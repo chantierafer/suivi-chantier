@@ -643,6 +643,11 @@ table.dv input.num{width:90px;text-align:right}
 .espace{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 11px 4px 8px;border-radius:20px;background:var(--turq);color:var(--anth)}
 .espace svg{width:15px;height:15px;flex:none}
 .tagprov{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;background:var(--warn-bg);color:var(--warn);white-space:nowrap}
+.lec{border-radius:12px;padding:14px 16px;margin:0 0 12px;background:var(--surface);border:1px solid var(--line)}
+.lec .lrow{display:flex;justify-content:space-between;gap:12px;align-items:baseline}.lec .lrow b{font-family:var(--display);font-size:22px;color:var(--turq)}
+.lbar{height:12px;border-radius:6px;background:var(--surface-2);overflow:hidden;margin:8px 0 6px}.lbar i{display:block;height:100%;background:var(--turq);border-radius:6px;transition:width .9s linear}
+.lec.err{background:var(--bad-bg);border-color:transparent}.lec.err p{margin:4px 0 10px}.lec .sub{margin:0}
+#lecm:empty,#lecd:empty{display:none}#lecm{grid-column:1/-1}
 .autonote{border-radius:10px;padding:10px 14px;margin:0 0 12px;background:var(--surface-2);font-size:14px}
 .card.startdocs{border:2px dashed var(--turq)}
 .dvx .dvst.ref{background:var(--danger-soft);color:var(--danger)}
@@ -933,6 +938,7 @@ table.dv input.num{width:90px;text-align:right}
       <div class="card">
         <h2>Documents du chantier</h2>
         <p class="sub" style="margin:0 0 10px">Tout ce que DOMetVIE transmet pour ce chantier : prévisite, liste du matériel, fiches techniques, notices. Le technicien les ouvre ici.</p>
+        <div id="lecd"></div>
         <div id="doclist"></div>
         <div class="row" style="margin-top:12px" data-roles="afer domevie"><button class="btn" id="docadd">＋ Ajouter des documents</button></div>
         <p class="sub" style="margin:8px 0 0" data-roles="afer domevie">Plusieurs fichiers d'un coup possible. Les infos de la mission du technicien (adresse, matériel, retraits…) se remplissent toutes seules à partir de ces documents.</p>
@@ -1670,6 +1676,7 @@ function renderDocs(){
   (CH.fiche.docsRecus||[]).forEach(d=>{if(d.interne&&role==="domevie")return;el.insertAdjacentHTML("beforeend",`<div class="doc"><div class="ic">PDF</div><div><strong>${esc(d.n)}</strong><p>${esc(d.s||"Reçu de DOMetVIE")}</p></div><span class="pill go">Reçu</span></div>`)});
   docs.filter(d=>(d.cat||"dmv")==="dmv").forEach(d=>el.appendChild(docRow(d)));
   if(!el.children.length)el.innerHTML='<p class="empty">DOMetVIE n\'a encore déposé aucun document pour ce chantier.</p>';
+  paintLec();
   const el2=document.getElementById("doclist2");el2.innerHTML="";docs.filter(d=>d.cat==="autre").forEach(d=>el2.appendChild(docRow(d)));
 }
 const docfile=document.getElementById("docfile");let docCat="dmv";
@@ -1692,7 +1699,28 @@ async function addDocs(files,cat){
   renderAll();return R.length}
 /* Mission remplie depuis les documents de début de chantier (version en ligne : fonction « lire-documents ») */
 function lireDocs(force){if(!SB.ready){if(force)gsay("Disponible dans la version en ligne");return}
-  if(CH.key==="_vide")return;SB.toRead[CH.key]=SB.toRead[CH.key]||!!force;flushSoon()}
+  if(CH.key==="_vide")return;SB.toRead[CH.key]=SB.toRead[CH.key]||!!force;LECL[CH.key]=Date.now();paintLec();flushSoon()}
+/* Jauge d'avancement de la lecture (fiche.lecture, écrite par la fonction au fil des étapes) : AFER et DOMetVIE */
+const LECL={};// lecture demandée depuis cet appareil, en attendant les premières nouvelles de la fonction
+function lecEtat(){if(typeof CH==="undefined"||!CH||!CH.fiche)return null;const l=CH.fiche.lecture||null,loc=LECL[CH.key],t=x=>Date.parse(x||0)||0;
+  if(loc&&(!l||t(l.maj)<loc)){if(Date.now()-loc<45000)return{etat:"en_cours",etape:"Envoi des documents",pct:2,maj:new Date(loc).toISOString()};delete LECL[CH.key]}
+  if(!l||!l.etat)return null;
+  if(l.etat==="en_cours"&&Date.now()-t(l.maj)>170000)return{...l,etat:"erreur",msg:"la lecture s'est arrêtée avant la fin"};
+  if(l.etat==="fini"&&Date.now()-t(l.maj)>60000)return null;
+  return l}
+function lecPct(l){if(l.etat!=="en_cours")return 100;const p=+l.pct||0,dt=Math.max(0,Date.now()-(Date.parse(l.maj)||Date.now()))/1000,
+  nx=p<25?24:p<95?90:99,tau=p<25?4:45;return Math.round(p+(nx-p)*(1-Math.exp(-dt/tau)))}
+let lecK="";
+function lecHTML(l){if(!l||role==="tech")return"";
+  if(l.etat==="erreur")return role==="afer"?`<div class="lec err"><strong>Lecture automatique des documents impossible</strong><p>${esc(l.msg||"")}</p><button class="btn sec" data-relire>Relancer la lecture</button></div>`
+    :`<div class="lec err"><strong>La lecture automatique des documents n'a pas abouti</strong><p class="sub">AFER est prévenu et complète la mission.</p></div>`;
+  if(l.etat==="fini")return`<div class="lec"><div class="lrow"><strong>Mission remplie depuis les documents</strong><b>100 %</b></div><div class="lbar"><i style="width:100%"></i></div></div>`;
+  const p=lecPct(l);return`<div class="lec" data-lec><div class="lrow"><strong>Lecture des documents en cours</strong><b data-lpct>${p} %</b></div><div class="lbar"><i style="width:${p}%"></i></div><p class="sub">${esc(l.etape||"")} · la mission se remplit toute seule, tu peux continuer.</p></div>`}
+function paintLec(){const l=lecEtat(),h=lecHTML(l);lecK=l?l.etat+"|"+l.etape+"|"+l.pct:"";
+  ["lecm","lecd"].forEach(id=>{const z=document.getElementById(id);if(z&&z.innerHTML!==h)z.innerHTML=h})}
+setInterval(()=>{const l=lecEtat(),k=l?l.etat+"|"+l.etape+"|"+l.pct:"";if(k!==lecK){paintLec();return}
+  if(!l||l.etat!=="en_cours")return;const p=lecPct(l);document.querySelectorAll("[data-lec]").forEach(z=>{z.querySelector(".lbar i").style.width=p+"%";z.querySelector("[data-lpct]").textContent=p+" %"})},1000);
+document.addEventListener("click",e=>{if(e.target.closest("[data-relire]"))lireDocs(true)});
 document.getElementById("mlire").onclick=()=>{if(!docs.some(d=>(d.cat||"dmv")==="dmv")){gsay("Ajoute d'abord les documents du chantier (onglet Documents)");return}lireDocs(true)};
 
 /* ===== Matériel : bons de livraison dépôt -> chantier ; factures et dépenses ===== */
@@ -1764,7 +1792,7 @@ const maps=a=>"https://www.google.com/maps/search/?api=1&query="+encodeURICompon
 function renderMission(){
   const f=CH.fiche,v=(x,t)=>x?esc(x):PH(t),R=(f.retraits||[]).filter(r=>r.lieu||r.adresse);
   const nd=docs.filter(d=>(d.cat||"dmv")==="dmv").length,vide=!f.adresse&&!R.length&&!(f.materiel||[]).length&&!(f.travaux||[]).length;
-  let h="";
+  let h=`<div id="lecm"></div>`;
   if(role==="afer"&&f.auto&&f.auto.le)h+=`<div class="autonote" style="grid-column:1/-1">Infos lues automatiquement dans les documents le ${ft(f.auto.le)}${f.auto.champs&&f.auto.champs.length?" ("+f.auto.champs.length+" rubrique"+(f.auto.champs.length>1?"s":"")+" remplie"+(f.auto.champs.length>1?"s":"")+")":""} : à vérifier. Ce que tu as saisi à la main n'est jamais remplacé.</div>`;
   if(role==="afer"&&vide)h+=`<div class="card startdocs"><h2>Documents de début de chantier</h2><p class="sub" style="margin:0 0 10px">Dépose la prévisite, la liste du matériel, les bons de commande… (plusieurs fichiers d'un coup). La mission se remplit toute seule à partir de ces documents : ville, adresse, accès, matériel, lieux de retrait, travaux.</p><div class="row"><button class="btn" id="mdocs">＋ Ajouter les documents</button></div>${nd?`<p class="sub" style="margin:10px 0 0">${nd} document${nd>1?"s":""} déjà déposé${nd>1?"s":""}. Si la mission reste vide, bouton « Remplir la mission depuis les documents ».</p>`:""}</div>`;
   h+=`<div class="card"><h2>1. Récupérer le matériel</h2>`;
@@ -1775,6 +1803,7 @@ function renderMission(){
   if(f.verifs&&f.verifs.length)h+=`<div class="alert"><h2>À vérifier avant de partir</h2><ul class="clean">${f.verifs.map(t=>`<li><span class="wn">!</span><span>${esc(t)}</span></li>`).join("")}</ul></div>`;
   const el=document.getElementById("missioncols");el.innerHTML=h;
   el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{setTab(b.dataset.go);scrollTo(0,0)});
+  paintLec();
   const md=el.querySelector("#mdocs");if(md)md.onclick=()=>{docCat="dmv";docfile.value="";docfile.click()};
   el.querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{try{navigator.clipboard.writeText(b.dataset.copy).then(()=>b.textContent="Copié",()=>{})}catch(x){}});
 }
@@ -2122,7 +2151,7 @@ async function flush(){if(flushing||!SB.ready)return;flushing=true;let drop=0;
 SB.lireGo=()=>Object.keys(SB.toRead).forEach(ch=>{
   if(OB.some(o=>(o.ch===ch&&(o.op==="file"||o.t==="doc"))||(o.op==="ch"&&o.row.id===ch)))return;
   const force=SB.toRead[ch];delete SB.toRead[ch];
-  SB.c.functions.invoke("lire-documents",{body:{chantier_id:ch,force}}).then(({data,error})=>{if(role!=="afer")return;
+  SB.c.functions.invoke("lire-documents",{body:{chantier_id:ch,force}}).then(({data,error})=>{if(error||!(data&&data.lance)){delete LECL[ch];paintLec()}if(role!=="afer")return;
     if(error){const st=error.context&&error.context.status;gsay(st===404?"Remplissage automatique pas encore activé (fonction « lire-documents » à installer)":"Lecture des documents impossible pour l'instant");return}
     if(data&&data.message)gsay(data.message)}).catch(()=>{})});
 
@@ -3328,6 +3357,8 @@ function render() {
   boot(); ensureCat(); bindD();
   // le premier passage d'AFER enregistre l'en-tête par défaut du chantier
   if (role === 'afer' && CH.key !== '_vide' && LS.get('devisinfo', null) == null) persist();
+  // adresse lue dans les documents après la création du devis : reprise dans l'en-tête si elle y manque
+  if (role === 'afer' && CH.key !== '_vide' && D.chantier && !D.chantier.adresse && CH.fiche.adresse) { D.chantier.adresse = CH.fiche.adresse; persist(); }
   paintState(); renderReqs();
   $('#dvimp').hidden = !(role === 'afer' && !CAT.afer);
   if ($('#tab-devis').hidden) return;
