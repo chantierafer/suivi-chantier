@@ -116,11 +116,24 @@ export function fusion(fiche: Fiche, lu: Lu, vus: string[], ignores: string[]) {
 }
 
 // Message lisible pour l'appli (au lieu de la page d'erreur brute renvoyée par le service)
+// Détail renvoyé par l'API (type et message), pour savoir exactement ce qui bloque
+export function detailApi(e: unknown): string {
+  const st = (e as { status?: number })?.status
+  const x = (e as { error?: { error?: { type?: string; message?: string } } })?.error?.error
+  if (!st) return court(e)
+  return `${st}${x?.type ? ' ' + x.type : ''}${x?.message ? ' : ' + String(x.message).slice(0, 160) : ''}`
+}
 export function messageErreur(e: unknown): string {
+  const essais = (e as { essais?: string[] })?.essais
+  const base = messageBase(e)
+  return essais && essais.length ? `${base} [réponse de Claude : ${essais.join(' | ')}]` : base
+}
+function messageBase(e: unknown): string {
   const st = (e as { status?: number })?.status
   if (e instanceof Anthropic.APIConnectionTimeoutError) return 'lecture trop longue, relance avec « Remplir la mission depuis les documents »'
   if (e instanceof Anthropic.APIConnectionError) return 'Claude injoignable pour le moment, réessaie dans quelques minutes'
-  if (st === 401 || st === 403) return 'clé API Anthropic refusée (vérifier le secret ANTHROPIC_API_KEY dans Supabase)'
+  if (st === 401) return 'clé API Anthropic refusée (vérifier le secret ANTHROPIC_API_KEY dans Supabase)'
+  if (st === 403) return 'accès refusé par Anthropic pour cette demande (droits de la clé ou du modèle)'
   if (st === 429) return 'trop de demandes envoyées à Claude, réessaie dans une minute'
   if (st && st >= 500) return `service Claude momentanément indisponible (erreur ${st}), réessaie dans quelques minutes`
   if (st === 400 || st === 413) {
@@ -174,6 +187,7 @@ export async function appelClaude(pieces: Piece[], surEssai?: Essai, fin = Date.
 async function lecture(apiKey: string, contenu: Bloc[], surEssai: Essai | undefined, fin: number): Promise<Lu> {
   const ESSAIS = 3
   let derniere: unknown
+  const essais: string[] = []
   for (let i = 1; i <= ESSAIS; i++) {
     const reste = fin - Date.now()
     if (reste < 25_000) break
@@ -196,11 +210,13 @@ async function lecture(apiKey: string, contenu: Bloc[], surEssai: Essai | undefi
       return lireReponse(rep as unknown as { stop_reason: string; content: { type: string; text?: string }[] })
     } catch (e) {
       derniere = e
-      console.error('lire-documents : essai', i, (e as { status?: number })?.status ?? '', (e as { requestID?: string })?.requestID ?? '', court(e))
-      if (!repassable(e)) throw e
+      essais.push(`essai ${i} : ${detailApi(e)}`)
+      console.error('lire-documents : essai', i, (e as { requestID?: string })?.requestID ?? '', detailApi(e))
+      if (!repassable(e)) { Object.assign(e as object, { essais }); throw e }
       await pause(Math.min(3_000 * i, Math.max(0, fin - Date.now() - 25_000)))
     }
   }
+  if (derniere) Object.assign(derniere as object, { essais })
   throw derniere ?? new Error('lecture trop longue')
 }
 
