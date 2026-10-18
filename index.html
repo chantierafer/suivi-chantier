@@ -217,9 +217,9 @@ ol.proc{margin:0;padding-left:22px;display:grid;gap:6px}
 .duo .thumbs{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
 .alertlist{display:grid;gap:10px;margin-bottom:12px}
 .alertitem{background:var(--bad-bg);border-radius:12px;padding:12px 14px;display:grid;gap:6px}
-.alertitem.done{background:var(--surface-2)}
+.alertitem.done{background:var(--anth);color:#fff}.alertitem.done .sub{color:#C7D0D2}.alertitem.done .pill.val{background:var(--okc);color:#fff}
 .alertitem strong{color:var(--bad)}
-.alertitem.done strong{color:var(--fg)}
+.alertitem.done strong,.alertitem.done b{color:#fff}
 .alertitem p{margin:0;font-size:14px}
 table.dv{width:100%;border-collapse:collapse;font-size:14px}
 table.dv th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:2px solid var(--anth)}
@@ -1441,6 +1441,8 @@ const BPU_DEFAULT=[
  ["d10","Dépose et démolition","Dépose de cloison légère (carreaux de plâtre ou plaque)","m²"],
  ["d11","Dépose et démolition","Dépose de meubles, miroirs et accessoires","forfait"],
  ["d12","Dépose et démolition","Dépose de revêtement de sol souple (PVC, lino)","m²"],
+ ["d13","Dépose et démolition","Dépose d'une cabine de douche complète","u"],
+ ["d14","Dépose et démolition","Dépose d'un sèche-serviettes ou radiateur","u"],
  ["s1","Supports et cloisons","Ragréage de sol","m²"],
  ["s2","Supports et cloisons","Reprise de support mural (rebouchage, enduit)","m²"],
  ["s3","Supports et cloisons","Cloison ou doublage en plaque hydrofuge","m²"],
@@ -1468,6 +1470,29 @@ const BPU_DEFAULT=[
  ["p14","Plomberie","Remplacement d'un mécanisme de chasse d'eau","u"],
  ["p15","Plomberie","Recherche et réparation de fuite","forfait"],
  ["p16","Plomberie","Débouchage de canalisation","forfait"],
+ ["p17","Plomberie","Déplacement d'un robinet ou d'un point d'eau","u"],
+ ["p18","Plomberie","Déplacement d'un WC (alimentation et évacuation)","u"],
+ ["p19","Plomberie","Déplacement d'un bidet (alimentation et évacuation)","u"],
+ ["p20","Plomberie","Déplacement d'un lavabo (alimentation et évacuation)","u"],
+ ["p21","Plomberie","Déplacement d'une machine à laver (alimentation et évacuation)","u"],
+ ["p22","Plomberie","Pose d'un bidet avec robinetterie","u"],
+ ["p23","Plomberie","Pose d'un broyeur sanitaire","u"],
+ ["p24","Plomberie","Pose d'un meuble vasque avec robinetterie","u"],
+ ["p25","Plomberie","Pose d'un lave-mains","u"],
+ ["p26","Plomberie","Pose d'un bâti-support pour WC suspendu","u"],
+ ["p27","Plomberie","Pose d'une douchette hygiénique WC","u"],
+ ["p28","Plomberie","Pose d'un réducteur de pression","u"],
+ ["p29","Plomberie","Raccordement d'une machine à laver","u"],
+ ["c1","Douche et étanchéité","Supplément receveur grande dimension (plus de 120 cm)","u"],
+ ["c2","Douche et étanchéité","Douche à l'italienne carrelée avec siphon de sol","forfait"],
+ ["c3","Douche et étanchéité","Caniveau de douche linéaire","u"],
+ ["c4","Douche et étanchéité","Découpe de receveur sur mesure","u"],
+ ["c5","Douche et étanchéité","Étanchéité liquide supplémentaire (hors zone douche)","m²"],
+ ["c6","Douche et étanchéité","Bande d'étanchéité périphérique supplémentaire","ml"],
+ ["c7","Douche et étanchéité","Traitement d'un support humide avant étanchéité","m²"],
+ ["c8","Douche et étanchéité","Paroi de douche supplémentaire ou grande largeur","u"],
+ ["c9","Douche et étanchéité","Porte de douche pivotante ou battante","u"],
+ ["c10","Douche et étanchéité","Rideau de douche avec barre","u"],
  ["e1","Électricité et ventilation","Déplacement ou ajout d'un point électrique","u"],
  ["e2","Électricité et ventilation","Pose d'un luminaire étanche","u"],
  ["e3","Électricité et ventilation","Pose d'un extracteur d'air","u"],
@@ -1487,6 +1512,9 @@ const BPU_DEFAULT=[
  ["r7","Revêtements","Réfection de joints silicone","ml"],
  ["r8","Revêtements","Peinture de porte et huisseries","u"],
  ["r9","Revêtements","Remplacement ponctuel de carreaux cassés","u"],
+ ["r10","Revêtements","Pose de mosaïque","m²"],
+ ["r11","Revêtements","Supplément pose de carrelage grand format","m²"],
+ ["r12","Revêtements","Faux-plafond en plaque hydrofuge","m²"],
  ["m1","Équipements PMR","Barre d'appui supplémentaire","u"],
  ["m2","Équipements PMR","Élargissement de porte","u"],
  ["m3","Équipements PMR","Remplacement de porte","u"],
@@ -1496,6 +1524,8 @@ const BPU_DEFAULT=[
  ["m7","Équipements PMR","Pose d'un miroir inclinable","u"],
  ["m8","Équipements PMR","Pose d'accessoires (patère, porte-serviettes, distributeur)","u"],
  ["m9","Équipements PMR","Pose d'une barre de tirage de porte","u"],
+ ["m10","Équipements PMR","Pose d'un rangement ou placard","u"],
+ ["m11","Équipements PMR","Pose d'une tablette ou étagère","u"],
  ["v1","Divers","Accès difficile, déplacement supplémentaire","forfait"],
  ["v2","Divers","Main-d'œuvre en régie","h"],
  ["v3","Divers","Protection renforcée du logement et des parties communes","forfait"],
@@ -1594,7 +1624,14 @@ sh.onclick=e=>{if(e.target===sh)closeSheet()};
 function gsay(t){let e=document.getElementById("gtoast");if(!e){e=document.createElement("div");e.id="gtoast";e.className="gtoast";document.body.appendChild(e)}e.textContent=t;e.classList.add("on");clearTimeout(e._h);e._h=setTimeout(()=>e.classList.remove("on"),1800)}
 function shotField(el,cb){const b=el.querySelector("[data-shot]"),pv=el.querySelector("[data-shotpv]");b.onclick=()=>pickOnce(k=>{cb(k);getImg(k).then(s=>{pv.innerHTML=s?`<img src="${s}" alt="Photo jointe">`:"";b.textContent="Reprendre la photo"})})}
 const SHOT=(label)=>`<div class="shot"><button type="button" class="btn sec" data-shot>${label}</button><span data-shotpv></span></div>`;
-function bpuOptions(withPrice,sel){const cats=[...new Set(bpu.filter(b=>b.id!=="base").map(b=>b.cat))];return cats.map(c=>`<optgroup label="${esc(c)}">${bpu.filter(b=>b.cat===c&&b.id!=="base").map(b=>`<option value="${b.id}"${b.id===sel?" selected":""}>${esc(b.lib)}${withPrice?" · "+(eur(b.pu)||"prix à compléter")+" / "+b.u:""}</option>`).join("")}</optgroup>`).join("")+`<option value="autre"${sel==="autre"?" selected":""}>Autre (à décrire)</option>`}
+// Travaux en plus proposés d'abord selon l'étape (le reste du BPU suit, rien n'est masqué)
+const STEP_BPU={constat:["v1","v3","v6","v7","d6"],protection:["v3","v6","v7","d6","d11"],depose:["d"],plomberie:["p","e5","e6"],receveur:["c1","c2","c3","c4","s1","s5","s6","s7","d7","p1","p23"],
+  etancheite:["c5","c6","c7","s11","s2","s3","s8","s9"],dalles:["r","s2","s3","s4","s8"],colonne:["p11","p17","p3","p5","p9","p27","p28","p15"],paroi:["c8","c9","c10"],
+  pmr:["m","s10"],finitions:["r7","r3","r6","r8","r9","e2","e3","e4","e8","e9","e10","v4"],reception:["v4","v5","r7"]};
+const stepBpu=(st,b)=>(STEP_BPU[st]||[]).some(k=>b.id===k||(k.length===1&&b.id[0]===k&&/^\d+$/.test(b.id.slice(1))));
+function bpuOptions(withPrice,sel,step){const L=bpu.filter(b=>b.id!=="base"),opt=b=>`<option value="${b.id}"${b.id===sel?" selected":""}>${esc(b.lib)}${withPrice?" · "+(eur(b.pu)||"prix à compléter")+" / "+b.u:""}</option>`;
+  const st=step&&ALL_STEPS.find(x=>x.id===step),top=st?L.filter(b=>stepBpu(step,b)):[],rest=L.filter(b=>!top.includes(b)),cats=[...new Set(rest.map(b=>b.cat))];
+  return (top.length?`<optgroup label="Étape ${esc(st.t)}">${top.map(opt).join("")}</optgroup>`:"")+cats.map(c=>`<optgroup label="${esc(top.length?"Autres · "+c:c)}">${rest.filter(b=>b.cat===c).map(opt).join("")}</optgroup>`).join("")+`<option value="autre"${sel==="autre"?" selected":""}>Autre (à décrire)</option>`}
 
 /* ===== Photos : prise, compression, grille ===== */
 const CAM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="4"/></svg>';
@@ -1701,8 +1738,8 @@ function openPb(step){let photo=null;const st=step&&ALL_STEPS.find(x=>x.id===ste
   el=>{shotField(el,k=>photo=k);el.querySelector("#pb-send").onclick=()=>{const p={id:uid(),type:el.querySelector("#pb-type").value,note:el.querySelector("#pb-note").value.trim(),photo,step:step||null,at:iso(),st:"open",by:role};pbs.unshift(p);save("pbs",pbs);notify(["afer","domevie"].filter(r=>r!==role),"Problème signalé : "+p.type,"suivi");closeSheet();gsay("Signalement envoyé");renderAll()}})}
 
 /* ===== Travaux en plus : demande du technicien, ou ajout direct par AFER ===== */
-function openExtra(step){let photo=null;const afer=role==="afer";
-  sheet(`<h2>${afer?"Ajouter une prestation":"Travaux en plus"}</h2><div class="form"><label>${afer?"Prestation du BPU":"Contrainte constatée"}<select id="x-sel">${bpuOptions(afer)}</select></label><label id="x-freew" hidden>Décrire la prestation<input id="x-free"></label>${afer?`<label>Quantité<input id="x-q" type="number" min="0" step="0.5" value="1" inputmode="decimal"></label>`:`<label>Ce que vous constatez<textarea id="x-note" placeholder="ex. sol pourri sous la baignoire, évacuation à déplacer…"></textarea></label>${SHOT(CAM+" Photo avant (conseillée)")}`}</div><p class="sub" style="margin:0">${afer?"La ligne s'ajoute au devis en orange, DOMetVIE la valide, et la case photo avant/après apparaît chez le technicien.":"AFER reçoit la demande et l'ajoute au devis. La case photo avant/après apparaîtra ensuite ici."}</p><div class="row"><button class="btn sec" data-close>Annuler</button><button class="btn" id="x-send">${afer?"Ajouter au devis":"Envoyer à AFER"}</button></div>`,
+function openExtra(step){let photo=null;const afer=role==="afer";if(!step){const S=STEPS(),i=curIdx();step=(S[i]||{}).id||null}
+  sheet(`<h2>${afer?"Ajouter une prestation":"Travaux en plus"}${step&&ALL_STEPS.find(x=>x.id===step)?" · "+esc(ALL_STEPS.find(x=>x.id===step).t):""}</h2><div class="form"><label>${afer?"Prestation du BPU":"Contrainte constatée"}<select id="x-sel">${bpuOptions(afer,null,step)}</select></label><label id="x-freew" hidden>Décrire la prestation<input id="x-free"></label>${afer?`<label>Quantité<input id="x-q" type="number" min="0" step="0.5" value="1" inputmode="decimal"></label>`:`<label>Ce que vous constatez<textarea id="x-note" placeholder="ex. sol pourri sous la baignoire, évacuation à déplacer…"></textarea></label>${SHOT(CAM+" Photo avant (conseillée)")}`}</div><p class="sub" style="margin:0">${afer?"La ligne s'ajoute au devis en orange, DOMetVIE la valide, et la case photo avant/après apparaît chez le technicien.":"AFER reçoit la demande et l'ajoute au devis. La case photo avant/après apparaîtra ensuite ici."}</p><div class="row"><button class="btn sec" data-close>Annuler</button><button class="btn" id="x-send">${afer?"Ajouter au devis":"Envoyer à AFER"}</button></div>`,
   el=>{const sel=el.querySelector("#x-sel"),fw=el.querySelector("#x-freew");sel.onchange=()=>fw.hidden=sel.value!=="autre";if(!afer)shotField(el,k=>photo=k);
     el.querySelector("#x-send").onclick=()=>{const v=sel.value,free=el.querySelector("#x-free").value.trim();if(v==="autre"&&!free){el.querySelector("#x-free").focus();return}
       const lib=v==="autre"?free:bpu.find(b=>b.id===v).lib;
@@ -1820,9 +1857,9 @@ function renderFrais(){
   const B=document.getElementById("bllist");B.innerHTML="";if(!bls.length)B.innerHTML='<p class="empty">Aucun bon de livraison.</p>';
   bls.forEach((b,i)=>B.appendChild(itemRow(b.photo,`Bon n° ${bls.length-i} · ${ft(b.at)}`,esc(b.items.join(" · "))+(b.note?"<br>"+esc(b.note):""),`<span class="pill">${b.items.length} élément${b.items.length>1?"s":""}</span>`,"Bon de livraison "+(bls.length-i))));
   const F=document.getElementById("fraislist");F.innerHTML="";if(!frais.length)F.innerHTML='<p class="empty">Aucune dépense.</p>';
-  frais.forEach(x=>{const r=itemRow(x.photo,esc(x.cat)+(x.note?" · "+esc(x.note):""),ft(x.at)+" · ajouté par "+ROLE_NAME[x.by],`<div class="amt">${eur(x.amt)||"—"}</div>`,"Ticket "+x.cat);
+  frais.forEach(x=>{const r=itemRow(x.photo,esc(x.cat)+(x.note?" · "+esc(x.note):""),ft(x.at)+" · ajouté par "+ROLE_NAME[x.by],role==="tech"?"":`<div class="amt">${eur(x.amt)||"à saisir"}</div>`,"Ticket "+x.cat);
     const right=r.lastElementChild;const p=document.createElement(role==="afer"?"button":"span");p.className="pill "+(x.paid?"val":"att");p.style.border="0";p.textContent=x.paid?"Remboursé":"À rembourser";if(role==="afer")p.onclick=()=>{x.paid=!x.paid;save("frais",frais);renderFrais()};right.appendChild(p);F.appendChild(r)});
-  if(frais.length)F.insertAdjacentHTML("beforeend",`<div class="total"><span>Total des dépenses</span><span>${eur(frais.reduce((a,x)=>a+(+x.amt||0),0))}</span></div>`);
+  if(frais.length&&role!=="tech")F.insertAdjacentHTML("beforeend",`<div class="total"><span>Total des dépenses</span><span>${eur(frais.reduce((a,x)=>a+(+x.amt||0),0))}</span></div>`);
 }
 document.getElementById("bladd").onclick=()=>{let photo=null;const M=CH.fiche.materiel||[];
   const free=()=>`<div class="blfree"><input placeholder="Désignation" aria-label="Désignation"><input type="number" min="1" value="1" inputmode="numeric" aria-label="Quantité"><button type="button" class="btn sec sm" aria-label="Retirer la ligne">✕</button></div>`;
@@ -1835,9 +1872,9 @@ document.getElementById("bladd").onclick=()=>{let photo=null;const M=CH.fiche.ma
       if(!items.length){gsay("Ajoutez au moins un élément");return}
       bls.unshift({id:uid(),at:iso(),items,note:el.querySelector("#bl-note").value.trim(),photo,by:role});save("bls",bls);if(role!=="afer")notify(["afer"],"Bon de livraison : "+items.length+" élément(s) sortis du dépôt","frais");closeSheet();gsay("Bon enregistré");renderAll()}})};
 document.getElementById("fraisadd").onclick=()=>{let photo=null;
-  sheet(`<h2>Ajouter une dépense</h2><div class="form"><label>Type<select id="fr-cat">${FRAIS_CAT.map(c=>`<option>${c}</option>`).join("")}</select></label><label>Montant TTC (€)<input id="fr-amt" type="number" step="0.01" min="0" inputmode="decimal"></label><label>Détail<input id="fr-note" placeholder="ex. plein camion, embouts de vissage…"></label>${SHOT(CAM+" Photo du ticket (obligatoire)")}</div><div class="row"><button class="btn sec" data-close>Annuler</button><button class="btn" id="fr-ok">Enregistrer</button></div>`,
-  el=>{shotField(el,k=>photo=k);el.querySelector("#fr-ok").onclick=()=>{const amt=parseFloat(el.querySelector("#fr-amt").value);if(!(amt>0)){el.querySelector("#fr-amt").focus();return}if(!photo){gsay("Photo du ticket obligatoire");return}
-    frais.unshift({id:uid(),at:iso(),cat:el.querySelector("#fr-cat").value,amt,note:el.querySelector("#fr-note").value.trim(),photo,by:role,paid:false});save("frais",frais);if(role!=="afer")notify(["afer"],"Nouvelle dépense : "+eur(amt),"frais");closeSheet();gsay("Dépense enregistrée");renderAll()}})};
+  sheet(`<h2>Ajouter une dépense</h2><div class="form"><label>Type<select id="fr-cat">${FRAIS_CAT.map(c=>`<option>${c}</option>`).join("")}</select></label>${role==="tech"?"":`<label>Montant TTC (€)<input id="fr-amt" type="number" step="0.01" min="0" inputmode="decimal"></label>`}<label>Détail<input id="fr-note" placeholder="ex. plein camion, embouts de vissage…"></label>${SHOT(CAM+" Photo du ticket (obligatoire)")}</div><div class="row"><button class="btn sec" data-close>Annuler</button><button class="btn" id="fr-ok">Enregistrer</button></div>`,
+  el=>{shotField(el,k=>photo=k);el.querySelector("#fr-ok").onclick=()=>{const ai=el.querySelector("#fr-amt"),amt=ai?parseFloat(ai.value):null;if(ai&&!(amt>0)){ai.focus();return}if(!photo){gsay("Photo du ticket obligatoire");return}
+    frais.unshift({id:uid(),at:iso(),cat:el.querySelector("#fr-cat").value,amt,note:el.querySelector("#fr-note").value.trim(),photo,by:role,paid:false});save("frais",frais);if(role!=="afer")notify(["afer"],"Nouvelle dépense : "+(amt?eur(amt):el.querySelector("#fr-cat").value+" (montant sur le ticket)"),"frais");closeSheet();gsay("Dépense enregistrée");renderAll()}})};
 
 /* ===== BPU (AFER uniquement) ===== */
 function renderBPU(){
@@ -2747,7 +2784,7 @@ function paintState() {
     ref ? ref + ' ligne' + (ref > 1 ? 's' : '') + ' refusée' + (ref > 1 ? 's' : '') + ' par DOMetVIE (hors total)' : ''].filter(Boolean).join(' · ');
   const miss = arts.filter(l => !(Number(l.pu) > 0)).length;
   const dp = $('#dvpill'); dp.textContent = att.length ? 'En attente' : 'Validé'; dp.className = 'pill ' + (att.length ? 'att' : 'val');
-  $('#dvdocsub').textContent = (D.numero ? D.numero + ' · ' : '') + arts.length + ' ligne' + (arts.length > 1 ? 's' : '') + (miss ? ' · ' + miss + ' prix à compléter' : ' · ' + money(totals().ht).replace(/ /g, ' ') + ' HT');
+  $('#dvdocsub').textContent = (D.numero ? D.numero + ' · ' : '') + arts.length + ' ligne' + (arts.length > 1 ? 's' : '') + (role === 'tech' ? '' : miss ? ' · ' + miss + ' prix à compléter' : ' · ' + money(totals().ht).replace(/ /g, ' ') + ' HT');
 }
 
 /* ---------- éditeur : client & devis ---------- */
