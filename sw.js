@@ -1,5 +1,5 @@
 // Garde l'appli disponible quand le réseau coupe. Les données (Supabase) ne passent jamais par ce cache.
-const C="suivi-chantier-v2";
+const C="suivi-chantier-v3";
 self.addEventListener("install",()=>self.skipWaiting());
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch",e=>{const r=e.request;if(r.method!=="GET")return;const u=new URL(r.url);

@@ -14,7 +14,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap">
 <style>
 /* Layout : en-tête chantier + rôle, onglets Mission / Suivi / Devis / PV / Documents / Matériel / BPU / SAV. Téléphone d'abord, gros boutons.
-   V8 : l'onglet Devis est l'appli de devis AFER (bibliothèque, aperçu A4, PDF), partagée avec DOMetVIE qui valide ligne par ligne. */
+   V8 : l'onglet Devis est l'appli de devis AFER (bibliothèque, aperçu A4, PDF), partagée avec DOMetVIE qui valide ligne par ligne.
+   V9 : documents multiples, mission lue dans les documents, nom de l'espace, refus DOMetVIE, BPU provisoire, copie OneDrive. */
 :root{
   --turq:#2FBFBF; --turq-ink:#178C8C; --anth:#2E3238; --vert:#A8D40A;
   --bg:#F3F6F6; --surface:#FFFFFF; --surface-2:#E8EFEF; --line:#D3DEDE;
@@ -638,6 +639,19 @@ table.dv input.num{width:90px;text-align:right}
   #dvPrintArea svg:last-child{page-break-after:auto;break-after:auto}
 }
 @page{size:A4;margin:0}
+/* V9 : nom de l'espace, BPU provisoire, mission lue dans les documents, ligne refusée, copie OneDrive */
+.espace{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 11px 4px 8px;border-radius:20px;background:var(--turq);color:var(--anth)}
+.espace svg{width:15px;height:15px;flex:none}
+.tagprov{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;background:var(--warn-bg);color:var(--warn);white-space:nowrap}
+.autonote{border-radius:10px;padding:10px 14px;margin:0 0 12px;background:var(--surface-2);font-size:14px}
+.card.startdocs{border:2px dashed var(--turq)}
+.dvx .dvst.ref{background:var(--danger-soft);color:var(--danger)}
+.dvx .rline.ref{box-shadow:inset 4px 0 0 var(--danger)}
+.dvx .rline.ref .rmain b{text-decoration:line-through;text-decoration-thickness:1px}
+.dvx .rbtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.odbox{border-radius:10px;padding:10px 14px;margin:0 0 10px;background:var(--surface-2);font-size:14px}
+.odbox.ok{background:var(--ok-bg);color:var(--okc)}
+.odbox.warn{background:var(--warn-bg);color:var(--warn)}
 </style>
 </head>
 <body>
@@ -647,6 +661,7 @@ table.dv input.num{width:90px;text-align:right}
   <header class="top">
     <div>
       <div class="brand"><i></i>AFER <small>Suivi de chantier · pour DOMetVIE</small></div>
+      <div class="espace" id="espace" hidden></div>
       <div class="chantier" style="margin-top:10px">
         <h1><button class="chsw" id="chsw" aria-label="Changer de chantier"><span id="ctitle">Chantier</span><span class="chev" aria-hidden="true">▾</span></button></h1>
         <p><span class="chip t" id="cdate">Début : à la réception du matériel</span><button class="chip" id="cvar" style="border:0" title="Changer la variante (AFER)">Avec démolition</button><span class="chip closed" id="cclosed" hidden>Clôturé</span><span class="chip" id="csync" hidden></span><span>Salle de bain PMR</span></p>
@@ -675,7 +690,7 @@ table.dv input.num{width:90px;text-align:right}
 
   <!-- MISSION : fiche générée depuis la fiche du chantier -->
   <section id="tab-mission">
-    <div class="row" data-roles="afer" style="margin-bottom:12px"><button class="btn sec" id="medit">Modifier la fiche du chantier</button><button class="btn sec" id="mnew">＋ Nouveau chantier</button><button class="btn sec" id="mlinks" hidden>Liens d'accès</button></div>
+    <div class="row" data-roles="afer" style="margin-bottom:12px"><button class="btn sec" id="medit">Modifier la fiche du chantier</button><button class="btn sec" id="mlire">Remplir la mission depuis les documents</button><button class="btn sec" id="mnew">＋ Nouveau chantier</button><button class="btn sec" id="mlinks" hidden>Liens d'accès</button></div>
     <div class="cols" id="missioncols"></div>
   </section>
 
@@ -724,6 +739,8 @@ table.dv input.num{width:90px;text-align:right}
     </div>
     <div class="dvx" id="dvapp">
 
+      <!-- AFER : paramètres du devis pas encore dans la base -->
+      <div class="box" id="dvimp" hidden style="margin:0 0 14px;border:2px solid var(--st-att);background:var(--st-att-bg)"><h3>Paramètres du devis à importer</h3><p style="margin:0 0 10px">La bibliothèque de prix, l'en-tête AFER (adresse, assurance, coordonnées bancaires) et la signature ne sont pas encore dans la base : le devis n'est pas utilisable tel quel. Importe une fois le fichier « parametres-devis-afer.json ».</p><label class="btn primary">Importer le fichier<input type="file" id="dvimpIn" accept=".json" hidden></label><div id="dvimpOut"></div></div>
       <!-- AFER : éditeur complet -->
       <div class="dvapp" id="dvEdit" data-roles="afer">
         <div class="topbar">
@@ -837,7 +854,7 @@ table.dv input.num{width:90px;text-align:right}
         <section class="panel">
           <div class="panel-head"><h2>Devis <span class="mono" id="rdNum"></span></h2><span class="pill" id="rdStat"></span></div>
           <p class="hint" style="margin:-6px 0 6px" id="rdMeta"></p>
-          <p class="hint" style="margin:0 0 10px">Chaque prestation ajoutée par AFER apparaît en orange. Vérifiez les photos avant/après, puis validez : la ligne passe au vert.</p>
+          <p class="hint" style="margin:0 0 10px">Chaque prestation ajoutée par AFER apparaît en orange. Vérifiez les photos avant/après, puis validez (la ligne passe au vert) ou refusez-la avec un motif : AFER est prévenu.</p>
           <div class="rlines" id="rdLines"></div>
           <div class="rtots" id="rdTots"></div>
           <div class="addbar">
@@ -917,18 +934,21 @@ table.dv input.num{width:90px;text-align:right}
         <h2>Documents du chantier</h2>
         <p class="sub" style="margin:0 0 10px">Tout ce que DOMetVIE transmet pour ce chantier : prévisite, liste du matériel, fiches techniques, notices. Le technicien les ouvre ici.</p>
         <div id="doclist"></div>
-        <div class="row" style="margin-top:12px" data-roles="afer domevie"><button class="btn" id="docadd">＋ Ajouter un document</button></div>
+        <div class="row" style="margin-top:12px" data-roles="afer domevie"><button class="btn" id="docadd">＋ Ajouter des documents</button></div>
+        <p class="sub" style="margin:8px 0 0" data-roles="afer domevie">Plusieurs fichiers d'un coup possible. Les infos de la mission du technicien (adresse, matériel, retraits…) se remplissent toutes seules à partir de ces documents.</p>
       </div>
       <div class="card">
         <h2>Autres documents</h2>
         <div class="doc"><div class="ic">PV</div><div><strong>Procès-verbal de réception</strong><p>Préparé pour ce client, signé sur tablette</p></div><span class="pill" id="pvpill">À signer</span></div>
         <div class="doc"><div class="ic">DEV</div><div><strong>Devis</strong><p id="dvdocsub">Onglet Devis</p></div><span class="pill" id="dvpill">En cours</span></div>
         <div id="doclist2"></div>
-        <div class="row" style="margin-top:12px" data-roles="afer"><button class="btn sec" id="docadd2">＋ Ajouter un autre document</button></div>
+        <div class="row" style="margin-top:12px" data-roles="afer"><button class="btn sec" id="docadd2">＋ Ajouter d'autres documents</button></div>
       </div>
       <div class="card" data-roles="afer">
-        <h2>Dossier SharePoint du chantier</h2>
-        <p class="sub" style="margin:0 0 10px">Tout ce qui est créé dans l'appli revient ici, une fois la version en ligne branchée.</p>
+        <h2>Copie dans SharePoint</h2>
+        <p class="sub" style="margin:0 0 10px">Sur le PC AFER (Chrome ou Edge), l'appli recopie photos, documents, PV, bons de livraison, factures et devis PDF de tous les chantiers dans le dossier OneDrive « Suivi Chantier SDB », que OneDrive envoie sur SharePoint. La copie tourne tant que l'appli est ouverte sur ce PC ; rien n'est supprimé côté SharePoint.</p>
+        <div id="odbox"></div>
+        <div class="row" style="margin:0 0 12px" id="odact"></div>
         <div class="tree" id="tree"></div>
       </div>
     </div>
@@ -957,7 +977,7 @@ table.dv input.num{width:90px;text-align:right}
     <div class="card">
       <h2>BPU salle de bain PMR</h2>
       <p class="sub" style="margin:0 0 6px">Bordereau des prix unitaires HT. Non visible par DOMetVIE ni par le technicien. Ces prestations apparaissent en tête de la bibliothèque du devis (« BPU salle de bain DOMetVIE ») et dans la liste « Travaux en plus » du technicien. Un prix modifié ici s'applique aux prochaines lignes ajoutées ; les lignes déjà au devis gardent leur prix, avec un lien « Appliquer » pour reprendre le nouveau.</p>
-      <p class="sub" style="margin:0 0 6px">Seul le forfait de base (900 € HT) est renseigné. Les autres prix sont à compléter.</p>
+      <p class="sub" style="margin:0 0 6px" id="bpuinfo"></p>
       <div id="bpu"></div>
       <div class="row" style="margin-top:14px"><button class="btn sec" id="bpunew">＋ Ajouter une prestation au BPU</button></div>
     </div>
@@ -988,7 +1008,7 @@ table.dv input.num{width:90px;text-align:right}
 </div>
 
 <input type="file" id="file" accept="image/*" capture="environment" hidden>
-<input type="file" id="docfile" hidden>
+<input type="file" id="docfile" multiple hidden>
 <div class="lightbox" id="lb" hidden><figure><img id="lbimg" alt=""><figcaption><span id="lbcap"></span><button class="btn" id="lbclose">Fermer</button></figcaption></figure></div>
 <div class="sbgate" id="sbgate" hidden></div>
 <div class="sheet" id="sheet" hidden><div id="sheetbody" role="dialog" aria-modal="true"></div></div>
@@ -1429,6 +1449,10 @@ const BPU_DEFAULT=[
  ["v1","Divers","Accès difficile, déplacement supplémentaire","forfait"],
  ["v2","Divers","Main-d'œuvre en régie","h"]
 ].map(([id,cat,lib,u,pu])=>({id,cat,lib,u,pu:pu??null}));
+// BPU provisoire demandé par AFER le 18/10/2026 (un peu au-dessus de la moyenne), en attendant le BPU DOMetVIE.
+// Hors dépôt public (build.py le vide) : la version en ligne le reçoit avec parametres-devis-afer.json.
+const BPU_PROV=/*DV-BPU*/{}/*/DV-BPU*/;
+function bpuProv(P){let n=0;(bpu||[]).forEach(b=>{if((b.pu==null||b.pu==="")&&P&&P[b.id]!=null){b.pu=P[b.id];b.prov=true;n++}});return n}
 
 /* ===== Chantiers : chaque chantier a sa fiche et ses propres données ===== */
 const GS={get(k,d){try{const v=localStorage.getItem("afer-suivi:"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("afer-suivi:"+k,JSON.stringify(v))}catch(e){}}};
@@ -1441,7 +1465,8 @@ const LS={get(k,d){try{const v=localStorage.getItem(CH.key+":"+k);return v?JSON.
 const save=(k,v)=>LS.set(k,v);
 const STEPS=()=>ALL_STEPS.filter(s=>!s.opt||CH.variant==="avec");
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const chName=id=>{const c=chantiers.find(x=>x.id===id);return c?"Chantier "+c.ville:"Chantier supprimé"};
+const nomCh=c=>c&&c.ville?"Chantier "+c.ville:"Nouveau chantier"+(c&&c.created?" du "+fd(c.created):"");
+const chName=id=>{const c=chantiers.find(x=>x.id===id);return c?nomCh(c):"Chantier supprimé"};
 /* Avancement d'un chantier autre que celui ouvert (liste des chantiers) */
 function chPct(id){const c=chantiers.find(x=>x.id===id),v=peek(id,"variant",c&&c.variante||"avec"),P=peek(id,"photos",{}),S=ALL_STEPS.filter(s=>!s.opt||v==="avec");return S.reduce((a,s)=>a+Math.min((P[s.id]||[]).length,MIN)/MIN,0)/S.length*100}
 const iso=()=>new Date().toISOString();
@@ -1452,7 +1477,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 
 /* ===== Données (prototype : stockées sur l'appareil) ===== */
 // Communes à tous les chantiers : BPU, notifications, rôle, historique
-let bpu=GS.get("bpu",null)||peek("saint-denis-v3","bpu",null)||BPU_DEFAULT.map(x=>({...x}));
+let bpu=GS.get("bpu",null)||peek("saint-denis-v3","bpu",null)||BPU_DEFAULT.map(x=>({...x}));if(bpuProv(BPU_PROV))GS.set("bpu",bpu);
 let notifs=GS.get("notifs",null)||peek("saint-denis-v3","notifs",[]).map(n=>({...n,ch:"saint-denis-v3"}));
 // Propres au chantier ouvert (rechargées par loadChantier)
 let photos={},devis=[],dvinfo=null,reqs=[],pbs=[],docs=[],bls=[],frais=[],sav=[],closed=null;
@@ -1476,7 +1501,7 @@ const curIdx=()=>{const S=STEPS();for(let i=0;i<S.length;i++)if(prog(S[i])<1)ret
 const photoCount=()=>Object.values(photos).reduce((a,L)=>a+L.length,0);
 const fmtPct=p=>p>=100?"100":(Math.round(p*10)/10).toString().replace(".",",");
 const startAt=()=>{const L=list("materiel");return L.length?L[0].at:null};
-const extras=()=>devis.filter(l=>l.kind!=="titre"&&!l.base&&l.ph!==false);
+const extras=()=>devis.filter(l=>l.kind!=="titre"&&!l.base&&l.ph!==false&&l.st!=="ref");
 const extraDone=l=>list("x:"+l.id+":av").length>0&&list("x:"+l.id+":ap").length>0;
 
 /* ===== Rôles : AFER (tout), Technicien, DOMetVIE ===== */
@@ -1484,7 +1509,10 @@ const TABS={afer:["mission","suivi","devis","pv","docs","frais","bpu","sav"],tec
 const ROLE_NAME={afer:"AFER",tech:"Technicien",domevie:"DOMetVIE"};
 let role=GS.get("role",null)||peek("saint-denis-v3","role","tech");if(!TABS[role])role="tech";
 const canPhoto=()=>role==="afer"||(role==="tech"&&!closed);
-function setRole(r){role=r;GS.set("role",r);document.querySelectorAll(".roles button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.role===r));document.querySelectorAll("nav.tabs button").forEach(b=>b.hidden=!TABS[r].includes(b.dataset.tab));const cur=GS.get("tab","mission");setTab(TABS[r].includes(cur)?cur:TABS[r][0]);renderAll();setupPV()}
+/* Nom de l'espace, visible en haut de chaque page */
+const ESPACE={afer:["Espace principal",'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>'],tech:["Espace suivi de chantier",'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'],domevie:["Espace DOMetVIE",'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M10 21v-4h4v4"/>']};
+function paintEspace(){const e=document.getElementById("espace"),x=ESPACE[role];if(!e||!x)return;e.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${x[1]}</svg>${x[0]}`;e.hidden=false}
+function setRole(r){role=r;GS.set("role",r);paintEspace();document.querySelectorAll(".roles button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.role===r));document.querySelectorAll("nav.tabs button").forEach(b=>b.hidden=!TABS[r].includes(b.dataset.tab));const cur=GS.get("tab","mission");setTab(TABS[r].includes(cur)?cur:TABS[r][0]);renderAll();setupPV()}
 document.querySelectorAll(".roles button").forEach(b=>b.onclick=()=>setRole(b.dataset.role));
 function setTab(t){if(!TABS[role].includes(t))t=TABS[role][0];document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));Object.values(TABS.afer).forEach(x=>document.getElementById("tab-"+x).hidden=x!==t);GS.set("tab",t);if(t==="pv")sizePad();if(t==="devis")renderDevis()}
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
@@ -1647,7 +1675,25 @@ function renderDocs(){
 const docfile=document.getElementById("docfile");let docCat="dmv";
 document.getElementById("docadd").onclick=()=>{docCat="dmv";docfile.value="";docfile.click()};
 document.getElementById("docadd2").onclick=()=>{docCat="autre";docfile.value="";docfile.click()};
-docfile.onchange=()=>{const f=docfile.files[0];if(!f)return;if(f.size>10*1024*1024){gsay("Fichier trop lourd (10 Mo max.)");return}const rd=new FileReader();rd.onload=()=>{const d={id:uid(),name:f.name,size:f.size,at:iso(),by:role,cat:docCat};putImg("doc:"+d.id,rd.result);docs.unshift(d);save("docs",docs);notify(["afer","tech","domevie"].filter(r=>r!==role),"Nouveau document : "+f.name,"docs");gsay("Document ajouté");renderAll()};rd.readAsDataURL(f)};
+docfile.onchange=()=>{addDocs(docfile.files,docCat);docfile.value=""};
+// Plusieurs fichiers d'un coup (10 Mo max. chacun). Les documents de début de chantier remplissent la mission (version en ligne).
+const readData=f=>new Promise(res=>{const rd=new FileReader();rd.onload=()=>res(rd.result);rd.onerror=()=>res(null);rd.readAsDataURL(f)});
+async function addDocs(files,cat){
+  const L=[...(files||[])],big=L.filter(f=>f.size>10*1024*1024),ok=L.filter(f=>f.size<=10*1024*1024),ch=CH.key;
+  if(big.length)gsay(big.length>1?big.length+" fichiers trop lourds (10 Mo max. chacun)":"Fichier trop lourd (10 Mo max.) : "+big[0].name);
+  if(!ok.length)return 0;
+  const R=(await Promise.all(ok.map(async f=>({f,src:await readData(f)})))).filter(x=>x.src);
+  if(ch!==CH.key||!R.length)return 0;
+  R.forEach(({f,src})=>{const d={id:uid(),name:f.name,size:f.size,at:iso(),by:role,cat};putImg("doc:"+d.id,src);docs.unshift(d)});
+  save("docs",docs);
+  notify(["afer","tech","domevie"].filter(r=>r!==role),R.length>1?R.length+" nouveaux documents":"Nouveau document : "+R[0].f.name,"docs");
+  gsay(R.length>1?R.length+" documents ajoutés":"Document ajouté");
+  if(cat==="dmv")lireDocs(false);
+  renderAll();return R.length}
+/* Mission remplie depuis les documents de début de chantier (version en ligne : fonction « lire-documents ») */
+function lireDocs(force){if(!SB.ready){if(force)gsay("Disponible dans la version en ligne");return}
+  if(CH.key==="_vide")return;SB.toRead[CH.key]=SB.toRead[CH.key]||!!force;flushSoon()}
+document.getElementById("mlire").onclick=()=>{if(!docs.some(d=>(d.cat||"dmv")==="dmv")){gsay("Ajoute d'abord les documents du chantier (onglet Documents)");return}lireDocs(true)};
 
 /* ===== Matériel : bons de livraison dépôt -> chantier ; factures et dépenses ===== */
 function itemRow(photo,title,sub,right,cap){const r=document.createElement("div");r.className="it";r.innerHTML=`<div class="noimg"></div><div><strong>${title}</strong><p>${sub}</p></div><div>${right||""}</div>`;if(photo)getImg(photo).then(src=>{if(!src)return;const im=document.createElement("img");im.src=src;im.alt=cap;im.onclick=()=>showLB(src,cap);r.firstElementChild.replaceWith(im)});return r}
@@ -1678,11 +1724,14 @@ document.getElementById("fraisadd").onclick=()=>{let photo=null;
 function renderBPU(){
   const el=document.getElementById("bpu");el.innerHTML="";
   [...new Set(bpu.map(b=>b.cat))].forEach(c=>{el.insertAdjacentHTML("beforeend",`<div class="bpucat">${esc(c)}</div>`);const w=document.createElement("div");w.className="tbl";const t=document.createElement("table");t.className="dv";t.innerHTML=`<thead><tr><th>Prestation</th><th>Unité</th><th class="n">PU HT (€)</th><th></th></tr></thead><tbody></tbody>`;
-    bpu.filter(b=>b.cat===c).forEach(b=>{const tr=document.createElement("tr");tr.innerHTML=`<td><input data-k="lib" value="${esc(b.lib)}" aria-label="Libellé"></td><td style="width:110px"><select data-k="u">${["u","m²","ml","forfait","h"].map(u=>`<option${u===b.u?" selected":""}>${u}</option>`).join("")}</select></td><td class="n"><input class="num" data-k="pu" type="number" step="0.01" min="0" value="${b.pu??""}" placeholder="À compléter" aria-label="Prix unitaire HT"></td><td></td>`;
-      tr.querySelectorAll("[data-k]").forEach(i=>i.onchange=()=>{const k=i.dataset.k;b[k]=k==="pu"?(i.value===""?null:parseFloat(i.value)):i.value;GS.set("bpu",bpu);renderDevis()});
+    bpu.filter(b=>b.cat===c).forEach(b=>{const tr=document.createElement("tr");tr.innerHTML=`<td><input data-k="lib" value="${esc(b.lib)}" aria-label="Libellé"></td><td style="width:110px"><select data-k="u">${["u","m²","ml","forfait","h"].map(u=>`<option${u===b.u?" selected":""}>${u}</option>`).join("")}</select></td><td class="n"><input class="num" data-k="pu" type="number" step="0.01" min="0" value="${b.pu??""}" placeholder="À compléter" aria-label="Prix unitaire HT">${b.prov?'<span class="tagprov">provisoire</span>':""}</td><td></td>`;
+      tr.querySelectorAll("[data-k]").forEach(i=>i.onchange=()=>{const k=i.dataset.k;b[k]=k==="pu"?(i.value===""?null:parseFloat(i.value)):i.value;if(k==="pu"&&b.prov){delete b.prov;i.parentNode.querySelector(".tagprov")?.remove()}GS.set("bpu",bpu);renderDevis();bpuInfo()});
       if(b.custom){const x=document.createElement("button");x.className="btn sec sm";x.textContent="✕";x.setAttribute("aria-label","Supprimer");x.onclick=()=>{bpu=bpu.filter(y=>y!==b);GS.set("bpu",bpu);renderBPU()};tr.lastElementChild.appendChild(x)}
       t.querySelector("tbody").appendChild(tr)});labelCells(t);w.appendChild(t);el.appendChild(w)});
+  bpuInfo();
 }
+function bpuInfo(){const e=document.getElementById("bpuinfo");if(!e)return;const p=bpu.filter(b=>b.prov).length,v=bpu.filter(b=>b.pu==null||b.pu==="").length;
+  e.innerHTML=p?`<b>${p} prix provisoires</b> (tag « provisoire ») : estimation un peu au-dessus de la moyenne, en attendant le BPU DOMetVIE. Remplace-les ici dès réception : le tag disparaît à chaque prix modifié.${v?" "+v+" prix à compléter.":""}`:v?v+" prix à compléter.":"Tous les prix sont renseignés."}
 document.getElementById("bpunew").onclick=()=>{bpu.push({id:"c"+uid(),cat:"Ajouts AFER",lib:"Nouvelle prestation",u:"u",pu:null,custom:true});GS.set("bpu",bpu);renderBPU()};
 
 /* ===== SAV et clôture (AFER) ===== */
@@ -1690,7 +1739,7 @@ function renderSAV(){
   const X=extras(),chk=[
     ["Matériel réceptionné en photo",list("materiel").length>0],
     ["Toutes les étapes photographiées",globalPct()>=100],
-    ["Travaux supplémentaires validés par DOMetVIE",devis.every(l=>l.st==="val")],
+    ["Travaux supplémentaires validés par DOMetVIE",devis.every(l=>l.st==="val"||l.st==="ref")],
     ["Photos avant/après de chaque travail en plus",X.every(extraDone)],
     ["PV de réception signé par le client",!!pv],
     ["Aucun problème en cours",!pbs.some(p=>p.st!=="done")]];
@@ -1714,7 +1763,11 @@ const PH=t=>`<span class="ph">[À COMPLÉTER : ${t}]</span>`;
 const maps=a=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(a);
 function renderMission(){
   const f=CH.fiche,v=(x,t)=>x?esc(x):PH(t),R=(f.retraits||[]).filter(r=>r.lieu||r.adresse);
-  let h=`<div class="card"><h2>1. Récupérer le matériel</h2>`;
+  const nd=docs.filter(d=>(d.cat||"dmv")==="dmv").length,vide=!f.adresse&&!R.length&&!(f.materiel||[]).length&&!(f.travaux||[]).length;
+  let h="";
+  if(role==="afer"&&f.auto&&f.auto.le)h+=`<div class="autonote" style="grid-column:1/-1">Infos lues automatiquement dans les documents le ${ft(f.auto.le)}${f.auto.champs&&f.auto.champs.length?" ("+f.auto.champs.length+" rubrique"+(f.auto.champs.length>1?"s":"")+" remplie"+(f.auto.champs.length>1?"s":"")+")":""} : à vérifier. Ce que tu as saisi à la main n'est jamais remplacé.</div>`;
+  if(role==="afer"&&vide)h+=`<div class="card startdocs"><h2>Documents de début de chantier</h2><p class="sub" style="margin:0 0 10px">Dépose la prévisite, la liste du matériel, les bons de commande… (plusieurs fichiers d'un coup). La mission se remplit toute seule à partir de ces documents : ville, adresse, accès, matériel, lieux de retrait, travaux.</p><div class="row"><button class="btn" id="mdocs">＋ Ajouter les documents</button></div>${nd?`<p class="sub" style="margin:10px 0 0">${nd} document${nd>1?"s":""} déjà déposé${nd>1?"s":""}. Si la mission reste vide, bouton « Remplir la mission depuis les documents ».</p>`:""}</div>`;
+  h+=`<div class="card"><h2>1. Récupérer le matériel</h2>`;
   h+=R.length?`<div class="pickup">`+R.map((r,i)=>`<div><b class="n">${"ABCDEF"[i]}</b><div><div class="big">${v(r.lieu,"lieu de retrait")}</div><div>${v(r.adresse,"adresse")}</div>${r.code?`<div class="sub" style="margin-top:6px">Code de retrait</div><div class="row"><span class="code">${esc(r.code)}</span><button class="btn sec" data-copy="${esc(r.code)}" style="min-height:38px;padding:6px 12px">Copier</button></div>`:""}<div class="row" style="margin-top:6px">${r.adresse?`<a class="btn sec" target="_blank" rel="noopener" href="${maps(r.adresse)}">Itinéraire</a>`:""}${r.articles?`<span class="sub">${esc(r.articles)}</span>`:""}</div></div></div>`).join("")+`</div>`:`<p class="empty">${PH("lieu de retrait du matériel")}</p>`;
   if(f.materiel&&f.materiel.length)h+=`<details><summary>Liste complète du matériel (${f.materiel.length})</summary><ul>${f.materiel.map(m=>`<li>${esc(m)}</li>`).join("")}</ul></details>`;
   h+=`</div><div class="card"><h2>2. Se rendre sur le chantier</h2><dl class="kv"><dt>Adresse</dt><dd>${v(f.adresse,"adresse")}</dd><dt>Étage</dt><dd>${v(f.etage,"étage")}</dd><dt>Accès</dt><dd>${f.acces?`<span class="code" style="font-size:26px">${esc(f.acces)}</span>`:PH("code ou interphone")}</dd><dt>Client</dt><dd>${v(f.client,"nom du client")}${f.tel?" · "+esc(f.tel):""}</dd><dt>Disponibilité</dt><dd>${v(f.dispo,"disponibilité")}</dd><dt>Conduite de travaux DOMetVIE</dt><dd>${v(f.conducteur,"téléphone")}</dd></dl>${f.adresse?`<div class="row" style="margin-top:12px"><a class="btn" target="_blank" rel="noopener" href="${maps(f.adresse)}">Itinéraire vers le chantier</a></div>`:""}</div>`;
@@ -1722,6 +1775,7 @@ function renderMission(){
   if(f.verifs&&f.verifs.length)h+=`<div class="alert"><h2>À vérifier avant de partir</h2><ul class="clean">${f.verifs.map(t=>`<li><span class="wn">!</span><span>${esc(t)}</span></li>`).join("")}</ul></div>`;
   const el=document.getElementById("missioncols");el.innerHTML=h;
   el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{setTab(b.dataset.go);scrollTo(0,0)});
+  const md=el.querySelector("#mdocs");if(md)md.onclick=()=>{docCat="dmv";docfile.value="";docfile.click()};
   el.querySelectorAll("[data-copy]").forEach(b=>b.onclick=()=>{try{navigator.clipboard.writeText(b.dataset.copy).then(()=>b.textContent="Copié",()=>{})}catch(x){}});
 }
 
@@ -1730,9 +1784,10 @@ const lines=s=>s.split("\n").map(x=>x.trim()).filter(Boolean);
 function openFiche(edit){
   const f=edit?CH.fiche:{variante:"avec",retraits:[{},{}]},r=[...(f.retraits||[]),{},{}].slice(0,2),val=x=>esc(x||"");
   const tx=(id,l,a,ph)=>`<label>${l}<textarea id="${id}" placeholder="${ph}">${esc((a||[]).join("\n"))}</textarea></label>`;
-  sheet(`<h2>${edit?"Modifier la fiche du chantier":"Nouveau chantier"}</h2><p class="sub" style="margin:0">Le chantier s'appellera « Chantier &lt;ville&gt; », avec la date de début. Pas de nom de client dans le titre.</p>
+  sheet(`<h2>${edit?"Modifier la fiche du chantier":"Nouveau chantier"}</h2><p class="sub" style="margin:0">Le chantier s'appellera « Chantier &lt;ville&gt; », avec la date de début. Pas de nom de client dans le titre.${edit?"":" Tout est facultatif : avec les documents seuls, la mission se remplit toute seule (version en ligne)."}</p>
   <div class="form">
-    <label>Ville du chantier *<input id="f-ville" value="${val(f.ville)}" placeholder="ex. Saint-Denis"></label>
+    ${edit?"":`<label>Documents de début de chantier (prévisite, liste du matériel… plusieurs fichiers possibles)<input id="f-files" type="file" multiple></label>`}
+    <label>Ville du chantier<input id="f-ville" value="${val(f.ville)}" placeholder="ex. Saint-Denis"></label>
     <label>Adresse complète<input id="f-adr" value="${val(f.adresse)}"></label>
     <div class="duo"><label>Étage<input id="f-etage" value="${val(f.etage)}"></label><label>Code / interphone<input id="f-acces" value="${val(f.acces)}"></label></div>
     <div class="duo"><label>Client<input id="f-client" value="${val(f.client)}"></label><label>Téléphone client<input id="f-tel" value="${val(f.tel)}" inputmode="tel"></label></div>
@@ -1746,7 +1801,8 @@ function openFiche(edit){
   </div>
   <div class="row">${edit&&chantiers.length>1?`<button class="btn sec" id="f-del" style="margin-right:auto;color:var(--bad)">Supprimer ce chantier</button>`:""}<button class="btn sec" data-close>Annuler</button><button class="btn" id="f-ok">${edit?"Enregistrer":"Créer le chantier"}</button></div>`,
   el=>{const g=id=>el.querySelector(id).value.trim();
-    el.querySelector("#f-ok").onclick=()=>{const ville=g("#f-ville");if(!ville){el.querySelector("#f-ville").focus();return}
+    el.querySelector("#f-ok").onclick=()=>{const ville=g("#f-ville"),files=edit?[]:[...el.querySelector("#f-files").files];
+      if(!edit&&!ville&&!files.length&&!g("#f-adr")){el.querySelector("#f-ville").focus();gsay("Indique la ville ou ajoute les documents");return}
       const ret=[0,1].map(i=>{const o={};el.querySelectorAll(`[data-r="${i}"]`).forEach(x=>o[x.dataset.k]=x.value.trim());return o}).filter(o=>o.lieu||o.adresse);
       const old=edit?CH.fiche:{},dr=lines(g("#f-docs")).map(n=>(old.docsRecus||[]).find(d=>d.n===n)||{n,s:"Reçu de DOMetVIE"});
       const nf={...old,ville,adresse:g("#f-adr"),etage:g("#f-etage"),acces:g("#f-acces"),client:g("#f-client"),tel:g("#f-tel"),dispo:g("#f-dispo"),conducteur:g("#f-cond"),variante:el.querySelector("#f-var").value,retraits:ret,materiel:lines(g("#f-mat")),travaux:lines(g("#f-trav")),verifs:lines(g("#f-ver")),docsRecus:dr};
@@ -1754,8 +1810,9 @@ function openFiche(edit){
         if(!pv){if(F.client===(old.client||""))F.client=nf.client;if(F.adresse===(old.adresse||""))F.adresse=nf.adresse;if(F.lieu===(old.ville||""))F.lieu=nf.ville;save("pvfields",F)}
         if(nf.variante!==old.variante){save("variant",nf.variante)}
         chantiers=chantiers.map(c=>c.id===old.id?nf:c);GS.set("chantiers",chantiers);closeSheet();switchChantier(old.id);gsay("Fiche enregistrée")}
-      else{nf.id=ville.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+"-"+uid();nf.created=iso();
-        chantiers.push(nf);GS.set("chantiers",chantiers);closeSheet();switchChantier(nf.id);setTab("mission");notify(["domevie","tech"],"Nouveau chantier créé","suivi");gsay("Chantier créé")}};
+      else{nf.id=((ville||"chantier").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"chantier")+"-"+uid();nf.created=iso();
+        chantiers.push(nf);GS.set("chantiers",chantiers);closeSheet();switchChantier(nf.id);setTab("mission");notify(["domevie","tech"],"Nouveau chantier créé","suivi");gsay("Chantier créé");
+        if(files.length)addDocs(files,"dmv")}};
     const del=el.querySelector("#f-del");if(del)del.onclick=()=>{if(del.dataset.arm!=="1"){del.dataset.arm="1";del.textContent="Supprimer définitivement ?";setTimeout(()=>{del.dataset.arm="";del.textContent="Supprimer ce chantier"},4000);return}
       const id=CH.key;Object.keys(photos).forEach(k=>list(k).forEach(p=>delImg(p.id)));docs.forEach(d=>delImg("doc:"+d.id));
       Object.keys(localStorage).filter(k=>k.startsWith(id+":")).forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
@@ -1763,7 +1820,7 @@ function openFiche(edit){
       closeSheet();switchChantier(chantiers[0].id);gsay("Chantier supprimé")}})}
 function openChantiers(){
   const rows=st=>chantiers.filter(c=>!!peek(c.id,"closed",null)===st).map(c=>{const p=chPct(c.id),m=peek(c.id,"photos",{}).materiel,d=m&&m.length?fd(m[0].at):null;
-    return `<button class="chitem${c.id===CH.key?" cur":""}" data-id="${esc(c.id)}"><div><strong>Chantier ${esc(c.ville)}</strong><p>${d?"Début "+d:"Pas encore démarré"} · ${c.variante==="sans"?"sans":"avec"} démolition</p><div class="minibar"><i style="width:${p}%"></i></div></div><span class="pill ${p>=100?"val":""}">${fmtPct(p)} %</span></button>`}).join("");
+    return `<button class="chitem${c.id===CH.key?" cur":""}" data-id="${esc(c.id)}"><div><strong>${esc(nomCh(c))}</strong><p>${d?"Début "+d:"Pas encore démarré"} · ${c.variante==="sans"?"sans":"avec"} démolition</p><div class="minibar"><i style="width:${p}%"></i></div></div><span class="pill ${p>=100?"val":""}">${fmtPct(p)} %</span></button>`}).join("");
   const a=rows(false),b=rows(true);
   sheet(`<h2>Chantiers</h2><div class="chlist">${a||'<p class="empty">Aucun chantier en cours.</p>'}</div>${b?`<h3 style="font-size:19px;margin-top:6px">Clôturés</h3><div class="chlist">${b}</div>`:""}<div class="row">${role==="afer"?`<button class="btn" id="ch-new" style="margin-right:auto">＋ Nouveau chantier</button>`:""}${SB.ready&&SB.afer?'<button class="btn sec" id="ch-out">Se déconnecter</button>':""}<button class="btn sec" data-close>Fermer</button></div>`,
   el=>{el.querySelectorAll("[data-id]").forEach(x=>x.onclick=()=>{closeSheet();switchChantier(x.dataset.id)});const n=el.querySelector("#ch-new");if(n)n.onclick=()=>openFiche(false);const o=el.querySelector("#ch-out");if(o)o.onclick=SB.logout})}
@@ -1771,15 +1828,17 @@ const BLANK={id:"_vide",ville:"—",variante:"avec",retraits:[],materiel:[],trav
 function loadChantier(id){
   DV.flush();
   const c=chantiers.find(x=>x.id===id)||chantiers[0]||BLANK;
-  CH.key=c.id;CH.fiche=c;CH.ville=c.ville;CH.nom="Chantier "+c.ville;GS.set("current",c.id);
+  CH.key=c.id;CH.fiche=c;CH.ville=c.ville;CH.nom=nomCh(c);GS.set("current",c.id);
   CH.variant=LS.get("variant",c.variante||"avec");
   photos=LS.get("photos",{});devis=DV.mig(LS.get("devis",null))||[baseLine()];dvinfo=LS.get("devisinfo",null);reqs=LS.get("reqs",[]);pbs=LS.get("pbs",[]);docs=LS.get("docs",[]);bls=LS.get("bls",[]);frais=LS.get("frais",[]);sav=LS.get("sav",[]);closed=LS.get("closed",null);
   pv=LS.get("pv",null);choice=null;drawn=false;open=LS.get("open",null);
-  F=LS.get("pvfields",null)||{client:c.client||"",adresse:c.adresse||"",devis:"",lieu:c.ville||"",date:""};
+  F=pvF(c,LS.get("pvfields",null));
   PVF.forEach(([i,k])=>document.getElementById(i).value=F[k]||"");
   window.__scene&&window.__scene.reset();
   SB.loaded(c.id);
 }
+// Champs du PV : une valeur corrigée à la main reste, un champ vide suit la fiche du chantier
+function pvF(c,s){const b={client:c.client||"",adresse:c.adresse||"",devis:"",lieu:c.ville||"",date:""};if(!s)return b;const o={...b,...s};Object.keys(b).forEach(k=>{if(!o[k])o[k]=b[k]});return o}
 function switchChantier(id){loadChantier(id);pctx.clearRect(0,0,pad.width,pad.height);paintVar();renderAll();setupPV();if(!document.getElementById("tab-pv").hidden)sizePad()}
 document.getElementById("chsw").onclick=openChantiers;
 document.getElementById("medit").onclick=()=>openFiche(true);
@@ -1787,10 +1846,10 @@ document.getElementById("mnew").onclick=()=>openFiche(false);
 
 /* ===== Arborescence SharePoint ===== */
 function renderTree(){
-  const S=STEPS(),d=startAt()?startAt().slice(0,10):"AAAA-MM-JJ";
-  let t=`Suivi Chantier SDB/\n└─ ${d}_${CH.ville}/\n   ├─ 01_Documents/  ${(()=>{const n=docs.length+(CH.fiche.docsRecus||[]).length;return n?"("+n+" fichier"+(n>1?"s":"")+")":""})()}\n   ├─ 02_Photos/\n   │  ├─ 00_Réception matériel/  ${list("materiel").length?"("+list("materiel").length+")":""}\n`;
+  const S=STEPS(),nom=odNom(CH.fiche,false)||((startAt()||CH.fiche.created||"AAAA-MM-JJ").slice(0,10)+"_"+(CH.ville||"(ville à venir)"));
+  let t=`${OD&&OD.h?OD.h.name:"Suivi Chantier SDB"}/\n└─ ${nom}/\n   ├─ 01_Documents/  ${(()=>{const n=docs.length+(CH.fiche.docsRecus||[]).length;return n?"("+n+" fichier"+(n>1?"s":"")+")":""})()}\n   ├─ 02_Photos/\n   │  ├─ 00_Réception matériel/  ${list("materiel").length?"("+list("materiel").length+")":""}\n`;
   S.forEach((s,i)=>{const n=String(i+1).padStart(2,"0"),c=list(s.id).length;t+=`   │  ${i===S.length-1?"└":"├"}─ ${n}_${s.t}/  ${c?"("+c+")":""}\n`});
-  t+=`   ├─ 03_Travaux supplémentaires/  ${extras().length?"("+extras().length+" × avant/après)":""}\n   ├─ 04_Devis/\n   ├─ 05_PV de réception/  ${pv?"(PV signé)":""}\n   ├─ 06_Bons de livraison/  ${bls.length?"("+bls.length+")":""}\n   ├─ 07_Factures et dépenses/  ${frais.length?"("+frais.length+")":""}\n   ├─ 08_SAV/  ${sav.length?"("+sav.length+")":""}\n   └─ Fiche mission.pdf`;
+  t+=`   ├─ 03_Travaux supplémentaires/  ${extras().length?"("+extras().length+" × avant/après)":""}\n   ├─ 04_Devis/\n   ├─ 05_PV de réception/  ${pv?"(PV signé)":""}\n   ├─ 06_Bons de livraison/  ${bls.length?"("+bls.length+")":""}\n   ├─ 07_Factures et dépenses/  ${frais.length?"("+frais.length+")":""}\n   ├─ 08_SAV/  ${sav.length?"("+sav.length+")":""}\n   └─ 09_Problèmes signalés/  ${pbs.filter(p=>p.photo).length?"("+pbs.filter(p=>p.photo).length+")":""}`;
   document.getElementById("tree").textContent=t;
 }
 
@@ -1800,7 +1859,7 @@ function renderHead(){
   const s=startAt();document.getElementById("cdate").textContent=s?"Début : "+fd(s):"Début : à la réception du matériel";
   document.getElementById("cclosed").hidden=!closed;
 }
-function renderAll(){paintRoles();renderHead();renderMission();renderSuivi();renderDevis();renderDocs();renderFrais();renderBPU();renderSAV();renderTree();paintBell();paintRoles()}
+function renderAll(){paintRoles();renderHead();renderMission();renderSuivi();renderDevis();renderDocs();renderFrais();renderBPU();renderSAV();renderTree();odPaint();odSoon();paintBell();paintRoles()}
 
 /* ===== PV ===== */
 /* ===== PV ===== */
@@ -1985,7 +2044,7 @@ document.getElementById("replay").onclick=e=>{const sc=window.__scene;if(!sc){gs
    Les écrans lisent et écrivent comme avant dans le stockage de l'appareil. Ce module recopie chaque
    changement vers la base, applique en direct ceux des autres appareils, et garde une file d'envoi
    quand le réseau manque. Sans SB_URL / SB_KEY, l'appli reste en démo sur l'appareil. */
-const SB={on:!!(SB_URL&&SB_KEY&&window.supabase),ready:false,mute:false,c:null,uid:null,afer:false,roles:[],base:{},q:[],fl:{},inflight:{}};
+const SB={on:!!(SB_URL&&SB_KEY&&window.supabase),ready:false,mute:false,c:null,uid:null,afer:false,roles:[],base:{},q:[],fl:{},inflight:{},toRead:{}};
 // clé locale -> [type d'élément, identifiant unique si valeur simple]
 const SK={photos:["photo"],devis:["devis"],reqs:["req"],pbs:["pb"],docs:["doc"],bls:["bl"],frais:["frais"],sav:["sav"],pv:["pv","pv"],pvfields:["pvfields","F"],devisinfo:["devisinfo","H"],closed:["etat","closed"],variant:["etat","variant"]};
 let SRV={},PARV={},OB=GS.get("outbox",[]),SEEN=GS.get("seen",{}),chBase=new Map();
@@ -2022,10 +2081,10 @@ SB.local=(ch,k,v)=>{if(!SK[k]||ch==="_vide"||(!SB.afer&&k==="devisinfo"))return;
     const d=srv.get(id)||JSON.parse(j);enq({op:"del",ch,t,id});refs(t,id,d).forEach(r=>enq({op:"rm",ch,t,k:r}));srv.delete(id)});
   bc[k]=nb;flushSoon()};
 SB.gs=(k,v)=>{
-  if(k==="chantiers"&&SB.afer){const nb=new Map();(v||[]).forEach(c=>{const j=cj(c);nb.set(c.id,j);if(chBase.get(c.id)!==j)enq({op:"ch",row:{id:c.id,nom:"Chantier "+c.ville,fiche:c}})});
+  if(k==="chantiers"&&SB.afer){const nb=new Map();(v||[]).forEach(c=>{const j=cj(c);nb.set(c.id,j);if(chBase.get(c.id)!==j)enq({op:"ch",row:{id:c.id,nom:nomCh(c),fiche:c}})});
     chBase.forEach((j,id)=>{if(!nb.has(id)){enq({op:"chdel",id});delete SRV[id]}});chBase=nb;flushSoon()}
   else if(SB.afer&&["catalogue","devis_reglages","devis_images","devis_compteur","pv_cachet"].includes(k)){enq({op:"par",cle:k,v});flushSoon()}
-  else if(k==="bpu"&&SB.afer){enq({op:"par",cle:"bpu",v});enq({op:"par",cle:"bpu_libelles",v:(v||[]).map(({pu,...x})=>x)});flushSoon()}
+  else if(k==="bpu"&&SB.afer){enq({op:"par",cle:"bpu",v});enq({op:"par",cle:"bpu_libelles",v:(v||[]).map(({pu,prov,...x})=>x)});flushSoon()}
   else if(k==="notifs"){(v||[]).forEach(n=>Object.keys(n.seen||{}).forEach(r=>{if(n.seen[r])SEEN[n.id+"|"+r]=1}));rawGS("seen",SEEN)}};
 SB.ev=(to,txt,tab)=>{if(CH.key==="_vide")return;enq({op:"ev",row:{chantier_id:CH.key,pour:to,texte:txt,type:tab,par_role:role}});flushSoon()};
 SB.histo=h=>{if(SB.afer){enq({op:"par",cle:"historique",v:h});flushSoon()}};
@@ -2058,7 +2117,14 @@ async function flush(){if(flushing||!SB.ready)return;flushing=true;let drop=0;
       // la base répond mais refuse toujours la même modification : on l'abandonne
       if(v==="retry"){o.tries=(o.tries||0)+1;saveOB();if(o.tries>12&&navigator.onLine&&SB.online)v="drop";else break}
       if(OB[0]===o)OB.shift();if(v==="drop")drop++;saveOB()}}
-  finally{flushing=false;paintSync();if(drop)gsay("Une modification n'a pas été acceptée par la base")}}
+  finally{flushing=false;paintSync();if(drop)gsay("Une modification n'a pas été acceptée par la base");SB.lireGo()}}
+/* Lecture des documents : lancée quand les fichiers sont bien arrivés dans la base */
+SB.lireGo=()=>Object.keys(SB.toRead).forEach(ch=>{
+  if(OB.some(o=>(o.ch===ch&&(o.op==="file"||o.t==="doc"))||(o.op==="ch"&&o.row.id===ch)))return;
+  const force=SB.toRead[ch];delete SB.toRead[ch];
+  SB.c.functions.invoke("lire-documents",{body:{chantier_id:ch,force}}).then(({data,error})=>{if(role!=="afer")return;
+    if(error){const st=error.context&&error.context.status;gsay(st===404?"Remplissage automatique pas encore activé (fonction « lire-documents » à installer)":"Lecture des documents impossible pour l'instant");return}
+    if(data&&data.message)gsay(data.message)}).catch(()=>{})});
 
 /* --- Lecture : tout récupérer, puis appliquer les écarts --- */
 async function fetchAll(q){const out=[];for(let i=0;;i+=1000){const {data,error}=await q().range(i,i+999);if(error)throw error;out.push(...data);if(data.length<1000)return out}}
@@ -2081,11 +2147,12 @@ async function pull(){if(pulling)return;pulling=true;const c=SB.c;
     chantiers.forEach(x=>apply(x.id));
     SB.online=true}
   catch(e){console.warn("Lecture impossible",e);SB.online=false}
-  finally{pulling=false;paintSync();if(SB.ready)paintBell()}}
+  finally{pulling=false;paintSync();if(SB.ready)paintBell();odSoon()}}
 function setChantiers(L){const cur=CH.key;chantiers=L;rawGS("chantiers",L);chBase=new Map(L.map(x=>[x.id,cj(x)]));
   if(!SB.ready)return;const c=L.find(x=>x.id===cur);
   if(!c){later(()=>switchChantier((L[0]||{}).id||"_vide"));return}
-  if(cj(c)!==cj(CH.fiche))later(()=>{CH.fiche=c;CH.ville=c.ville;CH.nom="Chantier "+c.ville;renderAll()})}
+  if(cj(c)!==cj(CH.fiche))later(()=>{CH.fiche=c;CH.ville=c.ville;CH.nom=nomCh(c);
+    if(!pv){F=pvF(c,peek(c.id,"pvfields",null));PVF.forEach(([i,k])=>document.getElementById(i).value=F[k]||"")}renderAll();if(!pv)paintFields()})}
 const evN=e=>({id:"e"+e.id,ch:e.chantier_id,to:e.pour||[],txt:e.texte,tab:e.type,at:e.created_at,par:e.par,seen:{afer:!!SEEN["e"+e.id+"|afer"],tech:!!SEEN["e"+e.id+"|tech"],domevie:!!SEEN["e"+e.id+"|domevie"]}});
 function onPar1(p){
   if(p.cle==="bpu"&&SB.afer)later(()=>{if(cj(p.valeur)===cj(bpu))return;bpu=p.valeur;rawGS("bpu",bpu);if(SB.ready)renderAll()});
@@ -2099,6 +2166,7 @@ cachet();
 /* Applique l'état de la base à un chantier : stockage de l'appareil, puis écran si c'est le chantier ouvert */
 function apply(ch){if(ch===CH.key&&busy()){later(()=>apply(ch));return}
   const ch_=[];Object.keys(SK).forEach(k=>{const [t]=SK[k],v=fromEls(k,srvT(ch,t));if(cj(v)!==cj(peek(ch,k,null))){lsPut(ch,k,v);ch_.push(k)}});
+  if(ch_.length)odSoon();
   if(ch!==CH.key||!SB.ready||!ch_.length)return;
   const bc=SB.base[ch]=SB.base[ch]||{},c=CH.fiche;
   ch_.forEach(k=>{const v=peek(ch,k,null);bc[k]=baseOf(k,v);
@@ -2106,7 +2174,7 @@ function apply(ch){if(ch===CH.key&&busy()){later(()=>apply(ch));return}
     else if(k==="bls")bls=v||[];else if(k==="frais")frais=v||[];else if(k==="sav")sav=v||[];else if(k==="closed")closed=v;
     else if(k==="variant"){CH.variant=v||c.variante||"avec";paintVar()}
     else if(k==="pv"){pv=v;if(!pv){choice=null;drawn=false;pctx.clearRect(0,0,pad.width,pad.height)}}
-    else if(k==="pvfields"){F=v||{client:c.client||"",adresse:c.adresse||"",devis:"",lieu:c.ville||"",date:""};PVF.forEach(([i,x])=>document.getElementById(i).value=F[x]||"")}});
+    else if(k==="pvfields"){F=pvF(c,v);PVF.forEach(([i,x])=>document.getElementById(i).value=F[x]||"")}});
   renderAll();if(ch_.includes("pv")||ch_.includes("pvfields"))setupPV()}
 /* Pas de rafraîchissement pendant une saisie : on applique dès que le champ est quitté */
 const busy=()=>{const a=document.activeElement;return!!a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&!sh.contains(a)&&!document.getElementById("sbgate").contains(a)};
@@ -2170,7 +2238,7 @@ async function enter(session){SB.uid=session.user.id;showGate('<p class="sub">Ch
   role=SB.tokRole&&SB.roles.includes(SB.tokRole)?SB.tokRole:SB.roles.includes(GS.get("role",""))?GS.get("role",""):SB.roles[0];
   CH.key=SB.tokCh&&chantiers.some(x=>x.id===SB.tokCh)?SB.tokCh:chantiers.some(x=>x.id===GS.get("current",""))?GS.get("current",""):(chantiers[0]||{}).id||"_vide";
   document.querySelectorAll(".roles button").forEach(b=>b.hidden=!SB.roles.includes(b.dataset.role));document.querySelector(".roles").style.display=SB.roles.length>1?"":"none";
-  SB.ready=true;loadChantier(CH.key);paintVar();initScene();setRole(role);gate.hidden=true;
+  SB.ready=true;loadChantier(CH.key);paintVar();initScene();setRole(role);gate.hidden=true;odInit();
   document.getElementById("mlinks").hidden=false;listen();flush();paintSync();
   setInterval(()=>{if(document.visibilityState==="visible")pull()},60000);setInterval(()=>{if(OB.length)flush()},15000);
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){pull();flush()}});
@@ -2195,6 +2263,91 @@ async function openLinks(){if(!SB.ready){gsay("Disponible dans la version en lig
       const x=await SB.c.from("acces").insert({role:all?"domevie":b.dataset.new,chantier_id:all?null:CH.key,libelle:all?"Tous les chantiers":CH.nom});if(x.error)gsay("Création impossible");openLinks()});
     el.querySelectorAll("input[readonly]").forEach(i=>i.onfocus=()=>i.select())})}
 document.getElementById("mlinks").onclick=openLinks;
+/* ===== Copie dans SharePoint : le PC AFER recopie les fichiers de tous les chantiers dans le dossier OneDrive choisi =====
+   OneDrive envoie ensuite ce dossier sur SharePoint. Chrome ou Edge sur ordinateur (accès à un dossier du PC).
+   Chaque fichier n'est écrit qu'une fois ; rien n'est supprimé côté OneDrive. */
+var OD={ok:"showDirectoryPicker" in window,h:null,perm:"",run:false,again:false,t:null,n:0,err:"",said:false,
+  last:GS.get("od-last",null),noms:GS.get("od-noms",{}),fait:GS.get("od-fait",{})};
+function odKV(k,v){return new Promise(res=>{if(!db)return res(null);try{const tx=db.transaction("img",v===undefined?"readonly":"readwrite"),st=tx.objectStore("img"),r=v===undefined?st.get(k):st.put(v,k);r.onsuccess=()=>res(v===undefined?r.result||null:true);r.onerror=()=>res(null)}catch(e){res(null)}})}
+function odSafe(s){return String(s||"").replace(/[\\/:*?"<>|#%\u0000-\u001f]+/g," ").replace(/\s+/g," ").trim().replace(/[. ]+$/,"").slice(0,100)||"sans nom"}
+function odStamp(at){const d=new Date(at||Date.now()),p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+"h"+p(d.getMinutes())}
+function odExt(src){return({"image/jpeg":".jpg","image/png":".png","image/webp":".webp","image/gif":".gif","image/heic":".heic","application/pdf":".pdf"})[(String(src).match(/^data:([^;,]+)/)||[])[1]]||""}
+// dossier du chantier : « AAAA-MM-JJ_Ville », fixé à la première copie (attend que la ville soit connue)
+function odNom(c,keep){if(!c||!c.id)return"";if(OD.noms[c.id])return OD.noms[c.id];if(!c.ville)return"";
+  const d=((peek(c.id,"photos",{}).materiel||[])[0]||{}).at||c.created||iso();let n=odSafe(String(d).slice(0,10)+"_"+c.ville),i=2;
+  const pris=new Set(Object.values(OD.noms));while(pris.has(n))n=odSafe(String(d).slice(0,10)+"_"+c.ville)+" ("+i+++")";
+  if(keep){OD.noms[c.id]=n;GS.set("od-noms",OD.noms)}return n}
+// tout ce qui part dans le dossier d'un chantier
+function odPlan(c){
+  const ch=c.id,P=peek(ch,"photos",{})||{},v=peek(ch,"variant",c.variante||"avec"),S=ALL_STEPS.filter(s=>!s.opt||v==="avec"),T=[];
+  const ph=(slot,path,lab)=>(P[slot]||[]).forEach(p=>T.push({k:"ph:"+p.id,path,name:odSafe(odStamp(p.at)+(lab?" "+lab:"")+" "+String(p.id).slice(-4)),img:p.id}));
+  ph("materiel",["02_Photos","00_Réception matériel"]);
+  S.forEach((s,i)=>ph(s.id,["02_Photos",String(i+1).padStart(2,"0")+"_"+odSafe(s.t)]));
+  (peek(ch,"devis",[])||[]).filter(l=>l.kind!=="titre"&&!l.base).forEach(l=>{const p=["03_Travaux supplémentaires",odSafe(l.designation||"Travaux")+" "+String(l.id).slice(-4)];ph("x:"+l.id+":av",p,"avant");ph("x:"+l.id+":ap",p,"après")});
+  const used=new Set();
+  (peek(ch,"docs",[])||[]).slice().sort((a,b)=>String(a.at).localeCompare(String(b.at))).forEach(d=>{let n=odSafe(d.name);
+    if(used.has(n.toLowerCase())){const i=n.lastIndexOf(".");n=i>0?n.slice(0,i)+" ("+String(d.id).slice(-4)+")"+n.slice(i):n+" ("+String(d.id).slice(-4)+")"}
+    used.add(n.toLowerCase());T.push({k:"doc:"+d.id,path:["01_Documents"],name:n,img:"doc:"+d.id,raw:true})});
+  const pv_=peek(ch,"pv",null);if(pv_&&pv_.sig)T.push({k:"pv:"+pv_.at,path:["05_PV de réception"],name:"PV de réception signé "+odStamp(pv_.at)+".html",html:()=>pvHTML(pv_)});
+  (peek(ch,"bls",[])||[]).forEach(b=>{const n=odSafe(odStamp(b.at)+" bon de livraison "+String(b.id).slice(-4)),p=["06_Bons de livraison"];
+    T.push({k:"blt:"+b.id,path:p,name:n+".txt",text:()=>"Bon de livraison dépôt → chantier\r\n"+chName(ch)+"\r\n"+ft(b.at)+"\r\n\r\n"+(b.items||[]).map(x=>"- "+x).join("\r\n")+(b.note?"\r\n\r\n"+b.note:"")+"\r\n"});
+    if(b.photo)T.push({k:"bl:"+b.id,path:p,name:n,img:b.photo})});
+  (peek(ch,"frais",[])||[]).forEach(x=>{if(x.photo)T.push({k:"fr:"+x.id,path:["07_Factures et dépenses"],name:odSafe(odStamp(x.at)+" "+(x.cat||"dépense")+(x.amt!=null&&x.amt!==""?" "+String(x.amt).replace(".",",")+" €":"")+" "+String(x.id).slice(-4)),img:x.photo})});
+  (peek(ch,"sav",[])||[]).forEach(x=>{if(x.photo)T.push({k:"sav:"+x.id,path:["08_SAV"],name:odSafe((x.date||odStamp(x.at))+" "+(x.motif||"SAV")+" "+String(x.id).slice(-4)),img:x.photo})});
+  (peek(ch,"pbs",[])||[]).forEach(x=>{if(x.photo)T.push({k:"pb:"+x.id,path:["09_Problèmes signalés"],name:odSafe(odStamp(x.at)+" "+(x.type||"problème")+" "+String(x.id).slice(-4)),img:x.photo})});
+  return T}
+// PV signé : copie de la page du PV (champs, case cochée, signature, cachet), lisible et imprimable dans le navigateur
+function pvHTML(p){const paper=document.getElementById("paper").cloneNode(true),f=p.fields||{};
+  paper.removeAttribute("id");paper.classList.add("locked");
+  paper.querySelectorAll(".f-client").forEach(e=>e.textContent=f.client||"");
+  const set=(id,v,ph)=>{const e=paper.querySelector("#"+id);if(!e)return;e.textContent=v||ph||"";e.classList.toggle("ph",!v&&!!ph);e.removeAttribute("id")};
+  set("f-adresse",f.adresse);set("f-devis",f.devis,"[À COMPLÉTER : n° et date du devis]");set("f-lieu",f.lieu);set("pvdate",p.dateTxt);set("pvfoot",p.dateTxt);
+  paper.querySelectorAll(".cb").forEach(b=>{b.textContent=b.dataset.c===p.choice?"✕":"";b.removeAttribute("disabled")});
+  const cv=paper.querySelector("canvas");if(cv){const im=document.createElement("img");im.src=p.sig;im.alt="Signature du client";im.style.cssText="width:100%;height:9em;object-fit:contain;display:block";cv.replaceWith(im)}
+  const css=[...document.styleSheets].flatMap(x=>{try{return[...x.cssRules]}catch(e){return[]}}).filter(r=>r.selectorText&&/\.paper|\.ph\b/.test(r.selectorText)).map(r=>r.cssText).join("\n");
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>PV de réception</title><style>:root{--paper:Carlito,Calibri,"Segoe UI",Arial,sans-serif;--warn:#B86E00;--warn-bg:#FFF4E0}body{margin:0;padding:24px;background:#eee}${css}.paper{margin:0 auto}@media print{body{padding:0;background:#fff}.paper{box-shadow:none}}</style></head><body>${paper.outerHTML}</body></html>`}
+async function odSrc(ch,k){return await idbGet(ch,k)||(SB.ready?await SB.img(ch,k):null)}
+async function odDir(parts){let d=OD.h;for(const p of parts)d=await d.getDirectoryHandle(p,{create:true});return d}
+async function odWrite(dir,name,data,over){
+  if(!over)try{await dir.getFileHandle(name);return false}catch(e){} // déjà dans le dossier : on n'y touche pas
+  const fh=await dir.getFileHandle(name,{create:true}),w=await fh.createWritable();await w.write(data);await w.close();return true}
+function odSoon(){if(!OD||!OD.h||OD.perm!=="granted")return;clearTimeout(OD.t);OD.t=setTimeout(odRun,4000)}
+async function odRun(){if(!OD.h)return;if(OD.run){OD.again=true;return}
+  try{OD.perm=await OD.h.queryPermission({mode:"readwrite"})}catch(e){OD.perm="prompt"}
+  if(OD.perm!=="granted"){odPaint();return}
+  OD.run=true;OD.err="";odPaint();let n=0;
+  try{for(const c of chantiers.slice()){const nom=odNom(c,true);if(!nom)continue;const done=OD.fait[c.id]=OD.fait[c.id]||{};
+      for(const t of odPlan(c)){if(done[t.k])continue;let data,name=t.name;
+        try{if(t.html)data=new Blob([t.html()],{type:"text/html"});
+          else if(t.text)data=new Blob([t.text()],{type:"text/plain"});
+          else{const src=await odSrc(c.id,t.img);if(!src)continue;data=dataBlob(src);if(!t.raw)name+=odExt(src)} // pas encore arrivé : on réessaiera
+          if(await odWrite(await odDir([nom,...t.path]),name,data))n++;
+          done[t.k]=1;GS.set("od-fait",OD.fait)}
+        catch(e){if(e&&(e.name==="NotAllowedError"||e.name==="SecurityError"))throw e; // accès retiré : on s'arrête
+          console.warn("Copie OneDrive",t.path.join("/")+"/"+name,e);OD.err="« "+name+" » non copié ("+(e&&e.message||e)+"), nouvel essai au prochain changement"}}}
+    OD.last=iso();GS.set("od-last",OD.last)}
+  catch(e){console.warn("Copie OneDrive",e);if(e&&(e.name==="NotAllowedError"||e.name==="SecurityError"))OD.perm="prompt";else OD.err="copie interrompue ("+(e&&e.message||e)+"), nouvel essai au prochain changement"}
+  finally{OD.run=false;OD.n+=n;odPaint();if(n)gsay(n+" fichier"+(n>1?"s":"")+" copié"+(n>1?"s":"")+" dans OneDrive");if(OD.again){OD.again=false;odSoon()}}}
+async function odInit(){if(!OD.ok)return odPaint();OD.h=await odKV("_onedrive");
+  if(OD.h){try{OD.perm=await OD.h.queryPermission({mode:"readwrite"})}catch(e){OD.perm="prompt"}
+    if(OD.perm==="granted")odSoon();else if(!OD.said&&role==="afer"){OD.said=true;setTimeout(()=>gsay("Copie SharePoint en pause : onglet Documents, « Reprendre la copie »"),2500)}}
+  odPaint()}
+async function odPick(){try{const h=await showDirectoryPicker({id:"suivi-chantier-sdb",mode:"readwrite",startIn:"documents"});
+    OD.h=h;OD.perm="granted";await odKV("_onedrive",h);if(!/suivi.*chantier/i.test(h.name))gsay("Dossier choisi : « "+h.name+" »");odRun()}
+  catch(e){if(!e||e.name!=="AbortError")gsay("Choix du dossier impossible")}}
+async function odResume(){if(!OD.h)return odPick();try{OD.perm=await OD.h.requestPermission({mode:"readwrite"})}catch(e){}odPaint();if(OD.perm==="granted")odRun()}
+// PDF du devis : rangé aussi dans 04_Devis du chantier (remplacé s'il est refait)
+async function odDevis(blob,filename){if(!OD.h||OD.perm!=="granted")return;const nom=odNom(CH.fiche,true);if(!nom)return;
+  try{await odWrite(await odDir([nom,"04_Devis"]),odSafe(filename),blob,true);gsay("Devis rangé aussi dans OneDrive (04_Devis)")}catch(e){}}
+function odPaint(){const b=document.getElementById("odbox"),a=document.getElementById("odact");if(!b||!OD)return;
+  let t,c="odbox",btn="";
+  if(!OD.ok)t="Ouvre l'appli sur le PC AFER avec Chrome ou Edge pour activer la copie.";
+  else if(!OD.h){t="Aucun dossier choisi : choisis (ou crée) le dossier « Suivi Chantier SDB » dans ton OneDrive AFER.";btn='<button class="btn" data-od="pick">Choisir le dossier OneDrive</button>'}
+  else if(OD.perm!=="granted"){c+=" warn";t="Copie en pause : Chrome demande de confirmer l'accès au dossier « "+esc(OD.h.name)+" ».";btn='<button class="btn" data-od="resume">Reprendre la copie</button><button class="btn sec" data-od="pick">Changer de dossier</button>'}
+  else{c+=OD.err?" warn":" ok";t=(OD.run?"Copie en cours":"Copie active")+" dans « "+esc(OD.h.name)+" »"+(OD.last?" · dernière copie le "+ft(OD.last):"")+(OD.n?" · "+OD.n+" fichier"+(OD.n>1?"s":"")+" copié"+(OD.n>1?"s":"")+" depuis l'ouverture":"")+(OD.err?" · "+esc(OD.err):"");
+    btn='<button class="btn sec" data-od="run">Copier maintenant</button><button class="btn sec" data-od="pick">Changer de dossier</button>'}
+  b.className=c;b.innerHTML=t;if(a.dataset.v!==btn){a.dataset.v=btn;a.innerHTML=btn;a.querySelectorAll("[data-od]").forEach(x=>x.onclick=()=>({pick:odPick,resume:odResume,run:odRun})[x.dataset.od]())}}
+
 /* ===== Devis partagé AFER / DOMetVIE : l'appli de devis AFER intégrée =====
    Même éditeur que l'appli de devis (bibliothèque, aperçu A4, PDF), branché sur le chantier ouvert.
    Une ligne = un élément « devis » (orange tant que DOMetVIE ne l'a pas validée), l'en-tête = « devisinfo ».
@@ -2366,10 +2519,13 @@ function provisionalNumber() { const d = new Date(); return `DEV-${d.getFullYear
 function engineCfg() {
   return { company: S.company, mentions: S.mentions, rateOf, showSignature: S.showSignature && !!IMGS.sig, showBadges: S.showBadges, provisionalNumber: provisionalNumber() };
 }
-function totals() { return Engine.computeTotals(D, rateOf); }
+// les lignes refusées par DOMetVIE restent visibles mais sortent des totaux et du PDF
+const DX = () => ({ ...D, lines: D.lines.filter(l => l.st !== 'ref') });
+function totals() { return Engine.computeTotals(DX(), rateOf); }
 const isArt = l => l.kind !== 'titre';
 const labelOf = l => l.designation || 'Ligne sans désignation';
 const statHTML = l => !isArt(l) ? '' : l.base && l.st === 'val' ? '<span class="dvst val">Forfait de base</span>'
+  : l.st === 'ref' ? `<span class="dvst ref">Refusé par DOMetVIE${l.valAt ? ' le ' + esc(fd(l.valAt)) : ''} · hors total</span>`
   : l.st === 'val' ? `<span class="dvst val">${svgI(UI.check)}Validé par DOMetVIE${l.valAt ? ' le ' + esc(fd(l.valAt)) : ''}</span>` : '<span class="dvst att">En attente de validation DOMetVIE</span>';
 
 /* ---------- enregistrement : chaque modification part tout de suite dans le chantier (et la base) ---------- */
@@ -2405,12 +2561,12 @@ function renderSaveState() {
 }
 // une ligne déjà validée qui change repasse en orange ; DOMetVIE est prévenu
 function touch(l) {
-  if (!isArt(l) || l.st !== 'val') return;
+  if (!isArt(l) || (l.st !== 'val' && l.st !== 'ref')) return;
   l.st = 'att'; l.valAt = null; note('mod', l.id); refreshStat(l);
 }
 function refreshStat(l) {
   const row = $(`#lines [data-id="${l.id}"]`); if (!row) return;
-  row.classList.toggle('val', l.st === 'val'); row.classList.toggle('att', l.st !== 'val');
+  row.classList.toggle('val', l.st === 'val'); row.classList.toggle('ref', l.st === 'ref'); row.classList.toggle('att', l.st !== 'val' && l.st !== 'ref');
   const s = row.querySelector('.lstat .dvst'); if (s) s.outerHTML = statHTML(l);
 }
 /* Prévenir DOMetVIE et le technicien : regroupé pour ne pas envoyer une alerte par frappe */
@@ -2434,7 +2590,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && nqT
 /* ---------- aperçu ---------- */
 let prevT = null;
 function schedulePreview() { clearTimeout(prevT); prevT = setTimeout(renderPreview, 120); }
-function sheetsInto(host) { const L = Engine.layoutDevis(D, engineCfg()); host.innerHTML = L.pages.map(p => Engine.toSVG(p, IMGS)).join(''); return L.pages.length; }
+function sheetsInto(host) { const L = Engine.layoutDevis(DX(), engineCfg()); host.innerHTML = L.pages.map(p => Engine.toSVG(p, IMGS)).join(''); return L.pages.length; }
 function renderPreview() {
   if (!D || role !== 'afer' || $('#tab-devis').hidden) return;
   const n = sheetsInto($('#sheets'));
@@ -2459,9 +2615,10 @@ function renderTotals() {
 }
 // bandeau de l'onglet et ligne « Devis » de l'onglet Documents
 function paintState() {
-  const arts = devis.filter(isArt), att = arts.filter(l => l.st !== 'val');
-  const st = $('#dvstate'); st.className = 'dvstate ' + (att.length ? 'att' : 'val');
-  st.textContent = att.length ? att.length + ' ligne' + (att.length > 1 ? 's' : '') + ' en attente de validation DOMetVIE' : 'Devis complet : toutes les lignes sont validées par DOMetVIE';
+  const all = devis.filter(isArt), arts = all.filter(l => l.st !== 'ref'), att = arts.filter(l => l.st !== 'val'), ref = all.length - arts.length;
+  const st = $('#dvstate'); st.className = 'dvstate ' + (att.length || ref ? 'att' : 'val');
+  st.textContent = [att.length ? att.length + ' ligne' + (att.length > 1 ? 's' : '') + ' en attente de validation DOMetVIE' : ref ? 'Lignes restantes validées par DOMetVIE' : 'Devis complet : toutes les lignes sont validées par DOMetVIE',
+    ref ? ref + ' ligne' + (ref > 1 ? 's' : '') + ' refusée' + (ref > 1 ? 's' : '') + ' par DOMetVIE (hors total)' : ''].filter(Boolean).join(' · ');
   const miss = arts.filter(l => !(Number(l.pu) > 0)).length;
   const dp = $('#dvpill'); dp.textContent = att.length ? 'En attente' : 'Validé'; dp.className = 'pill ' + (att.length ? 'att' : 'val');
   $('#dvdocsub').textContent = (D.numero ? D.numero + ' · ' : '') + arts.length + ' ligne' + (arts.length > 1 ? 's' : '') + (miss ? ' · ' + miss + ' prix à compléter' : ' · ' + money(totals().ht).replace(/ /g, ' ') + ' HT');
@@ -2570,7 +2727,7 @@ function lineHTML(l, n) {
   const units = UNITS.includes(l.unit) || !l.unit ? UNITS : [...UNITS, l.unit];
   const tvaOpts = [['auto', `Auto ${Engine.rate(autoRate(l.cat || 'C')).replace(' ', ' ')}`], ['0', '0 %'], ['0.055', '5,5 %'], ['0.1', '10 %'], ['0.2', '20 %']];
   const tvaVal = l.tvaMode === 'manual' ? String(Number(l.tva)) : 'auto';
-  return `<div class="line ${l.st === 'val' ? 'val' : 'att'}" data-id="${l.id}">
+  return `<div class="line ${l.st === 'val' ? 'val' : l.st === 'ref' ? 'ref' : 'att'}" data-id="${l.id}">
     <div class="lnum">${n}</div>
     <div class="lmain">
       <textarea class="inp ldes auto" rows="1" data-lf="designation" placeholder="Désignation de la prestation" aria-label="Désignation">${esc(l.designation)}</textarea>
@@ -2849,8 +3006,9 @@ function bindDrawer() {
 /* ---------- PDF / impression ---------- */
 function checkDevis() {
   const issues = [];
-  const arts = D.lines.filter(isArt);
+  const arts = D.lines.filter(l => isArt(l) && l.st !== 'ref'), nref = D.lines.filter(l => l.st === 'ref').length;
   if (!arts.length) issues.push({ block: true, t: 'Le devis ne contient aucune prestation.' });
+  if (nref) issues.push({ t: `${nref} ligne${nref > 1 ? 's' : ''} refusée${nref > 1 ? 's' : ''} par DOMetVIE : hors total et hors PDF.` });
   if (!D.client.nom.trim()) issues.push({ block: true, t: 'Le nom du client est vide.' });
   if (!D.objet.trim()) issues.push({ t: 'L’objet du devis est vide.' });
   if (!D.client.adresse1.trim() || !D.client.ville.trim()) issues.push({ t: 'L’adresse du client est incomplète.' });
@@ -2882,7 +3040,7 @@ async function exportPDF(btn) {
   btn.disabled = true;
   try {
     await LIB.jspdf();
-    const L = Engine.layoutDevis(D, engineCfg());
+    const L = Engine.layoutDevis(DX(), engineCfg());
     const num = D.numero || 'provisoire';
     const blob = Engine.toPDF(window.jspdf.jsPDF, L.pages, DATA.fonts, IMGS, { title: `Devis ${num}`, author: 'Agence Française des Energies Renouvelables' });
     const filename = `devis_${num.replace(/[\/\\]/g, '_')}_${CH.nom.trim().replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_|_$/g, '')}.pdf`;
@@ -2891,6 +3049,7 @@ async function exportPDF(btn) {
   finally { btn.disabled = false; }
 }
 async function deliver(blob, filename) {
+  odDevis(blob, filename);
   const dl = await cap('downloads');
   if (dl) {
     try { const r = await dl.save({ filename, data: blob }); if (r?.status === 'saved') toast('PDF enregistré'); return; }
@@ -2903,7 +3062,7 @@ async function deliver(blob, filename) {
 function printDevis() {
   ensureNumber();
   let pa = $('#dvPrintArea'); if (!pa) { pa = document.createElement('div'); pa.id = 'dvPrintArea'; document.body.appendChild(pa); }
-  const L = Engine.layoutDevis(D, engineCfg());
+  const L = Engine.layoutDevis(DX(), engineCfg());
   pa.innerHTML = L.pages.map(p => Engine.toSVG(p, IMGS)).join('');
   document.body.classList.add('dvprint');
   addEventListener('afterprint', () => document.body.classList.remove('dvprint'), { once: true });
@@ -2974,13 +3133,15 @@ function openCatalogModal() {
 function importPack(j, fname, out) {
   const cat = j && (j.catalogue || (Array.isArray(j.rows) ? j : null));
   if (!cat || !Array.isArray(cat.rows) || !cat.rows.length) { out.innerHTML = '<div class="box err"><h3>Fichier non reconnu</h3><p style="margin:0">Ce fichier JSON ne contient pas de bibliothèque de prix AFER.</p></div>'; return; }
-  const parts = [`${cat.rows.length} prestations`]; if (j.reglages) parts.push('en-tête et pied de page société'); if (j.images && j.images.sig) parts.push('signature'); if (j.pv_cachet) parts.push('cachet DOMetVIE du PV');
+  const parts = [`${cat.rows.length} prestations`]; if (j.reglages) parts.push('en-tête et pied de page société'); if (j.images && j.images.sig) parts.push('signature'); if (j.pv_cachet) parts.push('cachet DOMetVIE du PV'); if (j.bpu_provisoire) parts.push('BPU salle de bain provisoire');
   out.innerHTML = `<div class="box ok"><h3>${esc(fname)}</h3><p style="margin:0 0 8px">Contient : ${esc(parts.join(', '))}.</p><div class="addbar"><button class="btn primary" id="impGo">Importer</button></div></div>`;
   $('#impGo').addEventListener('click', () => {
     DS.saveCatalog({ ...cat, source: cat.source || fname });
     if (j.reglages) { S = mergeSettings({ ...S, ...j.reglages }); DS.saveSettings(S); }
     if (j.images) DS.saveImages(j.images);
     if (j.pv_cachet) { GS.set('pv_cachet', j.pv_cachet); cachet(); }
+    if (j.bpu_provisoire && bpuProv(j.bpu_provisoire)) { GS.set('bpu', bpu); renderBPU(); }
+    $('#dvimp').hidden = true;
     onCatalogChanged(); toast('Paramètres du devis importés'); openCatalogModal();
   });
 }
@@ -3078,11 +3239,11 @@ function renderRead() {
   const host = $('#rdLines');
   host.innerHTML = D.lines.map(l => {
     if (!isArt(l)) return `<div class="lgroup">${esc(l.designation)}</div>`;
-    n++; const tot = Math.round((Number(l.qty) || 0) * Math.round((Number(l.pu) || 0) * 100)), val = l.st === 'val', priced = Number(l.pu) > 0;
-    return `<div class="rline ${val ? 'val' : 'att'}" data-id="${esc(l.id)}">
+    n++; const tot = Math.round((Number(l.qty) || 0) * Math.round((Number(l.pu) || 0) * 100)), val = l.st === 'val', ref = l.st === 'ref', priced = Number(l.pu) > 0;
+    return `<div class="rline ${val ? 'val' : ref ? 'ref' : 'att'}" data-id="${esc(l.id)}">
       <div class="rmain"><b>${n}. ${esc(labelOf(l))}</b>${l.detail ? `<small>${esc(l.detail)}</small>` : ''}
         <div class="rnum">${esc(Engine.num(Number(l.qty) || 0))} ${esc(Engine.unitLabel(l.unit))} × ${priced ? esc(moneyE(l.pu)) + ' HT' : 'prix à venir'}</div><div class="thumbs" data-th></div></div>
-      <div class="rside"><b class="rtot">${priced ? esc(money(tot)) : '—'}</b>${statHTML(l)}${val ? '' : `<button class="btn primary" data-ok>${svgI(UI.check)}Valider</button>`}</div></div>`;
+      <div class="rside"><b class="rtot">${priced && !ref ? esc(money(tot)) : '—'}</b>${statHTML(l)}${val ? '' : `<div class="rbtns">${ref ? '' : '<button class="btn danger" data-no>Refuser</button>'}<button class="btn primary" data-ok>${svgI(UI.check)}Valider</button></div>`}</div></div>`;
   }).join('') || '<p class="hint">Aucune ligne pour l’instant.</p>';
   D.lines.forEach(l => { if (isArt(l) && !l.base) thumbs(host.querySelector(`[data-id="${l.id}"] [data-th]`), l); });
   $('#rdTots').innerHTML = `<div class="tot"><span>Total HT</span><b>${money(t.ht)}</b></div><div class="tot"><span>${esc(tvaText(t))}</span><b>${money(t.tva)}</b></div><div class="tot ttc"><span>Total TTC</span><b>${money(t.ttc)}</b></div>`;
@@ -3092,6 +3253,18 @@ function validate(id) {
   const l = devis.find(x => x.id === id); if (!l || l.st === 'val') return;
   l.st = 'val'; l.valAt = iso(); save('devis', devis);
   notify(['afer'], 'DOMetVIE a validé : ' + labelOf(l), 'devis'); renderAll();
+}
+// refus : la ligne reste visible en rouge, hors total ; AFER reçoit le motif. Une modification d'AFER la remet en attente.
+function refuse(id) {
+  const l = devis.find(x => x.id === id); if (!l || l.st === 'ref' || l.base) return;
+  const w = openModal('Refuser la ligne', `<p style="margin:0 0 10px"><b>${esc(labelOf(l))}</b></p><label class="field"><span>Motif, envoyé à AFER</span><textarea class="inp" id="refWhy" rows="3" placeholder="ex. déjà compris dans le forfait, quantité à revoir…"></textarea></label>`,
+    '<button class="btn ghost" data-close>Annuler</button><button class="btn danger" id="refGo">Refuser la ligne</button>', 'sm');
+  setTimeout(() => w.querySelector('#refWhy').focus(), 30);
+  w.querySelector('#refGo').addEventListener('click', () => {
+    const why = w.querySelector('#refWhy').value.trim();
+    l.st = 'ref'; l.valAt = iso(); save('devis', devis); closeModal();
+    notify(['afer'], 'DOMetVIE a refusé : ' + labelOf(l) + (why ? ' · motif : ' + why : ''), 'devis'); renderAll();
+  });
 }
 
 /* ---------- AFER : demandes du technicien ---------- */
@@ -3139,7 +3312,7 @@ function boot() {
   $('#lotChips').addEventListener('click', e => { const b = e.target.closest('[data-lot]'); if (b) openDrawer(b.dataset.lot); });
   $('#lotTiles').addEventListener('click', e => { const b = e.target.closest('[data-lot]'); if (b) openDrawer(b.dataset.lot); });
   $('#emptyFree').addEventListener('click', () => addFreeLine());
-  $('#rdLines').addEventListener('click', e => { const b = e.target.closest('[data-ok]'); if (b) validate(b.closest('[data-id]').dataset.id); });
+  $('#rdLines').addEventListener('click', e => { const b = e.target.closest('[data-ok]'), x = e.target.closest('[data-no]'); if (b) validate(b.closest('[data-id]').dataset.id); else if (x) refuse(x.closest('[data-id]').dataset.id); });
   $('#rdShow').addEventListener('click', () => { const h = $('#rdSheets'); h.hidden = !h.hidden; $('#rdShow .lbl').textContent = h.hidden ? 'Voir le devis complet' : 'Masquer le devis complet'; if (!h.hidden) sheetsInto(h); });
   $('#rdPDF').addEventListener('click', e => exportPDF(e.currentTarget));
   document.addEventListener('keydown', e => {
@@ -3153,6 +3326,7 @@ function render() {
   // le premier passage d'AFER enregistre l'en-tête par défaut du chantier
   if (role === 'afer' && CH.key !== '_vide' && LS.get('devisinfo', null) == null) persist();
   paintState(); renderReqs();
+  $('#dvimp').hidden = !(role === 'afer' && !CAT.afer);
   if ($('#tab-devis').hidden) return;
   if (role === 'afer') { renderHeader(); fillForm(); renderLines(); renderTotals(); renderMentionsInfo(); renderSaveState(); renderPreview(); }
   else if (role === 'domevie') renderRead();
@@ -3165,6 +3339,12 @@ function par(cle, v) {
 }
 // avant de changer de chantier : les alertes en attente partent pour le bon chantier
 function flush() { if (nqT) flushNotes(); closeDrawer(); closeModal(); D = null; savedAt = null; }
+// import des paramètres depuis le bandeau de l'onglet Devis
+$('#dvimpIn').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return; const out = $('#dvimpOut');
+  try { importPack(JSON.parse(await f.text()), f.name, out); } catch (err) { out.innerHTML = `<div class="box err"><h3>Fichier non reconnu</h3><p style="margin:0">${esc(err.message || err)}</p></div>`; }
+  e.target.value = '';
+});
 return { render, addLine, baseLine, mig, par, flush };
 })();
 
@@ -3178,7 +3358,7 @@ cvar.onclick=()=>{if(role!=="afer")return;CH.variant=CH.variant==="avec"?"sans":
 if(SB_URL&&SB_KEY){if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   document.querySelector(".proto")?.remove(); // la mention « données sur cet appareil » ne vaut que pour la démo
   if(window.supabase)SB.start();else showGate('<h2>Connexion impossible</h2><p class="sub">Pas de connexion internet. Réessayez quand le réseau revient.</p><button class="btn" onclick="location.reload()">Réessayer</button>')}
-else{loadChantier(CH.key);paintVar();idb().then(()=>{initScene();setRole(role)})}
+else{loadChantier(CH.key);paintVar();idb().then(()=>{initScene();setRole(role);odInit()})}
 </script>
 
 </body>
