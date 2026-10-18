@@ -120,6 +120,10 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:14px}
 .ring .bgc{stroke:var(--surface-2)} .ring .fgc{stroke:var(--turq);stroke-linecap:round;transition:stroke-dashoffset .4s}
 .ring text{font-family:var(--display);font-size:16px;font-weight:700;fill:var(--fg)}
 .step-h h3{font-size:21px;line-height:1.1}
+.step-hw{display:flex;align-items:center}.step-hw .step-h{flex:1;min-width:0}
+.manu{margin:14px 0 4px;padding-left:22px;display:grid;gap:12px}.manu textarea{display:block;width:100%;min-height:120px;margin-top:6px}
+.stepal{flex:none;margin-right:10px;border:1px solid var(--line);background:var(--surface);color:var(--warn);border-radius:20px;font-weight:700;font-size:13px;padding:6px 10px;white-space:nowrap}
+.stepal.on{background:var(--bad-bg);border-color:transparent;color:var(--bad)}
 .step-h p{margin:2px 0 0;font-size:13px;color:var(--muted)}
 .cnt{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums;color:var(--muted);text-align:right;line-height:1.1}
 .cnt small{display:block;font-family:var(--body);font-size:11px}
@@ -695,7 +699,7 @@ table.dv input.num{width:90px;text-align:right}
 
   <!-- MISSION : fiche générée depuis la fiche du chantier -->
   <section id="tab-mission">
-    <div class="row" data-roles="afer" style="margin-bottom:12px"><button class="btn sec" id="medit">Modifier la fiche du chantier</button><button class="btn sec" id="mlire">Remplir la mission depuis les documents</button><button class="btn sec" id="mnew">＋ Nouveau chantier</button><button class="btn sec" id="mlinks" hidden>Liens d'accès</button></div>
+    <div class="row" data-roles="afer" style="margin-bottom:12px"><button class="btn sec" id="medit">Modifier la fiche du chantier</button><button class="btn sec" id="mlire">Remplir la mission depuis les documents</button><button class="btn sec" id="mmanu">Remplir avec Claude (manuel)</button><button class="btn sec" id="mnew">＋ Nouveau chantier</button><button class="btn sec" id="mlinks" hidden>Liens d'accès</button></div>
     <div class="cols" id="missioncols"></div>
   </section>
 
@@ -1651,7 +1655,9 @@ function renderSuivi(){
   S.forEach((s,i)=>{
     const L=list(s.id),p=prog(s);
     const box=document.createElement("div");box.className="step"+(p>=1?" done":"")+(i===ci&&p<1?" cur":"");
-    box.innerHTML=`<button class="step-h" aria-expanded="${open===s.id}">${ring(p)}<div><h3>${i+1}. ${s.t}</h3><p>À photographier : ${s.shots.join(" · ")}</p></div><span class="cnt">${L.length}/${MIN}<small>${L.length>=MIN?"validée":"minimum"}</small></span></button>`;
+    const npb=pbs.filter(x=>x.step===s.id&&x.st!=="done").length;
+    box.innerHTML=`<div class="step-hw"><button class="step-h" aria-expanded="${open===s.id}">${ring(p)}<div><h3>${i+1}. ${s.t}</h3><p>À photographier : ${s.shots.join(" · ")}</p></div><span class="cnt">${L.length}/${MIN}<small>${L.length>=MIN?"validée":"minimum"}</small></span></button><button class="stepal${npb?" on":""}" data-stepal title="Signaler un problème sur cette étape">⚠${npb?" "+npb+" en cours":" Signaler"}</button></div>`;
+    box.querySelector("[data-stepal]").onclick=()=>openPb(s.id);
     box.querySelector(".step-h").onclick=()=>{open=open===s.id?"":s.id;save("open",open);renderSuivi()};
     if(open===s.id){const b=document.createElement("div");b.className="step-b";b.appendChild(grid(s.id,s.t,s.shots));
       if(ed&&L.length>=MAX){const f=document.createElement("p");f.className="full";f.textContent="Maximum de "+MAX+" photos atteint. Supprimez-en une pour en ajouter une autre.";b.appendChild(f)}
@@ -1684,14 +1690,14 @@ function toast(t){const e=document.getElementById("toast");if(document.getElemen
 function renderAlerts(){
   const el=document.getElementById("alerts");el.innerHTML="";
   pbs.forEach(p=>{const d=document.createElement("div");d.className="alertitem"+(p.st==="done"?" done":"");
-    d.innerHTML=`<div class="row" style="justify-content:space-between"><strong>⚠ ${esc(p.type)}</strong><span class="pill ${p.st==="done"?"val":"bad"}">${p.st==="done"?"Traité":"En cours"}</span></div>${p.note?`<p>${esc(p.note)}</p>`:""}<p class="sub">Signalé le ${ft(p.at)}${p.step?" · "+esc((ALL_STEPS.find(s=>s.id===p.step)||{}).t||""):""}</p><div class="shot" data-ph></div>${p.rep?`<p><b>Réponse AFER :</b> ${esc(p.rep)}</p>`:""}`;
+    d.innerHTML=`<div class="row" style="justify-content:space-between"><strong>⚠ ${esc(p.type)}</strong><span class="pill ${p.st==="done"?"val":"bad"}">${p.st==="done"?"Traité":"En cours"}</span></div>${p.note?`<p>${esc(p.note)}</p>`:""}<p class="sub">Signalé le ${ft(p.at)}${p.by?" par "+ROLE_NAME[p.by]:""}${p.step?" · "+esc((ALL_STEPS.find(s=>s.id===p.step)||{}).t||""):""}</p><div class="shot" data-ph></div>${p.rep||p.st==="done"?`<p><b>Traité${p.doneBy?" par "+ROLE_NAME[p.doneBy]:""}${p.doneAt?" le "+ft(p.doneAt):""}${p.rep?" :":""}</b> ${esc(p.rep||"")}</p>`:""}`;
     if(p.photo){const s=d.querySelector("[data-ph]");imgInto(s,p.photo,"Problème : "+p.type)}
-    if(role==="afer"&&p.st!=="done"){const f=document.createElement("div");f.className="form";f.innerHTML=`<label>Ce qui a été fait<textarea data-rep placeholder="ex. technicien rappelé, client recontacté, RDV décalé au…"></textarea></label><div class="row"><button class="btn ok sm" data-ok>Marquer traité</button></div>`;
-      f.querySelector("[data-ok]").onclick=()=>{p.rep=f.querySelector("[data-rep]").value.trim();p.st="done";p.doneAt=iso();save("pbs",pbs);notify(["tech","domevie"],"Problème traité : "+p.type,"suivi");renderAll()};d.appendChild(f)}
+    if((role==="afer"||role==="domevie")&&p.st!=="done"){const f=document.createElement("div");f.className="form";f.innerHTML=`<label>Ce qui a été fait<textarea data-rep placeholder="ex. technicien rappelé, client recontacté, RDV décalé au…"></textarea></label><div class="row"><button class="btn ok sm" data-ok>Marquer traité</button></div>`;
+      f.querySelector("[data-ok]").onclick=()=>{p.rep=f.querySelector("[data-rep]").value.trim();p.st="done";p.doneAt=iso();p.doneBy=role;save("pbs",pbs);notify(["afer","tech","domevie"].filter(r=>r!==role),"Problème traité : "+p.type,"suivi");renderAll()};d.appendChild(f)}
     el.appendChild(d)});
 }
-function openPb(step){let photo=null;
-  sheet(`<h2>Signaler un problème</h2><div class="form"><label>Type de problème<select id="pb-type">${PB_TYPES.map(t=>`<option>${t}</option>`).join("")}</select></label><label>Ce qui se passe<textarea id="pb-note" placeholder="Décrire en quelques mots"></textarea></label>${SHOT(CAM+" Photo (facultatif)")}</div><p class="sub" style="margin:0">AFER et DOMetVIE sont prévenus tout de suite.</p><div class="row"><button class="btn sec" data-close>Annuler</button><button class="btn warn" id="pb-send">Envoyer le signalement</button></div>`,
+function openPb(step){let photo=null;const st=step&&ALL_STEPS.find(x=>x.id===step);
+  sheet(`<h2>Signaler un problème${st?" · "+esc(st.t):""}</h2><div class="form"><label>Type de problème<select id="pb-type">${PB_TYPES.map(t=>`<option${st&&t==="Imprévu technique"?" selected":""}>${t}</option>`).join("")}</select></label><label>Ce qui se passe<textarea id="pb-note" placeholder="Décrire en quelques mots"></textarea></label>${SHOT(CAM+" Photo (facultatif)")}</div><p class="sub" style="margin:0">AFER et DOMetVIE sont prévenus tout de suite.</p><div class="row"><button class="btn sec" data-close>Annuler</button><button class="btn warn" id="pb-send">Envoyer le signalement</button></div>`,
   el=>{shotField(el,k=>photo=k);el.querySelector("#pb-send").onclick=()=>{const p={id:uid(),type:el.querySelector("#pb-type").value,note:el.querySelector("#pb-note").value.trim(),photo,step:step||null,at:iso(),st:"open",by:role};pbs.unshift(p);save("pbs",pbs);notify(["afer","domevie"].filter(r=>r!==role),"Problème signalé : "+p.type,"suivi");closeSheet();gsay("Signalement envoyé");renderAll()}})}
 
 /* ===== Travaux en plus : demande du technicien, ou ajout direct par AFER ===== */
@@ -1770,6 +1776,42 @@ function paintLec(){const l=lecEtat(),h=lecHTML(l);lecK=l?l.etat+"|"+l.etape+"|"
 setInterval(()=>{const l=lecEtat(),k=l?l.etat+"|"+l.etape+"|"+l.pct:"";if(k!==lecK){paintLec();return}
   if(!l||l.etat!=="en_cours")return;const p=lecPct(l);document.querySelectorAll("[data-lec]").forEach(z=>{z.querySelector(".lbar i").style.width=p+"%";z.querySelector("[data-lpct]").textContent=p+" %"})},1000);
 document.addEventListener("click",e=>{if(e.target.closest("[data-relire]"))lireDocs(true)});
+/* Secours : remplissage de la mission « à la main » avec Claude (claude.ai), si la lecture automatique ne passe pas.
+   AFER copie la consigne, la colle dans Claude avec les documents, recolle la réponse : seuls les champs vides sont remplis. */
+const MANU_CH=["ville","adresse","etage","acces","client","tel","dispo","conducteur","retraits","materiel","travaux","verifs"];
+const MANU_CONSIGNE=`Ces documents sont transmis par DOMetVIE, donneur d'ordre, à AFER, entreprise de travaux, pour un chantier de rénovation de salle de bain adaptée aux personnes à mobilité réduite : compte rendu de prévisite technique, liste des produits à récupérer, bons de commande, plans ou photos.
+Remplis la fiche mission du technicien à partir de ces documents uniquement.
+- N'invente rien : une information absente des documents reste vide ("" ou []).
+- Recopie à l'identique les adresses, numéros de téléphone, codes d'accès et numéros ou codes de retrait.
+- Matériel : un article par élément, avec référence, dimensions et quantité quand elles sont écrites.
+- Travaux : des actions courtes, compréhensibles par le technicien, dans l'ordre du chantier.
+- Points à vérifier : seulement les vraies incohérences entre documents ou les informations indispensables qui manquent.
+Réponds uniquement par ce JSON rempli, sans aucun texte autour :
+{"ville":"commune, sans code postal","adresse":"numéro, rue, code postal, commune","etage":"étage, bâtiment, escalier, ascenseur","acces":"digicode ou interphone","client":"nom du bénéficiaire","tel":"téléphone du bénéficiaire","dispo":"disponibilités ou date prévue, telles qu'écrites","conducteur":"téléphone (et nom) du conducteur de travaux DOMetVIE","variante":"avec | sans | inconnu (avec = dépose ou démolition de l'existant)","retraits":[{"lieu":"fournisseur, ex. CEDEO","adresse":"adresse du retrait","code":"numéro ou code de retrait","articles":"résumé court, ex. 11 articles : receveur, colonne…"}],"materiel":["un article par élément"],"travaux":["une action par élément"],"verifs":["une incohérence ou info manquante par élément"]}`;
+function manuLire(t){const i=t.indexOf("{"),j=t.lastIndexOf("}");if(i<0||j<i)throw new Error("pas de JSON");return JSON.parse(t.slice(i,j+1))}
+// même règle que la lecture automatique (fonction « lire-documents ») : on n'écrase rien de ce qui est déjà rempli
+function manuFusion(fiche,lu){const f={...fiche},remplis=[],vide=v=>v==null||(typeof v==="string"&&!v.trim())||(Array.isArray(v)&&!v.length);
+  MANU_CH.forEach(k=>{let v=lu[k];
+    if(k==="retraits")v=(Array.isArray(v)?v:[]).map(r=>({lieu:String(r&&r.lieu||"").trim(),adresse:String(r&&r.adresse||"").trim(),code:String(r&&r.code||"").trim(),articles:String(r&&r.articles||"").trim()})).filter(r=>r.lieu||r.adresse);
+    else if(Array.isArray(v))v=v.map(x=>String(x).trim()).filter(Boolean);else v=typeof v==="string"?v.trim():"";
+    if(vide(f[k])&&!vide(v)){f[k]=v;remplis.push(k)}});
+  const lv=lu.variante,fv=f.variante||"avec";
+  if((lv==="avec"||lv==="sans")&&lv!==fv){const n=`Variante : les documents indiquent « ${lv} démolition », la fiche dit « ${fv} démolition ».`,vf=Array.isArray(f.verifs)?f.verifs:[];if(!vf.includes(n)){f.verifs=[...vf,n];if(!remplis.includes("verifs"))remplis.push("verifs")}}
+  return{fiche:f,remplis}}
+function openManu(){
+  sheet(`<h2>Remplir la mission avec Claude</h2><p class="sub" style="margin:0">Méthode de secours, 1 minute par chantier. Seuls les champs encore vides sont remplis.</p>
+  <ol class="manu"><li><button class="btn sec" id="mn-cp">Copier la consigne</button></li>
+  <li>Ouvrir <a href="https://claude.ai/new" target="_blank" rel="noopener">claude.ai</a>, joindre les documents du chantier (prévisite, liste du matériel…), coller la consigne, envoyer.</li>
+  <li>Copier la réponse de Claude et la coller ici :<textarea id="mn-rep" placeholder='{"ville": "…", "adresse": "…", …}'></textarea></li></ol>
+  <p class="sub" id="mn-msg"></p>
+  <div class="row"><button class="btn sec" data-close>Annuler</button><button class="btn" id="mn-ok">Remplir la mission</button></div>`,
+  el=>{const cp=el.querySelector("#mn-cp");cp.onclick=()=>{try{navigator.clipboard.writeText(MANU_CONSIGNE).then(()=>{cp.textContent="Consigne copiée";gsay("Consigne copiée")},()=>gsay("Copie impossible : sélectionne la consigne"))}catch(e){gsay("Copie impossible")}};
+    el.querySelector("#mn-ok").onclick=()=>{const m=el.querySelector("#mn-msg");let lu;
+      try{lu=manuLire(el.querySelector("#mn-rep").value)}catch(e){m.textContent="Réponse non reconnue : colle toute la réponse de Claude (elle commence par « { »).";m.style.color="var(--bad)";return}
+      const old=CH.fiche,{fiche:nf,remplis}=manuFusion(old,lu);nf.lecture={etat:"fini",pct:100,maj:iso(),manuel:true};
+      chantiers=chantiers.map(c=>c.id===old.id?nf:c);GS.set("chantiers",chantiers);closeSheet();switchChantier(old.id);
+      gsay(remplis.length?remplis.length+" rubrique"+(remplis.length>1?"s":"")+" remplie"+(remplis.length>1?"s":""):"Rien de nouveau : la mission était déjà remplie")}})}
+document.getElementById("mmanu").onclick=openManu;
 document.getElementById("mlire").onclick=()=>{if(!docs.some(d=>(d.cat||"dmv")==="dmv")){gsay("Ajoute d'abord les documents du chantier (onglet Documents)");return}lireDocs(true)};
 
 /* ===== Matériel : bons de livraison dépôt -> chantier ; factures et dépenses ===== */
@@ -2226,7 +2268,7 @@ async function pull(){if(pulling)return;pulling=true;const c=SB.c;
     SB.online=true}
   catch(e){console.warn("Lecture impossible",e);SB.online=false}
   finally{pulling=false;paintSync();if(SB.ready)paintBell();odSoon()}}
-function setChantiers(L){const cur=CH.key;chantiers=L;rawGS("chantiers",L);chBase=new Map(L.map(x=>[x.id,cj(x)]));
+function setChantiers(L){const cur=CH.key;if(SB.lien&&SB.lien.ch&&!SB.afer)L=L.filter(x=>x.id===SB.lien.ch);chantiers=L;rawGS("chantiers",L);chBase=new Map(L.map(x=>[x.id,cj(x)]));
   if(!SB.ready)return;const c=L.find(x=>x.id===cur);
   if(!c){later(()=>switchChantier((L[0]||{}).id||"_vide"));return}
   if(cj(c)!==cj(CH.fiche))later(()=>{CH.fiche=c;CH.ville=c.ville;CH.nom=nomCh(c);
@@ -2302,7 +2344,9 @@ SB.start=async()=>{showGate('<p class="sub">Chargement du chantier…</p>');awai
   if(tok){if(!session){const r=await SB.c.auth.signInAnonymously();if(r.error)return showGate(`<h2>Connexion impossible</h2><p class="sub">${navigator.onLine?"Le service ne répond pas. Réessayez dans un instant.":"Pas de connexion internet. Réessayez quand le réseau revient."}</p><button class="btn" onclick="location.reload()">Réessayer</button>`);session=r.data.session}
     const j=await SB.c.rpc("rejoindre",{p_token:tok});
     if(j.error&&!/fetch|network/i.test(j.error.message))return showGate('<h2>Lien désactivé</h2><p class="sub">Ce lien n\'est plus valide. Demandez un nouveau lien à AFER.</p>');
-    if(j.data){SB.tokRole=j.data.role;SB.tokCh=j.data.chantier_id;GS.set("role",j.data.role)}}
+    if(j.data){SB.tokRole=j.data.role;SB.tokCh=j.data.chantier_id;GS.set("role",j.data.role);GS.set("lien:"+tok,{role:j.data.role,ch:j.data.chantier_id})}
+    // un lien = un seul espace : ouvert par un lien, l'appareil n'affiche que l'espace de ce lien (même s'il en a ouvert d'autres avant)
+    SB.lien=j.data?{role:j.data.role,ch:j.data.chantier_id}:GS.get("lien:"+tok,null);if(SB.lien){SB.tokRole=SB.lien.role;SB.tokCh=SB.lien.ch}}
   if(!session)return showLogin();
   enter(session)};
 async function enter(session){SB.uid=session.user.id;showGate('<p class="sub">Chargement du chantier…</p>');
@@ -2311,6 +2355,7 @@ async function enter(session){SB.uid=session.user.id;showGate('<p class="sub">Ch
     else{const m=await SB.c.rpc("mes_acces");if(m.error)throw m.error;SB.roles=[...new Set((m.data||[]).map(x=>x.role))]}
     GS.set("roles",SB.roles);GS.set("afer",SB.afer)}
   catch(e){SB.roles=GS.get("roles",[]);SB.afer=GS.get("afer",false)} // hors ligne : on reprend le dernier état connu
+  if(SB.lien&&(SB.afer||SB.roles.includes(SB.lien.role)))SB.roles=[SB.lien.role];
   if(!SB.roles.length)return showGate('<h2>Accès désactivé</h2><p class="sub">Ce téléphone n\'a plus accès à aucun chantier. Demandez un nouveau lien à AFER.</p>');
   await pull();
   role=SB.tokRole&&SB.roles.includes(SB.tokRole)?SB.tokRole:SB.roles.includes(GS.get("role",""))?GS.get("role",""):SB.roles[0];
