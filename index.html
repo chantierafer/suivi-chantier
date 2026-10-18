@@ -952,7 +952,7 @@ table.dv input.num{width:90px;text-align:right}
       </div>
       <div class="card" data-roles="afer">
         <h2>Copie dans SharePoint</h2>
-        <p class="sub" style="margin:0 0 10px">Le programme de synchro du PC du bureau recopie chaque minute la fiche, les photos, les documents, le PV, les bons de livraison et les frais de tous les chantiers dans data - Documents &gt; Suivi Chantier SDB (un dossier par chantier), que OneDrive envoie sur SharePoint. Rien n'est supprimé côté SharePoint.</p>
+        <p class="sub" style="margin:0 0 10px">Toutes les 3 minutes, la fiche, les photos, les documents, le PV, les bons de livraison et les frais de tous les chantiers sont copiés directement dans SharePoint (data - Documents &gt; Suivi Chantier SDB, un dossier par chantier), sans PC allumé. Rien n'est supprimé côté SharePoint.</p>
         <div id="odbox"></div>
         <div class="row" style="margin:0 0 12px" id="odact"></div>
         <div class="tree" id="tree"></div>
@@ -2344,7 +2344,7 @@ document.getElementById("mlinks").onclick=openLinks;
 /* ===== Copie dans SharePoint : le PC AFER recopie les fichiers de tous les chantiers dans le dossier OneDrive choisi =====
    OneDrive envoie ensuite ce dossier sur SharePoint. Chrome ou Edge sur ordinateur (accès à un dossier du PC).
    Chaque fichier n'est écrit qu'une fois ; rien n'est supprimé côté OneDrive.
-   Désactivée : c'est le programme de synchro du PC du bureau (synchro-sharepoint) qui copie vers SharePoint ; window.OD_APP=true la réactive. */
+   Désactivée : c'est la fonction Supabase copie-sharepoint (côté serveur, sans PC) qui copie vers SharePoint ; window.OD_APP=true la réactive. */
 var OD={ok:!!window.OD_APP&&"showDirectoryPicker" in window,h:null,perm:"",run:false,again:false,t:null,n:0,err:"",said:false,
   last:GS.get("od-last",null),noms:GS.get("od-noms",{}),fait:GS.get("od-fait",{})};
 function odKV(k,v){return new Promise(res=>{if(!db)return res(null);try{const tx=db.transaction("img",v===undefined?"readonly":"readwrite"),st=tx.objectStore("img"),r=v===undefined?st.get(k):st.put(v,k);r.onsuccess=()=>res(v===undefined?r.result||null:true);r.onerror=()=>res(null)}catch(e){res(null)}})}
@@ -2421,7 +2421,7 @@ async function odDevis(blob,filename){if(!OD.h||OD.perm!=="granted")return;const
 function odPaint(){const b=document.getElementById("odbox"),a=document.getElementById("odact");if(!b||!OD)return;
   let t,c="odbox",btn="";
   const tr=document.getElementById("tree");if(tr)tr.hidden=!OD.ok;
-  if(!window.OD_APP)t="Si rien n'arrive dans SharePoint : vérifier que le PC du bureau est allumé, session ouverte, et que le programme de synchro y est installé.";
+  if(!window.OD_APP)t="Si rien n'arrive dans SharePoint après quelques minutes : vérifier dans Supabase que la copie automatique est installée (fonction « copie-sharepoint »).";
   else if(!OD.ok)t="Ouvre l'appli sur le PC AFER avec Chrome ou Edge pour activer la copie.";
   else if(!OD.h){t="Aucun dossier choisi : choisis (ou crée) le dossier « Suivi Chantier SDB » dans ton OneDrive AFER.";btn='<button class="btn" data-od="pick">Choisir le dossier OneDrive</button>'}
   else if(OD.perm!=="granted"){c+=" warn";t="Copie en pause : Chrome demande de confirmer l'accès au dossier « "+esc(OD.h.name)+" ».";btn='<button class="btn" data-od="resume">Reprendre la copie</button><button class="btn sec" data-od="pick">Changer de dossier</button>'}
