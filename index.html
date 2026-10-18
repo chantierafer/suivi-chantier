@@ -1431,11 +1431,23 @@ const BPU_DEFAULT=[
  ["d4","Dépose et démolition","Dépose d'un lavabo ou meuble vasque","u"],
  ["d5","Dépose et démolition","Dépose d'un WC","u"],
  ["d6","Dépose et démolition","Évacuation des gravats en déchetterie","forfait"],
+ ["d7","Dépose et démolition","Dépose d'une douche ou d'un receveur existant","u"],
+ ["d8","Dépose et démolition","Dépose d'un bidet","u"],
+ ["d9","Dépose et démolition","Dépose d'un chauffe-eau électrique","u"],
+ ["d10","Dépose et démolition","Dépose de cloison légère (carreaux de plâtre ou plaque)","m²"],
+ ["d11","Dépose et démolition","Dépose de meubles, miroirs et accessoires","forfait"],
+ ["d12","Dépose et démolition","Dépose de revêtement de sol souple (PVC, lino)","m²"],
  ["s1","Supports et cloisons","Ragréage de sol","m²"],
  ["s2","Supports et cloisons","Reprise de support mural (rebouchage, enduit)","m²"],
  ["s3","Supports et cloisons","Cloison ou doublage en plaque hydrofuge","m²"],
  ["s4","Supports et cloisons","Coffrage de canalisations","ml"],
  ["s5","Supports et cloisons","Décaissé de sol pour receveur","forfait"],
+ ["s6","Supports et cloisons","Reprise de chape ou mortier de sol","m²"],
+ ["s7","Supports et cloisons","Renfort de plancher bois sous receveur","forfait"],
+ ["s8","Supports et cloisons","Création d'une niche murale dans la douche","u"],
+ ["s9","Supports et cloisons","Rebouchage de saignées et trémies","forfait"],
+ ["s10","Supports et cloisons","Renfort mural pour fixation de barre d'appui ou de siège","u"],
+ ["s11","Supports et cloisons","Étanchéité sous carrelage supplémentaire","m²"],
  ["p1","Plomberie","Déplacement d'une évacuation","u"],
  ["p2","Plomberie","Remplacement de canalisations d'alimentation","ml"],
  ["p3","Plomberie","Remplacement d'une vanne d'arrêt","u"],
@@ -1443,21 +1455,58 @@ const BPU_DEFAULT=[
  ["p5","Plomberie","Pose d'un mitigeur de lavabo","u"],
  ["p6","Plomberie","Pose d'un lavabo PMR","u"],
  ["p7","Plomberie","Pose d'un WC surélevé ou suspendu","u"],
+ ["p8","Plomberie","Remplacement du siphon et de l'évacuation d'un lavabo","u"],
+ ["p9","Plomberie","Création d'une alimentation eau froide et eau chaude","u"],
+ ["p10","Plomberie","Remplacement de canalisations d'évacuation PVC","ml"],
+ ["p11","Plomberie","Pose d'un mitigeur thermostatique de douche","u"],
+ ["p12","Plomberie","Pose d'un chauffe-eau électrique (100 à 200 L)","u"],
+ ["p13","Plomberie","Raccordement sur colonne collective (eau ou évacuation)","forfait"],
+ ["p14","Plomberie","Remplacement d'un mécanisme de chasse d'eau","u"],
+ ["p15","Plomberie","Recherche et réparation de fuite","forfait"],
+ ["p16","Plomberie","Débouchage de canalisation","forfait"],
  ["e1","Électricité et ventilation","Déplacement ou ajout d'un point électrique","u"],
  ["e2","Électricité et ventilation","Pose d'un luminaire étanche","u"],
  ["e3","Électricité et ventilation","Pose d'un extracteur d'air","u"],
+ ["e4","Électricité et ventilation","Pose d'un sèche-serviettes électrique","u"],
+ ["e5","Électricité et ventilation","Création d'une ligne électrique dédiée depuis le tableau","u"],
+ ["e6","Électricité et ventilation","Mise en sécurité électrique de la salle de bain (liaison équipotentielle)","forfait"],
+ ["e7","Électricité et ventilation","Pose d'un interrupteur différentiel 30 mA","u"],
+ ["e8","Électricité et ventilation","Remplacement d'un interrupteur ou d'une prise","u"],
+ ["e9","Électricité et ventilation","Pose d'un détecteur de présence pour l'éclairage","u"],
+ ["e10","Électricité et ventilation","Pose ou remplacement d'une bouche de VMC","u"],
  ["r1","Revêtements","Revêtement mural supplémentaire","m²"],
  ["r2","Revêtements","Revêtement de sol antidérapant","m²"],
  ["r3","Revêtements","Peinture murs et plafond pièce humide","m²"],
+ ["r4","Revêtements","Pose de panneaux muraux (PVC ou stratifié)","m²"],
+ ["r5","Revêtements","Pose de sol souple PVC antidérapant","m²"],
+ ["r6","Revêtements","Pose de plinthes","ml"],
+ ["r7","Revêtements","Réfection de joints silicone","ml"],
+ ["r8","Revêtements","Peinture de porte et huisseries","u"],
+ ["r9","Revêtements","Remplacement ponctuel de carreaux cassés","u"],
  ["m1","Équipements PMR","Barre d'appui supplémentaire","u"],
  ["m2","Équipements PMR","Élargissement de porte","u"],
  ["m3","Équipements PMR","Remplacement de porte","u"],
+ ["m4","Équipements PMR","Pose d'un siège de douche relevable","u"],
+ ["m5","Équipements PMR","Pose d'une porte coulissante en applique","u"],
+ ["m6","Équipements PMR","Suppression de seuil ou de ressaut de porte","u"],
+ ["m7","Équipements PMR","Pose d'un miroir inclinable","u"],
+ ["m8","Équipements PMR","Pose d'accessoires (patère, porte-serviettes, distributeur)","u"],
+ ["m9","Équipements PMR","Pose d'une barre de tirage de porte","u"],
  ["v1","Divers","Accès difficile, déplacement supplémentaire","forfait"],
- ["v2","Divers","Main-d'œuvre en régie","h"]
+ ["v2","Divers","Main-d'œuvre en régie","h"],
+ ["v3","Divers","Protection renforcée du logement et des parties communes","forfait"],
+ ["v4","Divers","Nettoyage approfondi de fin de chantier","forfait"],
+ ["v5","Divers","Retour sur chantier non imputable (client absent, accès impossible)","forfait"],
+ ["v6","Divers","Manutention sans ascenseur, par étage","u"],
+ ["v7","Divers","Frais de stationnement (Paris et petite couronne), par jour","u"]
 ].map(([id,cat,lib,u,pu])=>({id,cat,lib,u,pu:pu??null}));
-// BPU provisoire demandé par AFER le 18/10/2026 (un peu au-dessus de la moyenne), en attendant le BPU DOMetVIE.
+// BPU provisoire demandé par AFER le 18/10/2026 (un peu au-dessus de la moyenne Île-de-France, pose seule), en attendant le BPU DOMetVIE.
+// 18/10 après-midi : 45 lignes de travaux en plus ajoutées (prix et sources : deploiement/bpu-sdb-prix-idf.md).
 // Hors dépôt public (build.py le vide) : la version en ligne le reçoit avec parametres-devis-afer.json.
 const BPU_PROV=/*DV-BPU*/{}/*/DV-BPU*/;
+// lignes ajoutées au BPU par une mise à jour : insérées dans un BPU déjà enregistré, à la fin de leur rubrique (prix et libellés existants inchangés)
+function bpuMerge(B){if(!Array.isArray(B))return 0;const have=new Set(B.map(b=>b.id));let n=0;
+  BPU_DEFAULT.forEach(d=>{if(have.has(d.id))return;let i=-1;B.forEach((b,j)=>{if(b.cat===d.cat)i=j});B.splice(i<0?B.length:i+1,0,{...d});have.add(d.id);n++});return n}
 function bpuProv(P){let n=0;(bpu||[]).forEach(b=>{if((b.pu==null||b.pu==="")&&P&&P[b.id]!=null){b.pu=P[b.id];b.prov=true;n++}});return n}
 
 /* ===== Chantiers : chaque chantier a sa fiche et ses propres données ===== */
@@ -1483,7 +1532,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 
 /* ===== Données (prototype : stockées sur l'appareil) ===== */
 // Communes à tous les chantiers : BPU, notifications, rôle, historique
-let bpu=GS.get("bpu",null)||peek("saint-denis-v3","bpu",null)||BPU_DEFAULT.map(x=>({...x}));if(bpuProv(BPU_PROV))GS.set("bpu",bpu);
+let bpu=GS.get("bpu",null)||peek("saint-denis-v3","bpu",null)||BPU_DEFAULT.map(x=>({...x}));if(bpuMerge(bpu)+bpuProv(BPU_PROV))GS.set("bpu",bpu);
 let notifs=GS.get("notifs",null)||peek("saint-denis-v3","notifs",[]).map(n=>({...n,ch:"saint-denis-v3"}));
 // Propres au chantier ouvert (rechargées par loadChantier)
 let photos={},devis=[],dvinfo=null,reqs=[],pbs=[],docs=[],bls=[],frais=[],sav=[],closed=null;
@@ -2184,7 +2233,7 @@ function setChantiers(L){const cur=CH.key;chantiers=L;rawGS("chantiers",L);chBas
     if(!pv){F=pvF(c,peek(c.id,"pvfields",null));PVF.forEach(([i,k])=>document.getElementById(i).value=F[k]||"")}renderAll();if(!pv)paintFields()})}
 const evN=e=>({id:"e"+e.id,ch:e.chantier_id,to:e.pour||[],txt:e.texte,tab:e.type,at:e.created_at,par:e.par,seen:{afer:!!SEEN["e"+e.id+"|afer"],tech:!!SEEN["e"+e.id+"|tech"],domevie:!!SEEN["e"+e.id+"|domevie"]}});
 function onPar1(p){
-  if(p.cle==="bpu"&&SB.afer)later(()=>{if(cj(p.valeur)===cj(bpu))return;bpu=p.valeur;rawGS("bpu",bpu);if(SB.ready)renderAll()});
+  if(p.cle==="bpu"&&SB.afer)later(()=>{if(cj(p.valeur)===cj(bpu))return;bpu=p.valeur;if(bpuMerge(bpu))GS.set("bpu",bpu);else rawGS("bpu",bpu);if(SB.ready)renderAll()});
   else if(["catalogue","devis_reglages","devis_images","devis_compteur"].includes(p.cle))later(()=>{rawGS(p.cle,p.valeur);if(p.cle!=="devis_compteur"){DV.par(p.cle,p.valeur);if(SB.ready)renderDevis()}});
   else if(p.cle==="pv_cachet"){rawGS(p.cle,p.valeur);cachet()}
   else if(p.cle==="bpu_libelles"&&!SB.afer){bpu=(p.valeur||[]).map(x=>({...x,pu:null}));rawGS("bpu",bpu)}
