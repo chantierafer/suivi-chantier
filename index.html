@@ -3176,6 +3176,7 @@ return { render, addLine, baseLine, mig, par, flush };
 const cvar=document.getElementById("cvar");const paintVar=()=>cvar.textContent=CH.variant==="avec"?"Avec démolition":"Sans démolition";
 cvar.onclick=()=>{if(role!=="afer")return;CH.variant=CH.variant==="avec"?"sans":"avec";save("variant",CH.variant);paintVar();open=null;renderAll()};
 if(SB_URL&&SB_KEY){if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+  document.querySelector(".proto")?.remove(); // la mention « données sur cet appareil » ne vaut que pour la démo
   if(window.supabase)SB.start();else showGate('<h2>Connexion impossible</h2><p class="sub">Pas de connexion internet. Réessayez quand le réseau revient.</p><button class="btn" onclick="location.reload()">Réessayer</button>')}
 else{loadChantier(CH.key);paintVar();idb().then(()=>{initScene();setRole(role)})}
 </script>
