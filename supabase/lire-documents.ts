@@ -5,12 +5,15 @@
 // la variante (avec ou sans démolition) n'est jamais changée : un écart part dans « À vérifier ».
 // Appelée par l'appli (AFER ou DOMetVIE) après un dépôt de documents, ou par le bouton « Remplir la mission depuis les documents ».
 // Secret à créer dans Supabase > Edge Functions > Secrets : ANTHROPIC_API_KEY.
+// V10e (19/10) : modèle économique Haiku 5.5 en premier (environ 40 fois moins cher qu'Opus), Sonnet 5.5 en secours si la lecture échoue.
+// Pour changer de modèle sans toucher au code : secret MODELE_LECTURE (ex. claude-sonnet-5-5) dans les mêmes Secrets.
 // La fonction vérifie elle-même l'appelant (connexion AFER ou lien DOMetVIE) : la vérification JWT de la plateforme peut rester coupée.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
 import Anthropic, { toFile } from 'npm:@anthropic-ai/sdk@0.135.0'
 import { Buffer } from 'node:buffer'
 
-const MODELE = 'claude-opus-5-5'
+const MODELE = Deno.env.get('MODELE_LECTURE') || 'claude-haiku-5-5'
+const MODELE_SECOURS = 'claude-sonnet-5-5'
 // Supabase arrête la fonction après 150 s (offre gratuite) : la lecture et ses nouveaux essais tiennent dans ce délai
 const DELAI_MS = 140_000
 const MAX_OCTETS = 20 * 1024 * 1024 // sous la limite de 32 Mo par requête, encodage base64 compris
@@ -149,8 +152,8 @@ const repassable = (e: unknown) => {
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 type Essai = (n: number, total: number) => Promise<void> | void
-// Trois essais au plus dans le délai : si le service répond par une erreur passagère (502, 529…), on relance ;
-// le dernier essai passe sans l'option de repli (beta), au cas où ce serait elle qui bloque.
+// Trois essais au plus dans le délai : si le service répond par une erreur passagère (502, 529…) ou si la réponse
+// est inutilisable (refus, JSON illisible), on relance avec le modèle de secours. L'option de repli serveur (beta) ne sert qu'avec Opus.
 // Les documents passent d'abord par l'API Files (envoi séparé, plus sûr pour les gros scans), puis sont supprimés.
 // Si l'envoi séparé échoue, ils repartent dans la demande elle-même (base64), comme en V9.
 async function contenuDe(client: Anthropic, pieces: Piece[], ids: string[]): Promise<Bloc[]> {
@@ -193,15 +196,16 @@ async function lecture(apiKey: string, contenu: Bloc[], surEssai: Essai | undefi
     if (reste < 25_000) break
     if (i > 1) await surEssai?.(i, ESSAIS)
     const client = new Anthropic({ apiKey, timeout: reste - 5_000, maxRetries: 0 })
+    const modele = i === 1 ? MODELE : MODELE_SECOURS
     const demande = {
-      model: MODELE,
+      model: modele,
       max_tokens: 16000,
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } }, // extraction : effort bas = lecture plus rapide
+      output_config: { effort: modele.includes('haiku') ? 'medium' : 'low', format: { type: 'json_schema', schema: SCHEMA } }, // extraction : effort bas, sauf Haiku (scans)
       // deno-lint-ignore no-explicit-any
       messages: [{ role: 'user', content: contenu as any }],
     }
     try {
-      const rep = i < ESSAIS
+      const rep = modele.includes('opus') && i < ESSAIS
         // si le modèle décline, l'API relance la demande sur le modèle de repli recommandé
         // deno-lint-ignore no-explicit-any
         ? await client.beta.messages.stream({ ...demande, betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } as any).finalMessage()
@@ -212,7 +216,7 @@ async function lecture(apiKey: string, contenu: Bloc[], surEssai: Essai | undefi
       derniere = e
       essais.push(`essai ${i} : ${detailApi(e)}`)
       console.error('lire-documents : essai', i, (e as { requestID?: string })?.requestID ?? '', detailApi(e))
-      if (!repassable(e)) { Object.assign(e as object, { essais }); throw e }
+      if (!repassable(e) && !(e as { lecture?: boolean })?.lecture) { Object.assign(e as object, { essais }); throw e }
       await pause(Math.min(3_000 * i, Math.max(0, fin - Date.now() - 25_000)))
     }
   }
@@ -220,12 +224,14 @@ async function lecture(apiKey: string, contenu: Bloc[], surEssai: Essai | undefi
   throw derniere ?? new Error('lecture trop longue')
 }
 
+// Une réponse inutilisable est marquée « lecture » : l'essai suivant repart sur le modèle de secours
 function lireReponse(rep: { stop_reason: string; content: { type: string; text?: string }[] }): Lu {
-  if (rep.stop_reason === 'refusal') throw new Error('lecture refusée par le modèle')
-  if (rep.stop_reason === 'max_tokens') throw new Error('réponse trop longue')
+  const ko = (m: string) => Object.assign(new Error(m), { lecture: true })
+  if (rep.stop_reason === 'refusal') throw ko('lecture refusée par le modèle')
+  if (rep.stop_reason === 'max_tokens') throw ko('réponse trop longue')
   const bloc = rep.content.find((b) => b.type === 'text') as { text: string } | undefined
-  if (!bloc) throw new Error('réponse vide')
-  return JSON.parse(bloc.text)
+  if (!bloc) throw ko('réponse vide')
+  try { return JSON.parse(bloc.text) } catch { throw ko('réponse illisible') }
 }
 
 // Avancement visible dans l'appli (fiche.lecture) : étape, pourcentage, erreur. Lu par AFER et DOMetVIE.

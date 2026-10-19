@@ -136,20 +136,34 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:14px}
 .jbar{height:18px;border-radius:9px;background:var(--surface-2);overflow:hidden;display:flex}.jbar i{display:block;height:100%}
 .jchips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}.jchips .sub{margin:0}
 .jc{font-weight:700;padding:5px 11px;border-radius:14px;background:var(--surface-2);font-size:13px}.jc.lost{background:var(--lost-bg);color:var(--lost)}.jc.ok{background:var(--jact);color:var(--jact-ink)}
-.jplan{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}.jplan select{width:auto;min-height:36px;padding:4px 8px}
-.jrib{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
-.jb{min-height:128px;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:3px;text-align:left;border:1.5px solid transparent;font-size:12.5px;line-height:1.3;background:var(--surface-2);color:var(--fg)}
-.jb .jd{font-size:11px;font-weight:600;opacity:.85}.jb b{font-weight:700}.jb .jm{font-size:11.5px}
-.jb.val{background:var(--turq);color:#0E3D3D}.jb.act{background:var(--jact);color:var(--jact-ink)}.jb.lost{background:var(--lost-bg);color:var(--lost)}
-.jb.vide{color:var(--muted)}.jb.fut{background:transparent;border:1.5px dashed var(--muted);color:var(--muted)}.jb.fut b{color:var(--fg)}
-.jb.now{background:var(--anth);color:#fff;outline:3px solid var(--turq);outline-offset:2px}
-.jb .jt{margin-top:auto;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.jk{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px}
+.jkc{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px;background:var(--surface)}
+.jkc .jkl{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.jkc .jkv{font-family:var(--display);font-size:40px;font-weight:700;line-height:1}.jkc .jkv small{font-size:22px;color:var(--muted)}
+.jkc .jks{font-size:13px;color:var(--muted)}
+.jcells{display:flex;gap:3px;flex-wrap:wrap}.jcells i{flex:1 1 0;min-width:14px;height:16px;border-radius:3px;background:var(--surface-2);font-style:normal;font-size:10px;font-weight:700;display:grid;place-items:center;color:var(--muted)}
+.jcells i.val{background:var(--turq);color:#0E3D3D}.jcells i.cur{background:var(--anth);color:#fff}.jcells i.lost{background:var(--lost-bg);color:var(--lost);box-shadow:inset 0 0 0 1px var(--lost)}.jcells i.over{background:var(--bad);color:#fff}.jcells i.used{background:var(--muted);color:#fff}
+.jcells i.plan{box-shadow:inset 0 0 0 1.5px var(--bad)}
+.jfr{overflow-x:auto;padding:4px 2px 8px}.jfi{display:flex;gap:10px;align-items:stretch;min-width:min-content}
+.jframe{position:relative;display:flex;gap:8px;border:2.5px dashed var(--bad);border-radius:12px;padding:30px 8px 8px}
+.jframe>.jfl,.jout>.jfl{position:absolute;top:6px;left:10px;font-size:12px;font-weight:700;color:var(--bad);text-transform:uppercase;letter-spacing:.06em}
+.jout{position:relative;display:flex;gap:8px;padding:30px 0 8px}.jout>.jfl{left:2px}
+.jcol{width:168px;flex:0 0 168px;display:flex;flex-direction:column;gap:6px;text-align:left;padding:0;border:0;background:none;color:var(--fg)}
+.jcol .jch{font-size:13px;font-weight:700}.jcol .jch small{display:block;font-weight:500;color:var(--muted);font-size:11.5px}
+.jseg{height:14px;border-radius:7px;background:var(--surface-2)}.jseg.val{background:var(--turq)}.jseg.act{background:var(--jact);box-shadow:inset 0 0 0 1.5px var(--turq)}.jseg.lost{background:var(--lost)}.jseg.now{background:var(--anth)}.jseg.fut{background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted);background-image:repeating-linear-gradient(90deg,transparent 0 6px,var(--surface-2) 6px 10px)}
+.jcum{display:flex;align-items:baseline;gap:6px}.jcum b{font-family:var(--display);font-size:26px;line-height:1}.jcum b.ok{color:var(--turq-ink)}.jcum b.ko{color:var(--bad)}.jcum span{font-size:11.5px;color:var(--muted)}
+.jli{border-left:2px solid var(--line);margin-left:6px;padding:2px 0 2px 10px;display:grid;gap:4px;font-size:12.5px;line-height:1.3;flex:1}
+.jli>span{position:relative}.jli>span::before{content:"";position:absolute;left:-11px;top:.6em;width:8px;border-top:2px solid var(--line)}
+.jli .v{font-weight:700;color:var(--turq-ink)}.jli .c{font-weight:700}.jli .l{font-weight:700;color:var(--lost)}.jli .p{color:var(--bad)}.jli .m{color:var(--muted)}.jli .f{color:var(--muted)}.jli .f b{color:var(--fg)}
+.jcol.now .jch{color:var(--fg)}.jcol.now .jli{border-left-color:var(--anth)}
+button.jcol:hover .jseg{filter:brightness(.95)}button.jcol{cursor:pointer}
 .jleg{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}.jleg span{display:inline-flex;gap:6px;align-items:center}.jleg i{display:inline-block;width:22px;height:12px;border-radius:3px}
 .jall{display:grid;gap:8px}.jrow{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(120px,2fr) auto;gap:6px 14px;align-items:center;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 .jrow.cur{border-color:var(--turq);box-shadow:inset 0 0 0 1px var(--turq)}.jrow .jrn{font-weight:700}.jrow .jrn small{display:block;font-weight:500;color:var(--muted);font-size:12px}
-.jmini{display:flex;flex-wrap:wrap;gap:3px}.jmini i{width:14px;height:14px;border-radius:3px;background:var(--surface-2)}.jmini i.val{background:var(--turq)}.jmini i.act{background:var(--jact);box-shadow:inset 0 0 0 1px var(--turq)}.jmini i.lost{background:var(--lost)}.jmini i.now{background:var(--anth)}.jmini i.fut{background:transparent;box-shadow:inset 0 0 0 1px var(--muted)}
+.jmini{display:flex;flex-wrap:wrap;gap:3px;align-items:center}.jmini i{width:14px;height:14px;border-radius:3px;background:var(--surface-2)}.jmini i.val{background:var(--turq)}.jmini i.act{background:var(--jact);box-shadow:inset 0 0 0 1px var(--turq)}.jmini i.lost{background:var(--lost)}.jmini i.now{background:var(--anth)}.jmini i.fut{background:transparent;box-shadow:inset 0 0 0 1px var(--muted)}
 .jrow .jrv{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;font-size:12.5px}
 @media (max-width:640px){.jrow{grid-template-columns:1fr}.jrow .jrv{justify-content:flex-start}}
+.jmini .jmf{display:inline-flex;gap:3px;padding:2px;border:1.5px dashed var(--bad);border-radius:5px}
 .jdt{font-size:19px;margin:6px 0 8px}
 .jstat{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}.jstat span{background:var(--surface-2);border-radius:8px;padding:6px 10px;font-weight:700;font-size:14px}.jstat span.bad{background:var(--bad-bg);color:var(--bad)}
 .manu{margin:14px 0 4px;padding-left:22px;display:grid;gap:12px}.manu textarea{display:block;width:100%;min-height:120px;margin-top:6px}
@@ -720,13 +734,13 @@ table.dv input.num{width:90px;text-align:right}
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="mission" aria-selected="true">Mission</button>
-    <button role="tab" data-tab="suivi" aria-selected="false">Suivi</button><button role="tab" data-tab="journal" aria-selected="false">Journal</button>
+    <button role="tab" data-tab="suivi" aria-selected="false">Suivi</button>
     <button role="tab" data-tab="devis" aria-selected="false">Devis</button>
     <button role="tab" data-tab="pv" aria-selected="false">PV de réception</button>
     <button role="tab" data-tab="docs" aria-selected="false">Documents</button>
     <button role="tab" data-tab="frais" aria-selected="false">Matériel et frais</button>
     <button role="tab" data-tab="bpu" aria-selected="false">BPU</button>
-    <button role="tab" data-tab="sav" aria-selected="false">SAV et clôture</button>
+    <button role="tab" data-tab="sav" aria-selected="false">SAV et clôture</button><button role="tab" data-tab="journal" aria-selected="false">Journal</button>
   </nav>
 
   <!-- MISSION : fiche générée depuis la fiche du chantier -->
@@ -738,7 +752,7 @@ table.dv input.num{width:90px;text-align:right}
   <!-- SUIVI : 1 réception du matériel, 2 étapes des travaux, 3 travaux supplémentaires -->
   <section id="tab-journal" hidden>
     <div class="card"><h2>Tous les chantiers</h2><p class="sub" style="margin:0 0 10px">Visible par AFER seulement. Un chantier par ligne, dès la photo de réception du matériel. Touche une ligne pour ouvrir son graphe.</p><div id="jall"></div></div>
-    <div class="card"><h2>Journal du chantier</h2><p class="sub" style="margin:0 0 10px">Visible par AFER seulement. Le graphe se met à jour à chaque photo, signalement, document, travaux en plus ou validation. Touche une demi-journée pour la noter perdue avec sa cause.</p>
+    <div class="card"><h2>Journal du chantier</h2><p class="sub" style="margin:0 0 10px">Visible par AFER seulement. Objectif : une salle de bain en 2 jours (cadre rouge). La frise se met à jour à chaque photo, signalement, document, travaux en plus ou validation. Touche une demi-journée pour la noter perdue avec sa cause.</p>
       <div id="jgraph"></div><h3 class="jdt">Détail par demi-journée</h3><div id="jbilan"></div><div id="jdays"></div></div>
   </section>
   <section id="tab-suivi" hidden>
@@ -1631,7 +1645,7 @@ const extras=()=>devis.filter(l=>l.kind!=="titre"&&!l.base&&l.ph!==false&&l.st!=
 const extraDone=l=>list("x:"+l.id+":av").length>0&&list("x:"+l.id+":ap").length>0;
 
 /* ===== Rôles : AFER (tout), Technicien, DOMetVIE ===== */
-const TABS={afer:["mission","suivi","journal","devis","pv","docs","frais","bpu","sav"],tech:["mission","suivi","pv","docs","frais"],domevie:["suivi","devis","pv","docs"]};
+const TABS={afer:["mission","suivi","devis","pv","docs","frais","bpu","sav","journal"],tech:["mission","suivi","pv","docs","frais"],domevie:["suivi","devis","pv","docs"]};
 const ROLE_NAME={afer:"AFER",tech:"Technicien",domevie:"DOMetVIE"};
 let role=GS.get("role",null)||peek("saint-denis-v3","role","tech");if(!TABS[role])role="tech";
 const canPhoto=()=>role==="afer"||(role==="tech"&&!closed);
@@ -2072,14 +2086,14 @@ function jEvents(){const E=[],add=(at,txt)=>{if(at&&!isNaN(Date.parse(at)))E.pus
   devis.forEach(l=>{if(l.valAt)add(l.valAt,(l.st==="ref"?"Ligne refusée par DOMetVIE : ":"Ligne validée par DOMetVIE : ")+(l.designation||""))});
   if(pv&&pv.at)add(pv.at,"PV de réception signé");if(closed&&closed.at)add(closed.at,"Chantier clôturé");
   return E.sort((a,b)=>a.at.localeCompare(b.at))}
-/* ===== Graphe du journal (AFER seul, validé par Djalil le 19/10 : maquette 2, double jauge + ruban) =====
-   Temps écoulé (demi-journées ouvrées depuis la réception du matériel) face à l'avancement (étapes à 2 photos).
-   Durée de référence indicative : une SDB = 2 à 3 jours ; 6 demi-journées par défaut, modifiable par chantier (journal._plan). */
-const J_PLAN_DEF=6;
+/* ===== Graphe du journal (AFER seul). 19/10 : maquette 2 validée, puis demande Djalil + patron : objectif fixe de 2 jours
+   (4 demi-journées) dans un cadre rouge pointillé, frise linéaire par demi-journée, chaque demi-journée liste ce qui a été fait,
+   étapes comptées en numéros (4/12). Temps = demi-journées ouvrées depuis la photo de réception du matériel. ===== */
+const J_PLAN=4;
 const jSK=at=>jKey(at)+"|"+jHalf(at);
 const jNx=k=>{const[d,h]=k.split("|");if(h==="am")return d+"|pm";const x=new Date(d+"T12:00:00");x.setDate(x.getDate()+1);return jKey(x)+"|am"};
 const jWk=k=>new Date(k.split("|")[0]+"T12:00:00").getDay()%6!==0;
-const jLbl=k=>{const[d,h]=k.split("|"),w=new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"}).replace(".","");return w[0].toUpperCase()+w.slice(1)+" · "+(h==="am"?"matin":"après-midi")};
+const jDate=k=>new Date(k.split("|")[0]+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}).replace(/\./g,"");
 const jPl=(n,a,b)=>n+" "+(n>1?b:a);
 function chData(id){if(id===CH.key)return{photos,pbs,reqs,docs,devis,bls,frais,sav,closed,J:LS.get("journal",{})||{},variant:CH.variant};
   const c=chantiers.find(x=>x.id===id)||{},g=(k,d)=>{try{const v=localStorage.getItem(id+":"+k);return v?JSON.parse(v):d}catch(e){return d}};
@@ -2087,48 +2101,59 @@ function chData(id){if(id===CH.key)return{photos,pbs,reqs,docs,devis,bls,frais,s
   return{photos:g("photos",{})||{},pbs:g("pbs",[])||[],reqs:g("reqs",[])||[],docs:g("docs",[])||[],devis:dv,bls:g("bls",[])||[],frais:g("frais",[])||[],sav:g("sav",[])||[],closed:g("closed",null),J:g("journal",{})||{},variant:g("variant",c.variante||"avec")}}
 function jModel(id){const D=chData(id),S=ALL_STEPS.filter(s=>!s.opt||D.variant==="avec"),J=D.J,ok=a=>a&&!isNaN(Date.parse(a));
   const L=k=>((D.photos||{})[k]||[]).map(p=>p&&p.at).filter(ok).sort(),m0=L("materiel");if(!m0.length)return null;
-  const start=m0[0],plan=Math.max(1,+((J._plan||{}).dj)||J_PLAN_DEF),closedF=!!(D.closed&&D.closed.at),endK=jSK(closedF?D.closed.at:new Date());
+  const start=m0[0],plan=J_PLAN,closedF=!!(D.closed&&D.closed.at),endK=jSK(closedF?D.closed.at:new Date());
   const A={},T={ph:0,pb:0,pbok:0,req:0,doc:0,dv:0,bl:0,fr:0,sav:0},bump=(at,f,v)=>{if(!ok(at))return;const k=jSK(at),o=A[k]=A[k]||{ph:0,val:[],pb:0,pbok:0,req:0,doc:0,dv:0,bl:0,fr:0,sav:0};if(f==="val")o.val.push(v);else{o[f]++;T[f]++}};
   Object.values(D.photos||{}).forEach(P=>(P||[]).forEach(p=>p&&bump(p.at,"ph")));
-  let done=0,full=0,cur=null;const U=[];S.forEach(s=>{const P=L(s.id);done+=Math.min(P.length,MIN)/MIN;if(P.length>=MIN){full++;bump(P[MIN-1],"val",s.t)}else{if(P.length&&!cur)cur=s.t;U.push(s.t)}});
+  let done=0,full=0,cur=null;const U=[],VK={};S.forEach((s,n)=>{const P=L(s.id),x={n:n+1,t:s.t};done+=Math.min(P.length,MIN)/MIN;if(P.length>=MIN){full++;bump(P[MIN-1],"val",x);VK[n]=jSK(P[MIN-1])}else{if(P.length&&!cur)cur=x;U.push(x)}});
   D.pbs.forEach(x=>{bump(x.at,"pb");if(x.doneAt)bump(x.doneAt,"pbok")});D.reqs.forEach(x=>bump(x.at,"req"));D.docs.forEach(x=>bump(x.at,"doc"));
   (D.devis||[]).forEach(l=>{if(l&&l.valAt&&l.st!=="ref")bump(l.valAt,"dv")});D.bls.forEach(x=>bump(x.at,"bl"));D.frais.forEach(x=>bump(x.at,"fr"));D.sav.forEach(x=>bump(x.at,"sav"));
   const past=[];for(let k=jSK(start),n=0;k<=endK&&n<600;k=jNx(k),n++)if(jWk(k)||A[k]||J[k])past.push(k);if(!past.length)past.push(jSK(start));
-  const total=S.length,elapsed=past.length,lostK=past.filter(k=>(J[k]||{}).perdue),remain=Math.max(0,total-done);
-  const worked=elapsed-lostK.length,pace=done>0&&worked>=2?done/worked:total/plan,remSlots=closedF||remain<=0?0:Math.max(1,Math.ceil(remain/pace-1e-9));
-  const estIdx=closedF||remain<=0?null:elapsed-1+remSlots,planIdx=plan-1,nFut=closedF?0:Math.min(40,Math.max(remSlots,plan-elapsed,0));
+  const total=S.length,elapsed=past.length,lostK=past.filter(k=>(J[k]||{}).perdue),remain=Math.max(0,total-done),worked=elapsed-lostK.length;
+  const pace=done>0&&worked>=2?done/worked:total/plan,remSlots=closedF||remain<=0?0:Math.max(1,Math.ceil(remain/pace-1e-9));
+  const estIdx=closedF||remain<=0?null:elapsed-1+remSlots,nFut=closedF?0:Math.min(40,Math.max(remSlots,plan-elapsed,0));
   const nowK=jSK(new Date()),slots=past.map((k,i)=>({k,i,a:A[k]||null,j:J[k]||{},now:!closedF&&k===nowK,proj:[]}));
-  let k=past[past.length-1];for(let i=0;i<nFut;i++){do k=jNx(k);while(!jWk(k));slots.push({k,i:elapsed+i,fut:true,proj:[]})}
-  const P2=U.filter(t=>t!==cur||!slots.some(s=>s.now));P2.forEach((t,i)=>{const s=slots[elapsed+Math.min(remSlots-1,Math.floor(i*remSlots/P2.length))];if(s)s.proj.push(t)});
+  let k=past[past.length-1];for(let i=0;i<nFut;i++){do k=jNx(k);while(!jWk(k));slots.push({k,i:elapsed+i,fut:true,proj:[],j:{}})}
+  const nowSlot=slots.some(s=>s.now),P2=U.filter(x=>!(cur&&x.n===cur.n&&nowSlot));P2.forEach((x,i)=>{const s=slots[elapsed+Math.min(remSlots-1,Math.floor(i*remSlots/P2.length))];if(s)s.proj.push(x)});
+  // numéro du jour (J1, J2…) et cumul des étapes validées à la fin de chaque demi-journée, face à l'objectif linéaire
+  const days=[...new Set(slots.map(s=>s.k.split("|")[0]))];slots.forEach(s=>{s.day=days.indexOf(s.k.split("|")[0])+1;s.cum=s.fut?null:Object.values(VK).filter(v=>v<=s.k).length;s.obj=Math.min(total,Math.round(total*(s.i+1)/plan))});
   const causes={};lostK.forEach(x=>{const c=J[x].cause||"Autre";causes[c]=(causes[c]||0)+1});
-  const lastIdx=remain<=0&&!closedF?elapsed-1:estIdx,retard=closedF?elapsed-1-planIdx:(lastIdx==null?0:lastIdx-planIdx);
-  return{id,start,plan,elapsed,total,done,full,cur,pct:total?done/total*100:0,lost:lostK.length,causes,slots,planIdx,estIdx,retard,closed:closedF,fini:remain<=0,T,
-    planK:(slots[planIdx]||{}).k||null,estK:estIdx!=null&&slots[estIdx]?slots[estIdx].k:null}}
+  const lastIdx=remain<=0&&!closedF?elapsed-1:estIdx,retard=closedF?elapsed-1-(plan-1):(lastIdx==null?0:lastIdx-(plan-1));
+  const objNow=Math.min(total,Math.round(total*elapsed/plan));
+  return{id,start,plan,elapsed,total,done,full,cur,pct:total?done/total*100:0,lost:lostK.length,causes,slots,estIdx,retard,objNow,closed:closedF,fini:remain<=0,T,VK,
+    estK:estIdx!=null&&slots[estIdx]?slots[estIdx].k:null}}
 function jState(s){return s.fut?"fut":s.now?"now":s.j.perdue?"lost":s.a&&s.a.val.length?"val":s.a?"act":"vide"}
-function jRetard(M){return M.closed?(M.retard>0?`<span class="jc lost">Clôturé avec ${jPl(M.retard,"demi-journée","demi-journées")} de retard</span>`:'<span class="jc ok">Clôturé dans les temps</span>'):M.retard>0?`<span class="jc lost">Retard estimé : ${jPl(M.retard,"demi-journée","demi-journées")}</span>`:'<span class="jc ok">Dans les temps</span>'}
-function jGraphHTML(M){const tp=Math.min(100,M.elapsed/M.plan*100),T=M.T;
-  const tot=[jPl(T.ph,"photo","photos"),T.pb&&jPl(T.pb,"problème signalé","problèmes signalés")+(T.pbok?" ("+T.pbok+" traité"+(T.pbok>1?"s":"")+")":""),T.req&&jPl(T.req,"demande de travaux en plus","demandes de travaux en plus"),T.dv&&jPl(T.dv,"ligne de devis validée","lignes de devis validées"),T.doc&&jPl(T.doc,"document","documents"),T.bl&&jPl(T.bl,"bon de livraison","bons de livraison"),T.fr&&jPl(T.fr,"dépense","dépenses"),T.sav&&jPl(T.sav,"SAV","SAV")].filter(Boolean).join(" · ");
-  const meta=a=>[a.ph&&jPl(a.ph,"photo","photos"),a.pb&&"⚠ "+jPl(a.pb,"problème","problèmes"),a.pbok&&jPl(a.pbok,"problème traité","problèmes traités"),a.req&&jPl(a.req,"travaux en plus","travaux en plus"),a.dv&&jPl(a.dv,"ligne validée","lignes validées"),a.doc&&jPl(a.doc,"document","documents"),a.bl&&"Bon de livraison",a.fr&&jPl(a.fr,"dépense","dépenses"),a.sav&&"SAV"].filter(Boolean).map(t=>`<span class="jm">${t}</span>`).join("");
-  const tag=s=>[s.k===M.planK&&"Fin prévue",s.k===M.estK&&"Fin estimée"].filter(Boolean).join(" · ");
-  const blk=s=>{const st=jState(s),t=tag(s);if(s.fut)return `<div class="jb fut"><span class="jd">${jLbl(s.k)}</span>${s.proj.length?"<span>prévu</span>"+s.proj.map(x=>`<b>${esc(x)}</b>`).join(""):""}${t?`<span class="jt">${t}</span>`:""}</div>`;
-    const a=s.a||{val:[]};return `<button class="jb ${st}${s.j.perdue&&s.now?" lost":""}" data-j="${s.k}" aria-label="${jLbl(s.k)}, noter"><span class="jd">${jLbl(s.k)}</span>${s.j.perdue?`<b>Perdue</b><span>${esc(s.j.cause||"")}</span>`:""}${a.val.map(x=>`<b>${esc(x)}</b>`).join("")}${s.now&&M.cur?`<span>En cours : ${esc(M.cur)}</span>`:""}${meta(a)}${s.j.note?`<span class="jm">Note : ${esc(s.j.note.length>50?s.j.note.slice(0,48)+"…":s.j.note)}</span>`:""}${!s.a&&!s.j.perdue&&!s.now?"<span>Aucune activité</span>":""}${s.now||t?`<span class="jt">${[s.now&&"Maintenant",t].filter(Boolean).join(" · ")}</span>`:""}</button>`};
-  const opts=[3,4,5,6,7,8,10,12].map(v=>`<option value="${v}"${v===M.plan?" selected":""}>${v} demi-journées (${String(v/2).replace(".",",")} j)</option>`).join("");
-  return `<div class="jg"><div class="jga"><div class="jgt"><span>Temps écoulé</span><small><b>${Math.round(M.elapsed/M.plan*100)} %</b>${jPl(M.elapsed,"demi-journée","demi-journées")} sur ${M.plan} prévues${M.elapsed>M.plan?" · dépassé":""}</small></div><div class="jbar"><i style="width:${tp}%;background:${M.elapsed>M.plan?"var(--lost)":"var(--muted)"}"></i></div></div>
-    <div class="jga"><div class="jgt"><span>Avancement du chantier</span><small><b style="color:var(--turq-ink)">${fmtPct(M.pct)} %</b>${M.full} étape${M.full>1?"s":""} sur ${M.total}${M.cur?", en cours : "+esc(M.cur):""}</small></div><div class="jbar"><i style="width:${M.pct}%;background:var(--turq)"></i></div></div>
-    <div class="jchips">${jRetard(M)}<span class="jc${M.lost?" lost":""}">${jPl(M.lost,"demi-journée perdue","demi-journées perdues")}${M.lost?" : "+Object.entries(M.causes).map(([c,n])=>esc(c)+" "+n).join(" · "):""}</span><span class="sub">Fin prévue ${M.planK?jLbl(M.planK).toLowerCase():"?"}${M.closed?"":M.fini?" · toutes les étapes validées":M.estK?" · fin estimée "+jLbl(M.estK).toLowerCase():""}</span></div>
-    <p class="sub" style="margin:0">${tot}</p>
-    <div class="jrib">${M.slots.map(blk).join("")}</div>
-    <div class="jleg"><span><i style="background:var(--turq)"></i>Étape validée</span><span><i style="background:var(--jact)"></i>Activité</span><span><i style="background:var(--anth)"></i>Maintenant</span><span><i style="border:1.5px dashed var(--muted)"></i>Prévu (estimé)</span><span><i style="background:var(--lost-bg);box-shadow:inset 0 0 0 1px var(--lost)"></i>Perdue</span></div>
-    <label class="jplan">Durée de référence (indicatif, une SDB = 2 à 3 jours)<select id="jplan">${opts}</select></label></div>`}
+function jRetard(M){return M.closed?(M.retard>0?`<span class="jc lost">Clôturé avec ${jPl(M.retard,"demi-journée","demi-journées")} de retard</span>`:'<span class="jc ok">Clôturé dans les 2 jours</span>'):M.retard>0?`<span class="jc lost">Retard estimé : ${jPl(M.retard,"demi-journée","demi-journées")}</span>`:'<span class="jc ok">Dans les 2 jours</span>'}
+const jHN=s=>"J"+s.day+" · "+(s.k.endsWith("am")?"matin":"après-midi");
+function jGraphHTML(M){const S=ALL_STEPS.filter(s=>!s.opt||chData(M.id).variant==="avec"),T=M.T,last=M.slots.filter(s=>!s.fut).pop()||{},used=M.elapsed;
+  const cellsE=S.map((s,n)=>`<i class="${M.VK[n]?"val":M.cur&&M.cur.n===n+1?"cur":""}" title="${n+1} · ${esc(s.t)}">${n+1}</i>`).join("");
+  const nT=Math.max(M.plan,used),cellsT=Array.from({length:nT},(_,i)=>{const s=M.slots[i];const c=i<used?((s&&s.j.perdue)?"lost":i>=M.plan?"over":"used"):"";return `<i class="${c}${i<M.plan?" plan":""}">${i+1}</i>`}).join("");
+  const kpi=`<div class="jk"><div class="jkc"><span class="jkl">Étapes validées</span><span class="jkv">${M.full}<small>/${M.total}</small></span><div class="jcells" aria-hidden="true">${cellsE}</div><span class="jks">${M.cur?"En cours : étape "+M.cur.n+" · "+esc(M.cur.t):M.fini?"Toutes les étapes sont validées":"Prochaine : étape "+(M.full+1)}</span></div>
+    <div class="jkc"><span class="jkl">Délai : 2 jours</span><span class="jkv">${used}<small>/${M.plan} demi-journées</small></span><div class="jcells" aria-hidden="true">${cellsT}</div><span class="jks">${used>M.plan?"Délai dépassé de "+jPl(used-M.plan,"demi-journée","demi-journées"):"Il reste "+jPl(M.plan-used,"demi-journée","demi-journées")+" dans le délai"}</span></div>
+    <div class="jkc"><span class="jkl">Où on en est</span><span class="jkv" style="color:${M.full>=M.objNow?"var(--turq-ink)":"var(--bad)"}">${M.full}<small> faites / ${M.objNow} prévues à cette heure</small></span>${jRetard(M)}<span class="jks">${M.closed?"Chantier clôturé":M.fini?"Toutes les étapes sont validées":M.estK?"Fin estimée : "+jHN(M.slots[M.estIdx])+" ("+jDate(M.estK)+")":""}</span></div></div>`;
+  const it=(c,t)=>`<span class="${c}">${t}</span>`;
+  const col=s=>{const a=s.a||{val:[]},st=jState(s),L=[];
+    if(s.fut){s.proj.forEach(x=>L.push(it("f","Prévu : <b>"+x.n+" · "+esc(x.t)+"</b>")));if(!L.length)L.push(it("m","—"))}
+    else{if(s.j.perdue)L.push(it("l","Perdue : "+esc(s.j.cause||"")));a.val.forEach(x=>L.push(it("v","✓ "+x.n+" · "+esc(x.t))));if(s.now&&M.cur)L.push(it("c","En cours : "+M.cur.n+" · "+esc(M.cur.t)));
+      if(a.pb)L.push(it("p","⚠ "+jPl(a.pb,"problème signalé","problèmes signalés")));if(a.pbok)L.push(it("m",jPl(a.pbok,"problème traité","problèmes traités")));if(a.req)L.push(it("m",jPl(a.req,"demande de travaux en plus","demandes de travaux en plus")));
+      if(a.dv)L.push(it("m",jPl(a.dv,"ligne de devis validée","lignes de devis validées")));if(a.doc)L.push(it("m",jPl(a.doc,"document","documents")));if(a.bl)L.push(it("m","Bon de livraison"));if(a.fr)L.push(it("m",jPl(a.fr,"dépense","dépenses")));if(a.sav)L.push(it("m","SAV"));
+      if(a.ph)L.push(it("m",jPl(a.ph,"photo","photos")));if(s.j.note)L.push(it("m","Note : "+esc(s.j.note.length>60?s.j.note.slice(0,58)+"…":s.j.note)));if(!L.length)L.push(it("m","Aucune activité"))}
+    const cum=s.fut?`<div class="jcum"><span>objectif ${s.obj}/${M.total}</span></div>`:`<div class="jcum"><b class="${s.cum>=s.obj?"ok":"ko"}">${s.cum}/${M.total}</b><span>objectif ${s.obj}/${M.total}</span></div>`;
+    const inner=`<span class="jch">${jHN(s)}${s.now?" · maintenant":""}<small>${jDate(s.k)}${s.k===M.estK?" · fin estimée":""}</small></span><span class="jseg ${st}"></span>${cum}<span class="jli">${L.join("")}</span>`;
+    return s.fut?`<div class="jcol fut">${inner}</div>`:`<button class="jcol ${st}" data-j="${s.k}" aria-label="${jHN(s)}, noter">${inner}</button>`};
+  const inF=M.slots.slice(0,M.plan),outF=M.slots.slice(M.plan);
+  const frise=`<div class="jfr"><div class="jfi"><div class="jframe"><span class="jfl">Objectif : 2 jours</span>${inF.map(col).join("")}</div>${outF.length?`<div class="jout"><span class="jfl" style="color:var(--bad)">Hors délai</span>${outF.map(col).join("")}</div>`:""}</div></div>`;
+  const tot=[jPl(T.ph,"photo","photos"),T.pb&&jPl(T.pb,"problème signalé","problèmes signalés")+(T.pbok?" ("+T.pbok+" traité"+(T.pbok>1?"s":"")+")":""),T.req&&jPl(T.req,"demande de travaux en plus","demandes de travaux en plus"),T.dv&&jPl(T.dv,"ligne de devis validée","lignes de devis validées"),T.doc&&jPl(T.doc,"document","documents"),T.bl&&jPl(T.bl,"bon de livraison","bons de livraison"),T.fr&&jPl(T.fr,"dépense","dépenses"),T.sav&&"SAV"].filter(Boolean).join(" · ");
+  return `<div class="jg">${kpi}<div class="jchips"><span class="jc${M.lost?" lost":""}">${jPl(M.lost,"demi-journée perdue","demi-journées perdues")}${M.lost?" : "+Object.entries(M.causes).map(([c,n])=>esc(c)+" "+n).join(" · "):""}</span><span class="sub">${tot}</span></div>${frise}
+    <div class="jleg"><span><i style="background:var(--turq)"></i>Étape validée</span><span><i style="background:var(--jact);box-shadow:inset 0 0 0 1px var(--turq)"></i>Activité</span><span><i style="background:var(--anth)"></i>Maintenant</span><span><i style="box-shadow:inset 0 0 0 1px var(--muted)"></i>Prévu</span><span><i style="background:var(--lost)"></i>Perdue</span><span><i style="border:2px dashed var(--bad)"></i>Délai de 2 jours</span></div></div>`}
 function renderJGraph(){const G=document.getElementById("jgraph"),AL=document.getElementById("jall");if(!G||role!=="afer")return;
-  const M=jModel(CH.key);G.innerHTML=M?jGraphHTML(M):'<p class="empty">Le graphe démarre avec la photo de réception du matériel.</p>';
+  const M=jModel(CH.key);G.innerHTML=M?jGraphHTML(M):'<p class="empty">La frise démarre avec la photo de réception du matériel.</p>';
   G.querySelectorAll("[data-j]").forEach(b=>b.onclick=()=>openJ(b.dataset.j));
-  const sel=G.querySelector("#jplan");if(sel)sel.onchange=()=>{const N={...(LS.get("journal",{})||{})};N._plan={dj:+sel.value,at:iso()};save("journal",N);renderJournal()};
   if(!AL)return;const R=chantiers.map(c=>({c,M:jModel(c.id)})).filter(x=>x.M).sort((a,b)=>b.M.start.localeCompare(a.M.start));
   if(!R.length){AL.innerHTML='<p class="empty">Aucun chantier démarré : un chantier apparaît ici dès la photo de réception du matériel.</p>';return}
   const lost=R.reduce((n,x)=>n+x.M.lost,0),cz={};R.forEach(x=>Object.entries(x.M.causes).forEach(([c,n])=>cz[c]=(cz[c]||0)+n));
+  const mini=M=>{const sl=M.slots.map(s=>`<i class="${jState(s)}"></i>`);return `<span class="jmf">${sl.slice(0,M.plan).join("")}</span>${sl.slice(M.plan).join("")}`};
   AL.innerHTML=`<div class="jall"><div class="jchips"><span class="jc">${jPl(R.length,"chantier suivi","chantiers suivis")}</span><span class="jc">${R.filter(x=>!x.M.closed).length} en cours</span><span class="jc${lost?" lost":""}">${jPl(lost,"demi-journée perdue","demi-journées perdues")}${lost?" : "+Object.entries(cz).map(([c,n])=>esc(c)+" "+n).join(" · "):""}</span></div>
-    ${R.map(({c,M})=>`<button class="jrow${c.id===CH.key?" cur":""}" data-ch="${esc(c.id)}"><span class="jrn">${esc(nomCh(c))}<small>début ${new Date(M.start).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})} · ${M.closed?"clôturé":"en cours"}</small></span><span class="jmini" aria-hidden="true">${M.slots.map(s=>`<i class="${jState(s)}"></i>`).join("")}</span><span class="jrv"><span class="jc">Temps ${Math.round(M.elapsed/M.plan*100)} %</span><span class="jc ok">Avancement ${fmtPct(M.pct)} %</span>${jRetard(M)}</span></button>`).join("")}</div>`;
+    ${R.map(({c,M})=>`<button class="jrow${c.id===CH.key?" cur":""}" data-ch="${esc(c.id)}"><span class="jrn">${esc(nomCh(c))}<small>début ${new Date(M.start).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})} · ${M.closed?"clôturé":"en cours"}</small></span><span class="jmini" aria-hidden="true">${mini(M)}</span><span class="jrv"><span class="jc ok">Étapes ${M.full}/${M.total}</span><span class="jc${M.elapsed>M.plan?" lost":""}">Délai ${M.elapsed}/${M.plan}</span>${jRetard(M)}</span></button>`).join("")}</div>`;
   AL.querySelectorAll("[data-ch]").forEach(b=>b.onclick=()=>{if(b.dataset.ch!==CH.key)switchChantier(b.dataset.ch);const g=document.getElementById("jgraph");g&&g.scrollIntoView({behavior:"smooth",block:"start"})})}
 function renderJournal(){const B=document.getElementById("jdays");if(!B||role!=="afer")return;renderJGraph();const J=LS.get("journal",{})||{},E=jEvents(),by={};
   E.forEach(e=>{const k=jKey(e.at);(by[k]=by[k]||{am:[],pm:[]})[jHalf(e.at)].push(e)});Object.keys(J).filter(k=>/^\d{4}-/.test(k)).forEach(k=>{const d=k.split("|")[0];by[d]=by[d]||{am:[],pm:[]}});
