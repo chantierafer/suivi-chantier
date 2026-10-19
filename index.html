@@ -124,9 +124,33 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:14px}
 .jday{border-top:1px solid var(--line);padding:12px 0}.jday h3{font-size:19px;margin-bottom:8px}
 .jhalf{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px}
 .jh{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px;align-content:start}
-.jh.lost{border-color:var(--bad);background:var(--bad-bg)}.jh.lost .jcause{color:var(--bad);font-weight:700}
+.jh.lost{border-color:var(--lost);background:var(--lost-bg)}.jh.lost .jcause{color:var(--lost);font-weight:700}
 .jh h4{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;justify-content:space-between;gap:8px;align-items:center}
 .jev{display:grid;grid-template-columns:46px minmax(0,1fr);gap:6px;font-size:14px}.jev b{font-variant-numeric:tabular-nums;color:var(--turq-ink)}
+:root{--lost:#8A3F0C;--lost-bg:#FCE6D4;--jact:#DDF4F4;--jact-ink:#145F5F}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--lost:#F5B98A;--lost-bg:#3D2A1C;--jact:#1E3A3A;--jact-ink:#9FE3E3}}
+:root[data-theme="dark"]{--lost:#F5B98A;--lost-bg:#3D2A1C;--jact:#1E3A3A;--jact-ink:#9FE3E3}
+.jg{display:grid;gap:14px;margin-bottom:18px}
+.jga{display:grid;gap:5px}.jgt{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;align-items:baseline;font-weight:700;font-size:15px}
+.jgt small{font-weight:500;color:var(--muted);font-size:13px}.jgt b{font-family:var(--display);font-size:26px;margin-right:6px}
+.jbar{height:18px;border-radius:9px;background:var(--surface-2);overflow:hidden;display:flex}.jbar i{display:block;height:100%}
+.jchips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:14px}.jchips .sub{margin:0}
+.jc{font-weight:700;padding:5px 11px;border-radius:14px;background:var(--surface-2);font-size:13px}.jc.lost{background:var(--lost-bg);color:var(--lost)}.jc.ok{background:var(--jact);color:var(--jact-ink)}
+.jplan{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}.jplan select{width:auto;min-height:36px;padding:4px 8px}
+.jrib{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
+.jb{min-height:128px;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:3px;text-align:left;border:1.5px solid transparent;font-size:12.5px;line-height:1.3;background:var(--surface-2);color:var(--fg)}
+.jb .jd{font-size:11px;font-weight:600;opacity:.85}.jb b{font-weight:700}.jb .jm{font-size:11.5px}
+.jb.val{background:var(--turq);color:#0E3D3D}.jb.act{background:var(--jact);color:var(--jact-ink)}.jb.lost{background:var(--lost-bg);color:var(--lost)}
+.jb.vide{color:var(--muted)}.jb.fut{background:transparent;border:1.5px dashed var(--muted);color:var(--muted)}.jb.fut b{color:var(--fg)}
+.jb.now{background:var(--anth);color:#fff;outline:3px solid var(--turq);outline-offset:2px}
+.jb .jt{margin-top:auto;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.jleg{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}.jleg span{display:inline-flex;gap:6px;align-items:center}.jleg i{display:inline-block;width:22px;height:12px;border-radius:3px}
+.jall{display:grid;gap:8px}.jrow{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(120px,2fr) auto;gap:6px 14px;align-items:center;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.jrow.cur{border-color:var(--turq);box-shadow:inset 0 0 0 1px var(--turq)}.jrow .jrn{font-weight:700}.jrow .jrn small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.jmini{display:flex;flex-wrap:wrap;gap:3px}.jmini i{width:14px;height:14px;border-radius:3px;background:var(--surface-2)}.jmini i.val{background:var(--turq)}.jmini i.act{background:var(--jact);box-shadow:inset 0 0 0 1px var(--turq)}.jmini i.lost{background:var(--lost)}.jmini i.now{background:var(--anth)}.jmini i.fut{background:transparent;box-shadow:inset 0 0 0 1px var(--muted)}
+.jrow .jrv{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;font-size:12.5px}
+@media (max-width:640px){.jrow{grid-template-columns:1fr}.jrow .jrv{justify-content:flex-start}}
+.jdt{font-size:19px;margin:6px 0 8px}
 .jstat{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}.jstat span{background:var(--surface-2);border-radius:8px;padding:6px 10px;font-weight:700;font-size:14px}.jstat span.bad{background:var(--bad-bg);color:var(--bad)}
 .manu{margin:14px 0 4px;padding-left:22px;display:grid;gap:12px}.manu textarea{display:block;width:100%;min-height:120px;margin-top:6px}
 .stepal{flex:none;margin-right:10px;border:1px solid var(--line);background:var(--surface);color:var(--warn);border-radius:20px;font-weight:700;font-size:13px;padding:6px 10px;white-space:nowrap}
@@ -713,8 +737,9 @@ table.dv input.num{width:90px;text-align:right}
 
   <!-- SUIVI : 1 réception du matériel, 2 étapes des travaux, 3 travaux supplémentaires -->
   <section id="tab-journal" hidden>
-    <div class="card"><h2>Journal du chantier</h2><p class="sub" style="margin:0 0 10px">Visible par AFER seulement. Tout ce qui s'est passé, par demi-journée, à l'heure près. Marque une demi-journée perdue et sa cause pour le bilan de clôture.</p>
-      <div id="jbilan"></div><div id="jdays"></div></div>
+    <div class="card"><h2>Tous les chantiers</h2><p class="sub" style="margin:0 0 10px">Visible par AFER seulement. Un chantier par ligne, dès la photo de réception du matériel. Touche une ligne pour ouvrir son graphe.</p><div id="jall"></div></div>
+    <div class="card"><h2>Journal du chantier</h2><p class="sub" style="margin:0 0 10px">Visible par AFER seulement. Le graphe se met à jour à chaque photo, signalement, document, travaux en plus ou validation. Touche une demi-journée pour la noter perdue avec sa cause.</p>
+      <div id="jgraph"></div><h3 class="jdt">Détail par demi-journée</h3><div id="jbilan"></div><div id="jdays"></div></div>
   </section>
   <section id="tab-suivi" hidden>
     <div class="grid">
@@ -2047,8 +2072,66 @@ function jEvents(){const E=[],add=(at,txt)=>{if(at&&!isNaN(Date.parse(at)))E.pus
   devis.forEach(l=>{if(l.valAt)add(l.valAt,(l.st==="ref"?"Ligne refusée par DOMetVIE : ":"Ligne validée par DOMetVIE : ")+(l.designation||""))});
   if(pv&&pv.at)add(pv.at,"PV de réception signé");if(closed&&closed.at)add(closed.at,"Chantier clôturé");
   return E.sort((a,b)=>a.at.localeCompare(b.at))}
-function renderJournal(){const B=document.getElementById("jdays");if(!B||role!=="afer")return;const J=LS.get("journal",{})||{},E=jEvents(),by={};
-  E.forEach(e=>{const k=jKey(e.at);(by[k]=by[k]||{am:[],pm:[]})[jHalf(e.at)].push(e)});Object.keys(J).forEach(k=>{const d=k.split("|")[0];by[d]=by[d]||{am:[],pm:[]}});
+/* ===== Graphe du journal (AFER seul, validé par Djalil le 19/10 : maquette 2, double jauge + ruban) =====
+   Temps écoulé (demi-journées ouvrées depuis la réception du matériel) face à l'avancement (étapes à 2 photos).
+   Durée de référence indicative : une SDB = 2 à 3 jours ; 6 demi-journées par défaut, modifiable par chantier (journal._plan). */
+const J_PLAN_DEF=6;
+const jSK=at=>jKey(at)+"|"+jHalf(at);
+const jNx=k=>{const[d,h]=k.split("|");if(h==="am")return d+"|pm";const x=new Date(d+"T12:00:00");x.setDate(x.getDate()+1);return jKey(x)+"|am"};
+const jWk=k=>new Date(k.split("|")[0]+"T12:00:00").getDay()%6!==0;
+const jLbl=k=>{const[d,h]=k.split("|"),w=new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"}).replace(".","");return w[0].toUpperCase()+w.slice(1)+" · "+(h==="am"?"matin":"après-midi")};
+const jPl=(n,a,b)=>n+" "+(n>1?b:a);
+function chData(id){if(id===CH.key)return{photos,pbs,reqs,docs,devis,bls,frais,sav,closed,J:LS.get("journal",{})||{},variant:CH.variant};
+  const c=chantiers.find(x=>x.id===id)||{},g=(k,d)=>{try{const v=localStorage.getItem(id+":"+k);return v?JSON.parse(v):d}catch(e){return d}};
+  let dv=[];try{dv=DV.mig(g("devis",null))||[]}catch(e){}
+  return{photos:g("photos",{})||{},pbs:g("pbs",[])||[],reqs:g("reqs",[])||[],docs:g("docs",[])||[],devis:dv,bls:g("bls",[])||[],frais:g("frais",[])||[],sav:g("sav",[])||[],closed:g("closed",null),J:g("journal",{})||{},variant:g("variant",c.variante||"avec")}}
+function jModel(id){const D=chData(id),S=ALL_STEPS.filter(s=>!s.opt||D.variant==="avec"),J=D.J,ok=a=>a&&!isNaN(Date.parse(a));
+  const L=k=>((D.photos||{})[k]||[]).map(p=>p&&p.at).filter(ok).sort(),m0=L("materiel");if(!m0.length)return null;
+  const start=m0[0],plan=Math.max(1,+((J._plan||{}).dj)||J_PLAN_DEF),closedF=!!(D.closed&&D.closed.at),endK=jSK(closedF?D.closed.at:new Date());
+  const A={},T={ph:0,pb:0,pbok:0,req:0,doc:0,dv:0,bl:0,fr:0,sav:0},bump=(at,f,v)=>{if(!ok(at))return;const k=jSK(at),o=A[k]=A[k]||{ph:0,val:[],pb:0,pbok:0,req:0,doc:0,dv:0,bl:0,fr:0,sav:0};if(f==="val")o.val.push(v);else{o[f]++;T[f]++}};
+  Object.values(D.photos||{}).forEach(P=>(P||[]).forEach(p=>p&&bump(p.at,"ph")));
+  let done=0,full=0,cur=null;const U=[];S.forEach(s=>{const P=L(s.id);done+=Math.min(P.length,MIN)/MIN;if(P.length>=MIN){full++;bump(P[MIN-1],"val",s.t)}else{if(P.length&&!cur)cur=s.t;U.push(s.t)}});
+  D.pbs.forEach(x=>{bump(x.at,"pb");if(x.doneAt)bump(x.doneAt,"pbok")});D.reqs.forEach(x=>bump(x.at,"req"));D.docs.forEach(x=>bump(x.at,"doc"));
+  (D.devis||[]).forEach(l=>{if(l&&l.valAt&&l.st!=="ref")bump(l.valAt,"dv")});D.bls.forEach(x=>bump(x.at,"bl"));D.frais.forEach(x=>bump(x.at,"fr"));D.sav.forEach(x=>bump(x.at,"sav"));
+  const past=[];for(let k=jSK(start),n=0;k<=endK&&n<600;k=jNx(k),n++)if(jWk(k)||A[k]||J[k])past.push(k);if(!past.length)past.push(jSK(start));
+  const total=S.length,elapsed=past.length,lostK=past.filter(k=>(J[k]||{}).perdue),remain=Math.max(0,total-done);
+  const worked=elapsed-lostK.length,pace=done>0&&worked>=2?done/worked:total/plan,remSlots=closedF||remain<=0?0:Math.max(1,Math.ceil(remain/pace-1e-9));
+  const estIdx=closedF||remain<=0?null:elapsed-1+remSlots,planIdx=plan-1,nFut=closedF?0:Math.min(40,Math.max(remSlots,plan-elapsed,0));
+  const nowK=jSK(new Date()),slots=past.map((k,i)=>({k,i,a:A[k]||null,j:J[k]||{},now:!closedF&&k===nowK,proj:[]}));
+  let k=past[past.length-1];for(let i=0;i<nFut;i++){do k=jNx(k);while(!jWk(k));slots.push({k,i:elapsed+i,fut:true,proj:[]})}
+  const P2=U.filter(t=>t!==cur||!slots.some(s=>s.now));P2.forEach((t,i)=>{const s=slots[elapsed+Math.min(remSlots-1,Math.floor(i*remSlots/P2.length))];if(s)s.proj.push(t)});
+  const causes={};lostK.forEach(x=>{const c=J[x].cause||"Autre";causes[c]=(causes[c]||0)+1});
+  const lastIdx=remain<=0&&!closedF?elapsed-1:estIdx,retard=closedF?elapsed-1-planIdx:(lastIdx==null?0:lastIdx-planIdx);
+  return{id,start,plan,elapsed,total,done,full,cur,pct:total?done/total*100:0,lost:lostK.length,causes,slots,planIdx,estIdx,retard,closed:closedF,fini:remain<=0,T,
+    planK:(slots[planIdx]||{}).k||null,estK:estIdx!=null&&slots[estIdx]?slots[estIdx].k:null}}
+function jState(s){return s.fut?"fut":s.now?"now":s.j.perdue?"lost":s.a&&s.a.val.length?"val":s.a?"act":"vide"}
+function jRetard(M){return M.closed?(M.retard>0?`<span class="jc lost">Clôturé avec ${jPl(M.retard,"demi-journée","demi-journées")} de retard</span>`:'<span class="jc ok">Clôturé dans les temps</span>'):M.retard>0?`<span class="jc lost">Retard estimé : ${jPl(M.retard,"demi-journée","demi-journées")}</span>`:'<span class="jc ok">Dans les temps</span>'}
+function jGraphHTML(M){const tp=Math.min(100,M.elapsed/M.plan*100),T=M.T;
+  const tot=[jPl(T.ph,"photo","photos"),T.pb&&jPl(T.pb,"problème signalé","problèmes signalés")+(T.pbok?" ("+T.pbok+" traité"+(T.pbok>1?"s":"")+")":""),T.req&&jPl(T.req,"demande de travaux en plus","demandes de travaux en plus"),T.dv&&jPl(T.dv,"ligne de devis validée","lignes de devis validées"),T.doc&&jPl(T.doc,"document","documents"),T.bl&&jPl(T.bl,"bon de livraison","bons de livraison"),T.fr&&jPl(T.fr,"dépense","dépenses"),T.sav&&jPl(T.sav,"SAV","SAV")].filter(Boolean).join(" · ");
+  const meta=a=>[a.ph&&jPl(a.ph,"photo","photos"),a.pb&&"⚠ "+jPl(a.pb,"problème","problèmes"),a.pbok&&jPl(a.pbok,"problème traité","problèmes traités"),a.req&&jPl(a.req,"travaux en plus","travaux en plus"),a.dv&&jPl(a.dv,"ligne validée","lignes validées"),a.doc&&jPl(a.doc,"document","documents"),a.bl&&"Bon de livraison",a.fr&&jPl(a.fr,"dépense","dépenses"),a.sav&&"SAV"].filter(Boolean).map(t=>`<span class="jm">${t}</span>`).join("");
+  const tag=s=>[s.k===M.planK&&"Fin prévue",s.k===M.estK&&"Fin estimée"].filter(Boolean).join(" · ");
+  const blk=s=>{const st=jState(s),t=tag(s);if(s.fut)return `<div class="jb fut"><span class="jd">${jLbl(s.k)}</span>${s.proj.length?"<span>prévu</span>"+s.proj.map(x=>`<b>${esc(x)}</b>`).join(""):""}${t?`<span class="jt">${t}</span>`:""}</div>`;
+    const a=s.a||{val:[]};return `<button class="jb ${st}${s.j.perdue&&s.now?" lost":""}" data-j="${s.k}" aria-label="${jLbl(s.k)}, noter"><span class="jd">${jLbl(s.k)}</span>${s.j.perdue?`<b>Perdue</b><span>${esc(s.j.cause||"")}</span>`:""}${a.val.map(x=>`<b>${esc(x)}</b>`).join("")}${s.now&&M.cur?`<span>En cours : ${esc(M.cur)}</span>`:""}${meta(a)}${s.j.note?`<span class="jm">Note : ${esc(s.j.note.length>50?s.j.note.slice(0,48)+"…":s.j.note)}</span>`:""}${!s.a&&!s.j.perdue&&!s.now?"<span>Aucune activité</span>":""}${s.now||t?`<span class="jt">${[s.now&&"Maintenant",t].filter(Boolean).join(" · ")}</span>`:""}</button>`};
+  const opts=[3,4,5,6,7,8,10,12].map(v=>`<option value="${v}"${v===M.plan?" selected":""}>${v} demi-journées (${String(v/2).replace(".",",")} j)</option>`).join("");
+  return `<div class="jg"><div class="jga"><div class="jgt"><span>Temps écoulé</span><small><b>${Math.round(M.elapsed/M.plan*100)} %</b>${jPl(M.elapsed,"demi-journée","demi-journées")} sur ${M.plan} prévues${M.elapsed>M.plan?" · dépassé":""}</small></div><div class="jbar"><i style="width:${tp}%;background:${M.elapsed>M.plan?"var(--lost)":"var(--muted)"}"></i></div></div>
+    <div class="jga"><div class="jgt"><span>Avancement du chantier</span><small><b style="color:var(--turq-ink)">${fmtPct(M.pct)} %</b>${M.full} étape${M.full>1?"s":""} sur ${M.total}${M.cur?", en cours : "+esc(M.cur):""}</small></div><div class="jbar"><i style="width:${M.pct}%;background:var(--turq)"></i></div></div>
+    <div class="jchips">${jRetard(M)}<span class="jc${M.lost?" lost":""}">${jPl(M.lost,"demi-journée perdue","demi-journées perdues")}${M.lost?" : "+Object.entries(M.causes).map(([c,n])=>esc(c)+" "+n).join(" · "):""}</span><span class="sub">Fin prévue ${M.planK?jLbl(M.planK).toLowerCase():"?"}${M.closed?"":M.fini?" · toutes les étapes validées":M.estK?" · fin estimée "+jLbl(M.estK).toLowerCase():""}</span></div>
+    <p class="sub" style="margin:0">${tot}</p>
+    <div class="jrib">${M.slots.map(blk).join("")}</div>
+    <div class="jleg"><span><i style="background:var(--turq)"></i>Étape validée</span><span><i style="background:var(--jact)"></i>Activité</span><span><i style="background:var(--anth)"></i>Maintenant</span><span><i style="border:1.5px dashed var(--muted)"></i>Prévu (estimé)</span><span><i style="background:var(--lost-bg);box-shadow:inset 0 0 0 1px var(--lost)"></i>Perdue</span></div>
+    <label class="jplan">Durée de référence (indicatif, une SDB = 2 à 3 jours)<select id="jplan">${opts}</select></label></div>`}
+function renderJGraph(){const G=document.getElementById("jgraph"),AL=document.getElementById("jall");if(!G||role!=="afer")return;
+  const M=jModel(CH.key);G.innerHTML=M?jGraphHTML(M):'<p class="empty">Le graphe démarre avec la photo de réception du matériel.</p>';
+  G.querySelectorAll("[data-j]").forEach(b=>b.onclick=()=>openJ(b.dataset.j));
+  const sel=G.querySelector("#jplan");if(sel)sel.onchange=()=>{const N={...(LS.get("journal",{})||{})};N._plan={dj:+sel.value,at:iso()};save("journal",N);renderJournal()};
+  if(!AL)return;const R=chantiers.map(c=>({c,M:jModel(c.id)})).filter(x=>x.M).sort((a,b)=>b.M.start.localeCompare(a.M.start));
+  if(!R.length){AL.innerHTML='<p class="empty">Aucun chantier démarré : un chantier apparaît ici dès la photo de réception du matériel.</p>';return}
+  const lost=R.reduce((n,x)=>n+x.M.lost,0),cz={};R.forEach(x=>Object.entries(x.M.causes).forEach(([c,n])=>cz[c]=(cz[c]||0)+n));
+  AL.innerHTML=`<div class="jall"><div class="jchips"><span class="jc">${jPl(R.length,"chantier suivi","chantiers suivis")}</span><span class="jc">${R.filter(x=>!x.M.closed).length} en cours</span><span class="jc${lost?" lost":""}">${jPl(lost,"demi-journée perdue","demi-journées perdues")}${lost?" : "+Object.entries(cz).map(([c,n])=>esc(c)+" "+n).join(" · "):""}</span></div>
+    ${R.map(({c,M})=>`<button class="jrow${c.id===CH.key?" cur":""}" data-ch="${esc(c.id)}"><span class="jrn">${esc(nomCh(c))}<small>début ${new Date(M.start).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})} · ${M.closed?"clôturé":"en cours"}</small></span><span class="jmini" aria-hidden="true">${M.slots.map(s=>`<i class="${jState(s)}"></i>`).join("")}</span><span class="jrv"><span class="jc">Temps ${Math.round(M.elapsed/M.plan*100)} %</span><span class="jc ok">Avancement ${fmtPct(M.pct)} %</span>${jRetard(M)}</span></button>`).join("")}</div>`;
+  AL.querySelectorAll("[data-ch]").forEach(b=>b.onclick=()=>{if(b.dataset.ch!==CH.key)switchChantier(b.dataset.ch);const g=document.getElementById("jgraph");g&&g.scrollIntoView({behavior:"smooth",block:"start"})})}
+function renderJournal(){const B=document.getElementById("jdays");if(!B||role!=="afer")return;renderJGraph();const J=LS.get("journal",{})||{},E=jEvents(),by={};
+  E.forEach(e=>{const k=jKey(e.at);(by[k]=by[k]||{am:[],pm:[]})[jHalf(e.at)].push(e)});Object.keys(J).filter(k=>/^\d{4}-/.test(k)).forEach(k=>{const d=k.split("|")[0];by[d]=by[d]||{am:[],pm:[]}});
   const s=startAt();if(s){const d=new Date(s),end=closed&&closed.at?new Date(closed.at):new Date();d.setHours(12);let n=0;while(d<=end&&n++<90){const k=jKey(d);if(d.getDay()%6)by[k]=by[k]||{am:[],pm:[]};d.setDate(d.getDate()+1)}}
   const days=Object.keys(by).sort().reverse(),lost=Object.entries(J).filter(([,v])=>v&&v.perdue),causes={};lost.forEach(([,v])=>causes[v.cause]=(causes[v.cause]||0)+1);
   const worked=days.reduce((n,d)=>n+["am","pm"].filter(h=>by[d][h].length&&!(J[d+"|"+h]||{}).perdue).length,0);
