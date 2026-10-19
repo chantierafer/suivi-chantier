@@ -88,7 +88,7 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:14px}
 @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
 .stage{position:sticky;top:12px;background:var(--stage-bg);color:var(--stage-fg);border-radius:14px;overflow:hidden}
 @media (max-width:900px){.stage{position:relative;top:0}}
-#three{width:100%;aspect-ratio:1/1;max-width:100%;display:block;touch-action:none;cursor:grab}
+#three{width:100%;aspect-ratio:1/1;max-width:100%;display:block;touch-action:pan-y;cursor:grab}
 .hud{position:absolute;inset:12px 12px auto 12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
 .lvl{font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--turq)}
 .lvlname{font-family:var(--display);font-size:22px;font-weight:600;line-height:1.1}
@@ -121,6 +121,13 @@ details ul{margin:8px 0 0;padding-left:18px;font-size:14px}
 .ring text{font-family:var(--display);font-size:16px;font-weight:700;fill:var(--fg)}
 .step-h h3{font-size:21px;line-height:1.1}
 .step-hw{display:flex;align-items:center}.step-hw .step-h{flex:1;min-width:0}
+.jday{border-top:1px solid var(--line);padding:12px 0}.jday h3{font-size:19px;margin-bottom:8px}
+.jhalf{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px}
+.jh{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px;align-content:start}
+.jh.lost{border-color:var(--bad);background:var(--bad-bg)}.jh.lost .jcause{color:var(--bad);font-weight:700}
+.jh h4{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.jev{display:grid;grid-template-columns:46px minmax(0,1fr);gap:6px;font-size:14px}.jev b{font-variant-numeric:tabular-nums;color:var(--turq-ink)}
+.jstat{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}.jstat span{background:var(--surface-2);border-radius:8px;padding:6px 10px;font-weight:700;font-size:14px}.jstat span.bad{background:var(--bad-bg);color:var(--bad)}
 .manu{margin:14px 0 4px;padding-left:22px;display:grid;gap:12px}.manu textarea{display:block;width:100%;min-height:120px;margin-top:6px}
 .stepal{flex:none;margin-right:10px;border:1px solid var(--line);background:var(--surface);color:var(--warn);border-radius:20px;font-weight:700;font-size:13px;padding:6px 10px;white-space:nowrap}
 .stepal.on{background:var(--bad-bg);border-color:transparent;color:var(--bad)}
@@ -181,6 +188,7 @@ ol.proc{margin:0;padding-left:22px;display:grid;gap:6px}
 .pill.go{background:var(--turq);color:var(--anth)}
 .lightbox{position:fixed;inset:0;background:rgba(10,12,14,.92);display:grid;place-items:center;z-index:50;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .lightbox figure{margin:0;max-width:min(1000px,100%);display:grid;gap:10px;color:#fff}
+.lbnav{position:fixed;top:50%;transform:translateY(-50%);z-index:51;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:40px;line-height:1;width:52px;height:72px;border-radius:12px}#lbprev{left:max(8px,env(safe-area-inset-left,0px))}#lbnext{right:max(8px,env(safe-area-inset-right,0px))}.lbnav[hidden]{display:none}
 .lightbox img{max-height:76vh;width:auto;max-width:100%;margin:0 auto;border-radius:8px}
 .lightbox figcaption{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:center}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -688,7 +696,7 @@ table.dv input.num{width:90px;text-align:right}
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="mission" aria-selected="true">Mission</button>
-    <button role="tab" data-tab="suivi" aria-selected="false">Suivi</button>
+    <button role="tab" data-tab="suivi" aria-selected="false">Suivi</button><button role="tab" data-tab="journal" aria-selected="false">Journal</button>
     <button role="tab" data-tab="devis" aria-selected="false">Devis</button>
     <button role="tab" data-tab="pv" aria-selected="false">PV de réception</button>
     <button role="tab" data-tab="docs" aria-selected="false">Documents</button>
@@ -704,6 +712,10 @@ table.dv input.num{width:90px;text-align:right}
   </section>
 
   <!-- SUIVI : 1 réception du matériel, 2 étapes des travaux, 3 travaux supplémentaires -->
+  <section id="tab-journal" hidden>
+    <div class="card"><h2>Journal du chantier</h2><p class="sub" style="margin:0 0 10px">Visible par AFER seulement. Tout ce qui s'est passé, par demi-journée, à l'heure près. Marque une demi-journée perdue et sa cause pour le bilan de clôture.</p>
+      <div id="jbilan"></div><div id="jdays"></div></div>
+  </section>
   <section id="tab-suivi" hidden>
     <div class="grid">
       <div class="stage">
@@ -1019,7 +1031,7 @@ table.dv input.num{width:90px;text-align:right}
 
 <input type="file" id="file" accept="image/*" capture="environment" hidden>
 <input type="file" id="docfile" multiple hidden>
-<div class="lightbox" id="lb" hidden><figure><img id="lbimg" alt=""><figcaption><span id="lbcap"></span><button class="btn" id="lbclose">Fermer</button></figcaption></figure></div>
+<div class="lightbox" id="lb" hidden><button class="lbnav" id="lbprev" aria-label="Photo précédente">‹</button><figure><img id="lbimg" alt=""><figcaption><span id="lbcap"></span><span id="lbn" class="sub" style="color:#C7D0D2"></span><button class="btn" id="lbclose">Fermer</button></figcaption></figure><button class="lbnav" id="lbnext" aria-label="Photo suivante">›</button></div>
 <div class="sbgate" id="sbgate" hidden></div>
 <div class="sheet" id="sheet" hidden><div id="sheetbody" role="dialog" aria-modal="true"></div></div>
 
@@ -1409,7 +1421,7 @@ const Engine = (() => {
 /* ===== Base en ligne : URL du projet et clé Publishable Supabase. Vides = démo, données gardées sur l'appareil ===== */
 const SB_URL="https://xgliespwrxlxiaqaxtzj.supabase.co",SB_KEY="sb_publishable_8UoZO8bXKkBgD47-wcLqCw_RlPkTslt";
 /* ===== Modèle : étapes SDB PMR, 2 photos minimum et 4 maximum par étape ===== */
-const MIN=2, MAX=4;
+const MIN=2, MAX=Infinity; // 18/10 : plus de maximum de photos par étape
 const ALL_STEPS=[
  {id:"constat",t:"Constat avant travaux",shots:["Vue d'ensemble depuis la porte","Zone à transformer"]},
  {id:"protection",t:"Protection et installation",shots:["Protections du sol et des accès","Coupures eau et électricité"]},
@@ -1581,7 +1593,7 @@ function putImg(k,v){mem[k]=v;if(!db)return;try{db.transaction("img","readwrite"
 function delImg(k){delete mem[k];if(!db)return;try{db.transaction("img","readwrite").objectStore("img").delete(CH.key+":"+k)}catch(e){}}
 function getImg(k){return new Promise(res=>{if(!k)return res(null);if(mem[k])return res(mem[k]);const ch=CH.key,miss=()=>SB.ready?SB.img(ch,k).then(res):res(null);if(!db)return miss();try{const r=db.transaction("img").objectStore("img").get(ch+":"+k);r.onsuccess=()=>{if(r.result){mem[k]=r.result;res(r.result)}else miss()};r.onerror=miss}catch(e){miss()}})}
 const list=k=>photos[k]||[];
-const lim=k=>k==="materiel"?{min:1,max:4}:k.startsWith("x:")?{min:1,max:2}:{min:MIN,max:MAX};
+const lim=k=>k==="materiel"||k.startsWith("x:")?{min:1,max:Infinity}:{min:MIN,max:MAX};
 
 /* ===== Avancement : une étape = 2 photos ; la réception du matériel ouvre le chantier ===== */
 const prog=s=>Math.min(list(s.id).length,MIN)/MIN;
@@ -1594,7 +1606,7 @@ const extras=()=>devis.filter(l=>l.kind!=="titre"&&!l.base&&l.ph!==false&&l.st!=
 const extraDone=l=>list("x:"+l.id+":av").length>0&&list("x:"+l.id+":ap").length>0;
 
 /* ===== Rôles : AFER (tout), Technicien, DOMetVIE ===== */
-const TABS={afer:["mission","suivi","devis","pv","docs","frais","bpu","sav"],tech:["mission","suivi","pv","docs","frais"],domevie:["suivi","devis","pv","docs"]};
+const TABS={afer:["mission","suivi","journal","devis","pv","docs","frais","bpu","sav"],tech:["mission","suivi","pv","docs","frais"],domevie:["suivi","devis","pv","docs"]};
 const ROLE_NAME={afer:"AFER",tech:"Technicien",domevie:"DOMetVIE"};
 let role=GS.get("role",null)||peek("saint-denis-v3","role","tech");if(!TABS[role])role="tech";
 const canPhoto=()=>role==="afer"||(role==="tech"&&!closed);
@@ -1651,17 +1663,26 @@ function addPhoto(key,d){
   else{open=key;save("open",open);const gain=globalPct()-before;if(s&&n===MIN){toast("Étape validée");notify(["afer","domevie"],"Étape validée : "+s.t,"suivi")}else if(gain>0)toast("+"+fmtPct(gain)+" %");else toast("Photo ajoutée")}
   renderAll()}
 function removePhoto(key,j){const L=list(key).slice(),[ph]=L.splice(j,1);delImg(ph.id);photos[key]=L;save("photos",photos);renderAll()}
-function showLB(src,cap){document.getElementById("lbimg").src=src;document.getElementById("lbcap").textContent=cap;document.getElementById("lb").hidden=false}
+// Visionneuse : flèches, clavier (← →) et glissé du pouce entre les photos du même groupe (étape, documents…)
+let LBL=[],LBI=0;
+function lbShow(i){if(!LBL.length)return;LBI=(i+LBL.length)%LBL.length;const x=LBL[LBI];document.getElementById("lbimg").src=x.src;document.getElementById("lbcap").textContent=x.cap;
+  const m=LBL.length>1;document.getElementById("lbn").textContent=m?(LBI+1)+" / "+LBL.length:"";document.getElementById("lbprev").hidden=document.getElementById("lbnext").hidden=!m}
+function showLB(src,cap,from){const box=from&&from.closest(".thumbs,.items,.alertlist,#alerts,.doclist,.step-b,.box")||null,ims=box?[...box.querySelectorAll("img")].filter(i=>i.src&&i.onclick):[];
+  LBL=ims.length?ims.map(i=>({src:i.src,cap:i.alt||""})):[{src,cap}];let k=ims.indexOf(from);if(k<0)k=LBL.findIndex(x=>x.src===src);document.getElementById("lb").hidden=false;lbShow(Math.max(0,k))}
+document.getElementById("lbprev").onclick=e=>{e.stopPropagation();lbShow(LBI-1)};document.getElementById("lbnext").onclick=e=>{e.stopPropagation();lbShow(LBI+1)};
+document.addEventListener("keydown",e=>{if(document.getElementById("lb").hidden)return;if(e.key==="ArrowLeft")lbShow(LBI-1);else if(e.key==="ArrowRight")lbShow(LBI+1)});
+{let x0=null,y0=0;const lb=document.getElementById("lb");lb.addEventListener("touchstart",e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});
+  lb.addEventListener("touchend",e=>{if(x0===null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy))lbShow(LBI+(dx<0?1:-1))},{passive:true})}
 document.getElementById("lbclose").onclick=()=>document.getElementById("lb").hidden=true;
 document.getElementById("lb").onclick=e=>{if(e.target.id==="lb")e.currentTarget.hidden=true};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){document.getElementById("lb").hidden=true;closeSheet()}});
-function imgInto(el,k,cap){getImg(k).then(src=>{if(!src)return;const im=document.createElement("img");im.src=src;im.alt=cap;im.onclick=()=>showLB(src,cap);el.prepend(im)})}
+function imgInto(el,k,cap){getImg(k).then(src=>{if(!src)return;const im=document.createElement("img");im.src=src;im.alt=cap;im.onclick=()=>showLB(src,cap,im);el.prepend(im)})}
 function grid(key,title,labels){
   const {min,max}=lim(key),L=list(key),ed=canPhoto(),g=document.createElement("div");g.className="thumbs";
   L.forEach((ph,j)=>{const t=document.createElement("div");t.className="th";t.innerHTML=`<span class="when">${j+1} · ${fd(ph.at)}</span>`;imgInto(t,ph.id,title+" · photo "+(j+1)+" · "+ft(ph.at));
     if(ed){const d=document.createElement("button");d.className="del";d.textContent="✕";d.setAttribute("aria-label","Supprimer la photo");d.onclick=ev=>{ev.stopPropagation();if(!d.classList.contains("arm")){d.classList.add("arm");d.textContent="Supprimer ?";setTimeout(()=>{d.classList.remove("arm");d.textContent="✕"},3000);return}removePhoto(key,j)};t.appendChild(d)}
     g.appendChild(t)});
-  if(ed&&L.length<max){const a=document.createElement("button");a.className="add"+(L.length<min?" req":"");const r=max-L.length;a.innerHTML=`${CAM}<span>${L.length<min?(labels[L.length]||"Prendre la photo"):"Ajouter une photo"}</span><small>${L.length<min?"Obligatoire":"Facultatif · "+r+" restante"+(r>1?"s":"")}</small>`;a.onclick=()=>pick(key);g.appendChild(a)}
+  if(ed&&L.length<max){const a=document.createElement("button");a.className="add"+(L.length<min?" req":"");a.innerHTML=`${CAM}<span>${L.length<min?(labels[L.length]||"Prendre la photo"):"Ajouter une photo"}</span><small>${L.length<min?"Obligatoire":"Facultatif"}</small>`;a.onclick=()=>pick(key);g.appendChild(a)}
   if(!L.length&&!ed){const e=document.createElement("p");e.className="full";e.textContent="Pas encore de photo.";g.appendChild(e)}
   return g}
 
@@ -2010,13 +2031,48 @@ function renderTree(){
   document.getElementById("tree").textContent=t;
 }
 
+/* ===== Journal du chantier (AFER seul) : chaque événement daté, par demi-journée ; demi-journées perdues et leur cause ===== */
+const J_CAUSES=["Problème DOMetVIE (commande, livraison)","Client absent ou accès impossible","Matériel manquant ou abîmé","Imprévu technique","Technicien absent","Intempéries ou autre cause extérieure","Autre"];
+const slotNom=k=>k==="materiel"?"Réception du matériel":/^x:/.test(k)?"Travaux en plus, photo "+(/:ap$/.test(k)?"après":"avant"):((ALL_STEPS.find(x=>x.id===k)||{}).t||k);
+const jKey=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+const jHalf=d=>new Date(d).getHours()<13?"am":"pm";
+function jEvents(){const E=[],add=(at,txt)=>{if(at&&!isNaN(Date.parse(at)))E.push({at,txt})};
+  Object.entries(photos||{}).forEach(([k,L])=>{const g={};(L||[]).forEach(p=>{if(!p.at)return;const h=jKey(p.at)+jHalf(p.at);(g[h]=g[h]||[]).push(p.at)});
+    Object.values(g).forEach(A=>{A.sort();add(A[0],(A.length>1?A.length+" photos · ":"Photo · ")+slotNom(k)+(A.length>1?" (jusqu'à "+new Date(A[A.length-1]).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+")":""))})});
+  (pbs||[]).forEach(x=>{add(x.at,"⚠ Problème signalé : "+x.type+(x.note?" · "+x.note:""));if(x.doneAt)add(x.doneAt,"✓ Problème traité"+(x.doneBy?" par "+ROLE_NAME[x.doneBy]:"")+" : "+x.type+(x.rep?" · "+x.rep:""))});
+  (reqs||[]).forEach(x=>add(x.at,"Demande de travaux en plus : "+x.lib));
+  (docs||[]).forEach(x=>add(x.at,"Document ajouté : "+x.name+(x.by?" ("+ROLE_NAME[x.by]+")":"")));
+  (bls||[]).forEach(x=>add(x.at,"Bon de livraison : "+(x.items||[]).length+" élément(s)"));
+  (frais||[]).forEach(x=>add(x.at,"Dépense : "+x.cat));(sav||[]).forEach(x=>add(x.at,"SAV : "+(x.t||x.txt||x.note||"intervention")));
+  devis.forEach(l=>{if(l.valAt)add(l.valAt,(l.st==="ref"?"Ligne refusée par DOMetVIE : ":"Ligne validée par DOMetVIE : ")+(l.designation||""))});
+  if(pv&&pv.at)add(pv.at,"PV de réception signé");if(closed&&closed.at)add(closed.at,"Chantier clôturé");
+  return E.sort((a,b)=>a.at.localeCompare(b.at))}
+function renderJournal(){const B=document.getElementById("jdays");if(!B||role!=="afer")return;const J=LS.get("journal",{})||{},E=jEvents(),by={};
+  E.forEach(e=>{const k=jKey(e.at);(by[k]=by[k]||{am:[],pm:[]})[jHalf(e.at)].push(e)});Object.keys(J).forEach(k=>{const d=k.split("|")[0];by[d]=by[d]||{am:[],pm:[]}});
+  const s=startAt();if(s){const d=new Date(s),end=closed&&closed.at?new Date(closed.at):new Date();d.setHours(12);let n=0;while(d<=end&&n++<90){const k=jKey(d);if(d.getDay()%6)by[k]=by[k]||{am:[],pm:[]};d.setDate(d.getDate()+1)}}
+  const days=Object.keys(by).sort().reverse(),lost=Object.entries(J).filter(([,v])=>v&&v.perdue),causes={};lost.forEach(([,v])=>causes[v.cause]=(causes[v.cause]||0)+1);
+  const worked=days.reduce((n,d)=>n+["am","pm"].filter(h=>by[d][h].length&&!(J[d+"|"+h]||{}).perdue).length,0);
+  document.getElementById("jbilan").innerHTML=`<div class="jstat"><span>${worked} demi-journée${worked>1?"s":""} avec activité</span><span class="${lost.length?"bad":""}">${lost.length} demi-journée${lost.length>1?"s":""} perdue${lost.length>1?"s":""}</span></div>${lost.length?`<p class="sub" style="margin:0 0 6px">${Object.entries(causes).map(([c,n])=>esc(c)+" : "+n).join(" · ")}</p>`:""}`;
+  if(!days.length){B.innerHTML='<p class="empty">Rien encore : le journal se remplit avec les photos, signalements, documents et validations.</p>';return}
+  const tm=at=>new Date(at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),dn=k=>{const x=new Date(k+"T12:00:00");const t=x.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"});return t[0].toUpperCase()+t.slice(1)};
+  B.innerHTML=days.map(d=>`<div class="jday"><h3>${dn(d)}</h3><div class="jhalf">${["am","pm"].map(h=>{const j=J[d+"|"+h]||{},L=by[d][h];
+    return `<div class="jh${j.perdue?" lost":""}"><h4>${h==="am"?"Matin":"Après-midi"}<button class="mini" data-j="${d}|${h}">${j.perdue||j.note?"Modifier":"Noter"}</button></h4>${j.perdue?`<div class="jcause">Demi-journée perdue : ${esc(j.cause||"")}</div>`:""}${j.note?`<p style="margin:0;font-size:14px">${esc(j.note)}</p>`:""}${L.length?L.map(e=>`<div class="jev"><b>${tm(e.at)}</b><span>${esc(e.txt)}</span></div>`).join(""):'<p class="empty" style="font-size:13px">Aucune activité.</p>'}</div>`}).join("")}</div></div>`).join("");
+  B.querySelectorAll("[data-j]").forEach(b=>b.onclick=()=>openJ(b.dataset.j))}
+function openJ(k){const J=LS.get("journal",{})||{},j=J[k]||{},[d,h]=k.split("|");
+  sheet(`<h2>${new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"2-digit"})} · ${h==="am"?"matin":"après-midi"}</h2><div class="form">
+    <label class="row" style="display:flex;gap:10px;align-items:center;color:var(--fg);font-size:15px"><input type="checkbox" id="j-lost" style="width:22px;min-height:0"${j.perdue?" checked":""}> Demi-journée perdue</label>
+    <label>Cause<select id="j-cause">${J_CAUSES.map(c=>`<option${c===j.cause?" selected":""}>${c}</option>`).join("")}</select></label>
+    <label>Remarque<textarea id="j-note" placeholder="ex. commande livrée à 14 h au lieu de 8 h, technicien en attente">${esc(j.note||"")}</textarea></label></div>
+    <div class="row"><button class="btn sec" data-close>Annuler</button><button class="btn" id="j-ok">Enregistrer</button></div>`,
+  el=>{el.querySelector("#j-ok").onclick=()=>{const perdue=el.querySelector("#j-lost").checked,note=el.querySelector("#j-note").value.trim(),N={...(LS.get("journal",{})||{})};
+    if(!perdue&&!note)delete N[k];else N[k]={perdue,cause:perdue?el.querySelector("#j-cause").value:"",note,at:iso()};save("journal",N);closeSheet();gsay("Journal enregistré");renderJournal()}})}
 /* ===== En-tête et rendu global ===== */
 function renderHead(){
   document.getElementById("ctitle").textContent=CH.nom;
   const s=startAt();document.getElementById("cdate").textContent=s?"Début : "+fd(s):"Début : à la réception du matériel";
   document.getElementById("cclosed").hidden=!closed;
 }
-function renderAll(){paintRoles();renderHead();renderMission();renderSuivi();renderDevis();renderDocs();renderFrais();renderBPU();renderSAV();renderTree();odPaint();odSoon();paintBell();paintRoles()}
+function renderAll(){paintRoles();renderHead();renderMission();renderSuivi();renderDevis();renderDocs();renderFrais();renderBPU();renderSAV();renderJournal();renderTree();odPaint();odSoon();paintBell();paintRoles()}
 
 /* ===== PV ===== */
 /* ===== PV ===== */
@@ -2173,7 +2229,7 @@ function initScene(){
   let rotY=-.35,drag=null,auto=true;
   cv.addEventListener("pointerdown",e=>{drag=e.clientX;auto=false;cv.setPointerCapture(e.pointerId);cv.style.cursor="grabbing"});
   cv.addEventListener("pointermove",e=>{if(drag===null)return;rotY+=(e.clientX-drag)*.008;drag=e.clientX});
-  cv.addEventListener("pointerup",()=>{drag=null;cv.style.cursor="grab"});
+  cv.addEventListener("pointerup",()=>{drag=null;cv.style.cursor="grab"});cv.addEventListener("pointercancel",()=>{drag=null;cv.style.cursor="grab"});
   function size(){const w=cv.clientWidth;if(!w)return;R.setSize(w,w,false);cam.aspect=1;cam.updateProjectionMatrix()}
   new ResizeObserver(size).observe(cv);size();
   let last=performance.now();
@@ -2203,7 +2259,7 @@ document.getElementById("replay").onclick=e=>{const sc=window.__scene;if(!sc){gs
    quand le réseau manque. Sans SB_URL / SB_KEY, l'appli reste en démo sur l'appareil. */
 const SB={on:!!(SB_URL&&SB_KEY&&window.supabase),ready:false,mute:false,c:null,uid:null,afer:false,roles:[],base:{},q:[],fl:{},inflight:{},toRead:{}};
 // clé locale -> [type d'élément, identifiant unique si valeur simple]
-const SK={photos:["photo"],devis:["devis"],reqs:["req"],pbs:["pb"],docs:["doc"],bls:["bl"],frais:["frais"],sav:["sav"],pv:["pv","pv"],pvfields:["pvfields","F"],devisinfo:["devisinfo","H"],closed:["etat","closed"],variant:["etat","variant"]};
+const SK={photos:["photo"],devis:["devis"],reqs:["req"],pbs:["pb"],docs:["doc"],bls:["bl"],frais:["frais"],sav:["sav"],pv:["pv","pv"],pvfields:["pvfields","F"],devisinfo:["devisinfo","H"],closed:["etat","closed"],variant:["etat","variant"],journal:["journal","J"]};
 let SRV={},PARV={},OB=GS.get("outbox",[]),SEEN=GS.get("seen",{}),chBase=new Map();
 const cj=v=>JSON.stringify(v,(k,x)=>x&&typeof x==="object"&&!Array.isArray(x)?Object.keys(x).sort().reduce((o,y)=>(o[y]=x[y],o),{}):x);
 const srvT=(ch,t)=>{const c=SRV[ch]=SRV[ch]||{};return c[t]=c[t]||new Map()};
@@ -2379,8 +2435,12 @@ SB.start=async()=>{showGate('<p class="sub">Chargement du chantier…</p>');awai
   SB.c=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   const tok=new URLSearchParams(location.search).get("k");let {data:{session}}=await SB.c.auth.getSession();
   if(tok){if(!session){const r=await SB.c.auth.signInAnonymously();if(r.error)return showGate(`<h2>Connexion impossible</h2><p class="sub">${navigator.onLine?"Le service ne répond pas. Réessayez dans un instant.":"Pas de connexion internet. Réessayez quand le réseau revient."}</p><button class="btn" onclick="location.reload()">Réessayer</button>`);session=r.data.session}
-    const j=await SB.c.rpc("rejoindre",{p_token:tok});
-    if(j.error&&!/fetch|network/i.test(j.error.message))return showGate('<h2>Lien désactivé</h2><p class="sub">Ce lien n\'est plus valide. Demandez un nouveau lien à AFER.</p>');
+    let j=await SB.c.rpc("rejoindre",{p_token:tok});
+    // session expirée ou perdue (téléphone resté en veille, stockage vidé) : nouvelle connexion anonyme, puis on rejoint de nouveau.
+    // Le lien n'est déclaré désactivé que si la base le dit (AFER l'a désactivé).
+    if(j.error&&!/fetch|network/i.test(j.error.message)&&!/invalide ou désactivé/i.test(j.error.message)){await SB.c.auth.signOut().catch(()=>{});
+      const r2=await SB.c.auth.signInAnonymously();if(!r2.error){session=r2.data.session;j=await SB.c.rpc("rejoindre",{p_token:tok})}}
+    if(j.error&&/invalide ou désactivé/i.test(j.error.message))return showGate('<h2>Lien désactivé</h2><p class="sub">Ce lien n\'est plus valide. Demandez un nouveau lien à AFER.</p>');
     if(j.data){SB.tokRole=j.data.role;SB.tokCh=j.data.chantier_id;GS.set("role",j.data.role);GS.set("lien:"+tok,{role:j.data.role,ch:j.data.chantier_id})}
     // un lien = un seul espace : ouvert par un lien, l'appareil n'affiche que l'espace de ce lien (même s'il en a ouvert d'autres avant)
     SB.lien=j.data?{role:j.data.role,ch:j.data.chantier_id}:GS.get("lien:"+tok,null);if(SB.lien){SB.tokRole=SB.lien.role;SB.tokCh=SB.lien.ch}}
