@@ -7,6 +7,9 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Suivi AFER">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Suivi Chantier SDB</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -252,6 +255,7 @@ ol.proc{margin:0;padding-left:22px;display:grid;gap:6px}
 .mini{border:0;background:transparent;color:var(--turq-ink);font-weight:700;font-size:13px;padding:4px 0;text-align:left}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px}
 .box.att{border-left:5px solid var(--warn)}
+.pushbox{margin-bottom:14px;border:1.5px solid var(--turq)}.pushbox.on{border:1px solid var(--line);padding:10px 14px}.pushbox h3{margin:0}.pushbox p{margin:0}
 .box.val{border-left:5px solid var(--okc)}
 .box.req{border-left:5px solid var(--muted)}
 .box h3{font-size:20px;line-height:1.15}
@@ -756,6 +760,7 @@ table.dv input.num{width:90px;text-align:right}
       <div id="jgraph"></div><h3 class="jdt">Détail par demi-journée</h3><div id="jbilan"></div><div id="jdays"></div></div>
   </section>
   <section id="tab-suivi" hidden>
+    <div class="box pushbox" id="pushbox" hidden></div>
     <div class="grid">
       <div class="stage">
         <div class="cvwrap"><canvas id="three" aria-label="Maquette 3D de la salle de bain, construite étape par étape"></canvas><div class="cap3d" id="cap3d" aria-live="polite"></div></div>
@@ -1667,6 +1672,44 @@ document.getElementById("bell").onclick=()=>{const L=myNotifs().slice(0,40);
   el=>el.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{closeSheet();if(b.dataset.ch!==CH.key&&chantiers.some(c=>c.id===b.dataset.ch))switchChantier(b.dataset.ch);setTab(b.dataset.tab);scrollTo(0,0)}));
   notifs.forEach(n=>{if(n.to.includes(role))n.seen[role]=true});GS.set("notifs",notifs);paintBell()};
 
+/* ===== Notifications sur le téléphone (espace DOMetVIE, version en ligne) =====
+   Une notification à chaque étape validée (avec le %), matériel reçu, problème, PV signé, clôture : envoyée par la fonction Supabase « notif-push ».
+   Android : directement depuis le lien. iPhone (iOS 16.4+) : seulement depuis l'icône ajoutée à l'écran d'accueil. */
+const PUSH={ok:"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window,synced:false,busy:false};
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const deb64u=x=>Uint8Array.from(atob(x.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((x.length+3)%4)),c=>c.charCodeAt(0));
+async function pushSub(){try{const r=await navigator.serviceWorker.getRegistration();return r?await r.pushManager.getSubscription():null}catch(e){return null}}
+const pushUrl=()=>{const u=new URL(location.href);u.searchParams.delete("ch");u.hash="";return u.href};
+async function paintPush(){const e=document.getElementById("pushbox");if(!e)return;
+  if(!SB.ready||role!=="domevie"){e.hidden=true;return}
+  if(!PUSH.cleared){PUSH.cleared=true;try{navigator.clearAppBadge&&navigator.clearAppBadge().catch(()=>{})}catch(x){}}
+  let html,on=false;
+  if(!PUSH.ok)html=isIOS?`<h3>Recevoir l'avancement sur cet iPhone</h3><p class="sub">Bouton Partager, puis « Sur l'écran d'accueil ». Ouvrez ensuite l'appli depuis l'icône AFER et touchez « Activer les notifications ».</p>`
+    :`<h3>Notifications indisponibles ici</h3><p class="sub">Ce navigateur ne permet pas les notifications. Ouvrez le lien dans Chrome (Android) ou Safari (iPhone).</p>`;
+  else if(Notification.permission==="denied")html=`<h3>Notifications bloquées</h3><p class="sub">Elles ont été refusées pour ce site. Réautorisez-les dans les réglages du téléphone (Chrome : cadenas à côté de l'adresse, puis Notifications).</p>`;
+  else{const sub=Notification.permission==="granted"?await pushSub():null;
+    if(sub){on=true;html=`<div class="row" style="justify-content:space-between"><span><strong>🔔 Notifications activées</strong> <span class="sub">sur ce téléphone, à chaque étape validée</span></span><span class="row"><button class="btn sec sm" data-ptest>Tester</button><button class="btn ghost sm" data-poff>Désactiver</button></span></div>`;
+      if(!PUSH.synced){PUSH.synced=true;SB.c.rpc("push_abonner",{p_sub:sub.toJSON(),p_url:pushUrl()}).then(()=>{},()=>{})}} // garde l'abonnement à jour à chaque ouverture
+    else html=`<h3>Recevoir l'avancement sur ce téléphone</h3><p class="sub">Une notification à chaque étape validée, avec le pourcentage du chantier.</p><div class="row"><button class="btn" data-pon>Activer les notifications</button></div>`}
+  e.className="box pushbox"+(on?" on":"");e.innerHTML=html;e.hidden=false;
+  const b=k=>e.querySelector("[data-"+k+"]");
+  if(b("pon"))b("pon").onclick=()=>pushOn(b("pon"));
+  if(b("ptest"))b("ptest").onclick=async()=>{const {data,error}=await SB.c.functions.invoke("notif-push",{body:{action:"test"}});gsay(!error&&data&&data.envoyes?"Notification de test envoyée":"Envoi impossible pour l'instant")};
+  if(b("poff"))b("poff").onclick=async()=>{const s=await pushSub();if(s){SB.c.rpc("push_desabonner",{p_endpoint:s.endpoint}).then(()=>{},()=>{});await s.unsubscribe().catch(()=>{})}gsay("Notifications désactivées");paintPush()}}
+async function pushOn(btn){if(PUSH.busy)return;PUSH.busy=true;btn.disabled=true;
+  try{if(await Notification.requestPermission()!=="granted")return;
+    const reg=await navigator.serviceWorker.ready;
+    const {data,error}=await SB.c.functions.invoke("notif-push",{body:{action:"cle"}});
+    if(error||!data||!data.cle)throw new Error(error&&error.context&&error.context.status===404?"absente":"cle");
+    let s=await reg.pushManager.getSubscription();
+    if(s&&GS.get("push-cle","")!==data.cle){await s.unsubscribe().catch(()=>{});s=null}
+    if(!s)s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:deb64u(data.cle)});
+    const r=await SB.c.rpc("push_abonner",{p_sub:s.toJSON(),p_url:pushUrl()});if(r.error)throw r.error;
+    rawGS("push-cle",data.cle);PUSH.synced=true;gsay("Notifications activées");
+    SB.c.functions.invoke("notif-push",{body:{action:"test"}}).catch(()=>{})}
+  catch(x){console.warn("Notifications",x);gsay(x&&x.message==="absente"?"Notifications pas encore installées par AFER":"Activation impossible, réessayez")}
+  finally{PUSH.busy=false;paintPush()}}
+
 /* ===== Fenêtre de saisie (feuille du bas) ===== */
 const sh=document.getElementById("sheet"),shb=document.getElementById("sheetbody");
 function sheet(html,bind){shb.innerHTML=html;sh.hidden=false;shb.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeSheet);bind&&bind(shb)}
@@ -1699,7 +1742,7 @@ function addPhoto(key,d){
   const n=list(key).length,s=ALL_STEPS.find(x=>x.id===key);
   if(key==="materiel"){if(n===1){notify(["afer","domevie"],"Matériel réceptionné : début du chantier","suivi");toast("Chantier démarré")}else toast("Photo ajoutée")}
   else if(key.startsWith("x:")){const l=devis.find(x=>"x:"+x.id===key.slice(0,key.lastIndexOf(":")));toast("Photo ajoutée");if(l&&extraDone(l))notify(["afer","domevie"],"Photos avant/après prises : "+l.designation,"suivi")}
-  else{open=key;save("open",open);const gain=globalPct()-before;if(s&&n===MIN){toast("Étape validée");notify(["afer","domevie"],"Étape validée : "+s.t,"suivi")}else if(gain>0)toast("+"+fmtPct(gain)+" %");else toast("Photo ajoutée")}
+  else{open=key;save("open",open);const gain=globalPct()-before;if(s&&n===MIN){toast("Étape validée");const S=STEPS();notify(["afer","domevie"],"Étape "+(S.indexOf(s)+1)+"/"+S.length+" validée : "+s.t+" · "+Math.round(globalPct())+" %","suivi")}else if(gain>0)toast("+"+fmtPct(gain)+" %");else toast("Photo ajoutée")}
   renderAll()}
 function removePhoto(key,j){const L=list(key).slice(),[ph]=L.splice(j,1);delImg(ph.id);photos[key]=L;save("photos",photos);renderAll()}
 // Visionneuse : flèches, clavier (← →) et glissé du pouce entre les photos du même groupe (étape, documents…)
@@ -2180,7 +2223,7 @@ function renderHead(){
   const s=startAt();document.getElementById("cdate").textContent=s?"Début : "+fd(s):"Début : à la réception du matériel";
   document.getElementById("cclosed").hidden=!closed;
 }
-function renderAll(){paintRoles();renderHead();renderMission();renderSuivi();renderDevis();renderDocs();renderFrais();renderBPU();renderSAV();renderJournal();renderTree();odPaint();odSoon();paintBell();paintRoles()}
+function renderAll(){paintRoles();paintPush();renderHead();renderMission();renderSuivi();renderDevis();renderDocs();renderFrais();renderBPU();renderSAV();renderJournal();renderTree();odPaint();odSoon();paintBell();paintRoles()}
 
 /* ===== PV ===== */
 /* ===== PV ===== */
@@ -2564,7 +2607,9 @@ async function enter(session){SB.uid=session.user.id;showGate('<p class="sub">Ch
   if(!SB.roles.length)return showGate('<h2>Accès désactivé</h2><p class="sub">Ce téléphone n\'a plus accès à aucun chantier. Demandez un nouveau lien à AFER.</p>');
   await pull();
   role=SB.tokRole&&SB.roles.includes(SB.tokRole)?SB.tokRole:SB.roles.includes(GS.get("role",""))?GS.get("role",""):SB.roles[0];
-  CH.key=SB.tokCh&&chantiers.some(x=>x.id===SB.tokCh)?SB.tokCh:chantiers.some(x=>x.id===GS.get("current",""))?GS.get("current",""):(chantiers[0]||{}).id||"_vide";
+  const qch=new URLSearchParams(location.search).get("ch");
+  if(qch){rawGS("tab","suivi");const u=new URL(location.href);u.searchParams.delete("ch");history.replaceState(null,"",u.href)}
+  CH.key=qch&&chantiers.some(x=>x.id===qch)?qch:SB.tokCh&&chantiers.some(x=>x.id===SB.tokCh)?SB.tokCh:chantiers.some(x=>x.id===GS.get("current",""))?GS.get("current",""):(chantiers[0]||{}).id||"_vide";
   document.querySelectorAll(".roles button").forEach(b=>b.hidden=!SB.roles.includes(b.dataset.role));document.querySelector(".roles").style.display=SB.roles.length>1?"":"none";
   SB.ready=true;loadChantier(CH.key);paintVar();initScene();setRole(role);gate.hidden=true;odInit();
   document.getElementById("mlinks").hidden=false;listen();flush();paintSync();
