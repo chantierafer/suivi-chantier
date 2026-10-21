@@ -1806,7 +1806,7 @@ function renderSuivi(){
     el.appendChild(box)});
   // 3. travaux supplémentaires (synchronisés avec le devis)
   const xe=document.getElementById("extras");xe.innerHTML="";
-  if(role!=="domevie")reqs.filter(r=>r.st==="new").forEach(r=>{const d=document.createElement("div");d.className="box req";d.innerHTML=`<div class="row" style="justify-content:space-between"><h3>${esc(r.lib)}</h3><span class="pill">Demande envoyée à AFER</span></div>${r.note?`<p class="sub" style="margin:0">${esc(r.note)}</p>`:""}`;xe.appendChild(d)});
+  if(role!=="domevie")reqs.filter(r=>r.st==="new").forEach(r=>{const d=document.createElement("div");d.className="box req";d.innerHTML=`<div class="row" style="justify-content:space-between"><h3>${esc(r.lib)}</h3><span class="pill">Demande envoyée à AFER</span></div>${r.note?`<p class="sub" style="margin:0">${esc(r.note)}</p>`:""}${role==="afer"?`<div class="row">${delBtn("req",r.id)}</div>`:""}`;const db=d.querySelector("[data-delreq]");if(db)db.onclick=()=>delReq(r.id);xe.appendChild(d)});
   extras().forEach(l=>{const d=document.createElement("div");d.className="box "+(l.st==="val"?"val":"att");
     d.innerHTML=`<div class="row" style="justify-content:space-between"><h3>${esc(l.designation)} <span class="sub">· ${String(l.qty).replace(".",",")} ${esc(l.unit)}</span></h3><span class="pill ${l.st==="val"?"val":"att"}">${l.st==="val"?"Validé par DOMetVIE":"En attente de validation DOMetVIE"}</span></div><div class="duo"><div><h4>Avant</h4></div><div><h4>Après</h4></div></div>`;
     const c=d.querySelectorAll(".duo>div");c[0].appendChild(grid("x:"+l.id+":av",l.designation+" · avant",["Photo avant : la contrainte"]));c[1].appendChild(grid("x:"+l.id+":ap",l.designation+" · après",["Photo après : réglé"]));xe.appendChild(d)});
@@ -1827,11 +1827,17 @@ function updateHUD(){
 function toast(t){const e=document.getElementById("toast");if(document.getElementById("tab-suivi").hidden)return gsay(t);e.textContent=t;e.classList.add("on");clearTimeout(e._h);e._h=setTimeout(()=>e.classList.remove("on"),1500)}
 
 /* ===== Signalements de problème : visibles par AFER et DOMetVIE en direct ===== */
+// 21/10 (Djalil) : AFER peut supprimer un signalement ou une demande de travaux en plus envoyée par le technicien
+function delAsk(titre,fn){sheet(`<h2>Supprimer ${esc(titre)} ?</h2><p class="sub" style="margin:0">La suppression est définitive, pour tout le monde.</p><div class="row"><button class="btn sec" data-close>Annuler</button><button class="btn warn" id="del-ok">Supprimer</button></div>`,el=>{el.querySelector("#del-ok").onclick=()=>{fn();closeSheet();gsay("Supprimé");renderAll()}})}
+const delPb=id=>{const p=pbs.find(x=>x.id===id);if(p)delAsk("le signalement « "+p.type+" »",()=>{pbs=pbs.filter(x=>x.id!==id);save("pbs",pbs)})};
+const delReq=id=>{const r=reqs.find(x=>x.id===id);if(r)delAsk("la demande « "+r.lib+" »",()=>{reqs=reqs.filter(x=>x.id!==id);save("reqs",reqs)})};
+const delBtn=(k,id)=>`<button class="mini" data-del${k}="${id}" style="color:var(--bad)">Supprimer</button>`;
 function renderAlerts(){
   const el=document.getElementById("alerts");el.innerHTML="";
   pbs.forEach(p=>{const d=document.createElement("div");d.className="alertitem"+(p.st==="done"?" done":"");
     d.innerHTML=`<div class="row" style="justify-content:space-between"><strong>⚠ ${esc(p.type)}</strong><span class="pill ${p.st==="done"?"val":"bad"}">${p.st==="done"?"Traité":"En cours"}</span></div>${p.note?`<p>${esc(p.note)}</p>`:""}<p class="sub">Signalé le ${ft(p.at)}${p.by?" par "+ROLE_NAME[p.by]:""}${p.step?" · "+esc((ALL_STEPS.find(s=>s.id===p.step)||{}).t||""):""}</p><div class="shot" data-ph></div>${p.rep||p.st==="done"?`<p><b>Traité${p.doneBy?" par "+ROLE_NAME[p.doneBy]:""}${p.doneAt?" le "+ft(p.doneAt):""}${p.rep?" :":""}</b> ${esc(p.rep||"")}</p>`:""}`;
     if(p.photo){const s=d.querySelector("[data-ph]");imgInto(s,p.photo,"Problème : "+p.type)}
+    if(role==="afer"){d.insertAdjacentHTML("beforeend",`<div class="row">${delBtn("pb",p.id)}</div>`);d.querySelector("[data-delpb]").onclick=()=>delPb(p.id)}
     if((role==="afer"||role==="domevie")&&p.st!=="done"){const f=document.createElement("div");f.className="form";f.innerHTML=`<label>Ce qui a été fait<textarea data-rep placeholder="ex. technicien rappelé, client recontacté, RDV décalé au…"></textarea></label><div class="row"><button class="btn ok sm" data-ok>Marquer traité</button></div>`;
       f.querySelector("[data-ok]").onclick=()=>{p.rep=f.querySelector("[data-rep]").value.trim();p.st="done";p.doneAt=iso();p.doneBy=role;save("pbs",pbs);notify(["afer","tech","domevie"].filter(r=>r!==role),"Problème traité : "+p.type,"suivi");renderAll()};d.appendChild(f)}
     el.appendChild(d)});
@@ -3654,6 +3660,7 @@ function renderReqs() {
     if (r.photo) imgInto(d.querySelector('[data-ph]'), r.photo, 'Demande : ' + r.lib);
     const s = d.querySelector('[data-s]'); s.onchange = () => d.querySelector('[data-fw]').hidden = s.value !== 'autre';
     d.querySelector('[data-yes]').onclick = () => { const v = s.value, lib = v === 'autre' ? d.querySelector('[data-f]').value.trim() || r.lib : null; const l = addLine(v, parseFloat(d.querySelector('[data-q]').value) || 1, lib, r.photo); r.st = 'added'; r.line = l.id; save('reqs', reqs); renderAll(); };
+    d.insertAdjacentHTML('beforeend', `<div class="row">${delBtn('req', r.id)}</div>`); d.querySelector('[data-delreq]').onclick = () => delReq(r.id);
     d.querySelector('[data-no]').onclick = () => { r.st = 'refused'; save('reqs', reqs); notify(['tech'], 'Demande non retenue : ' + r.lib, 'suivi'); renderAll(); };
     R.appendChild(d);
   });
