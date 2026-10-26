@@ -711,10 +711,18 @@ table.dv input.num{width:90px;text-align:right}
 .odbox{border-radius:10px;padding:10px 14px;margin:0 0 10px;background:var(--surface-2);font-size:14px}
 .odbox.ok{background:var(--ok-bg);color:var(--okc)}
 .odbox.warn{background:var(--warn-bg);color:var(--warn)}
+.embarque header.top .brand{display:none} /* Gestion AFER : affichée dans le tableau de bord, la marque est déjà dans son menu */
 </style>
 </head>
 <body>
 
+<script>/* Gestion AFER (26/10/2026) : le compte AFER qui ouvre le lien simple de l'appli arrive sur le tableau de bord général (gestion.html),
+   qui affiche cette appli dans son onglet « Chantiers SDB » (?sdb=1). Liens technicien et DOMetVIE (?k=) : rien ne change. */
+function versGestion(){try{if(window.top!==window.self)return false;const q=new URLSearchParams(location.search);return !q.has("k")&&!q.has("sdb")&&!q.has("ch")}catch(e){return false}}
+(function(){try{if(window.parent!==window.self&&/gestion\.html$/.test(window.parent.location.pathname))document.documentElement.classList.add("embarque")}catch(e){}
+  try{if(!versGestion())return;for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!/^sb-.+-auth-token$/.test(k))continue;
+    const v=JSON.parse(localStorage.getItem(k)),u=v&&(v.user||(v.currentSession||{}).user);if(u&&u.email&&!u.is_anonymous){location.replace("gestion.html");return}}}catch(e){}})();
+</script>
 
 <div class="wrap">
   <header class="top">
@@ -2609,6 +2617,7 @@ async function enter(session){SB.uid=session.user.id;showGate('<p class="sub">Ch
     else{const m=await SB.c.rpc("mes_acces");if(m.error)throw m.error;SB.roles=[...new Set((m.data||[]).map(x=>x.role))]}
     GS.set("roles",SB.roles);GS.set("afer",SB.afer)}
   catch(e){SB.roles=GS.get("roles",[]);SB.afer=GS.get("afer",false)} // hors ligne : on reprend le dernier état connu
+  if(SB.afer&&!SB.lien&&versGestion())return location.replace("gestion.html"); // Gestion AFER : compte AFER sur le lien simple -> tableau de bord
   if(SB.lien&&(SB.afer||SB.roles.includes(SB.lien.role)))SB.roles=[SB.lien.role];
   if(!SB.roles.length)return showGate('<h2>Accès désactivé</h2><p class="sub">Ce téléphone n\'a plus accès à aucun chantier. Demandez un nouveau lien à AFER.</p>');
   await pull();
@@ -2623,8 +2632,13 @@ async function enter(session){SB.uid=session.user.id;showGate('<p class="sub">Ch
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){pull();flush()}});
   addEventListener("online",()=>{flush();pull()});addEventListener("offline",paintSync);
   if(SB.afer&&!SB.hasBpu&&SB.online)GS.set("bpu",bpu); // premier lancement : le BPU part dans la base
-  if(SB.afer&&!chantiers.length)openFiche(false)}
+  if(SB.afer&&!chantiers.length)openFiche(false);
+  if(window.parent!==window.self)try{window.parent.postMessage({gestion:"pret",ch:CH.key},location.origin)}catch(e){}} // Gestion AFER : appli prête dans le tableau de bord
 SB.logout=async()=>{if(OB.length){gsay("Envoi en cours, réessayez dans un instant");flush();return}await SB.c.auth.signOut();Object.keys(localStorage).forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});location.href=location.pathname};
+
+/* --- Gestion AFER : le tableau de bord (gestion.html) ouvre un chantier dans cette appli affichée dans son onglet « Chantiers SDB » --- */
+addEventListener("message",e=>{const d=e.data;if(e.origin!==location.origin||!d||d.gestion!=="ouvrir"||!SB.ready||!SB.afer)return;
+  if(d.ch&&d.ch!==CH.key&&chantiers.some(x=>x.id===d.ch))switchChantier(d.ch);if(d.tab)setTab(d.tab)});
 
 /* --- Liens d'accès (AFER) --- */
 const linkUrl=t=>location.origin+location.pathname+"?k="+t;

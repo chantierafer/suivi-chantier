@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2E3238">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Suivi AFER">
+<title>Gestion AFER</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Gestion AFER : tableau de bord général de l'espace AFER (maquette V4 validée le 21/10/2026).
+   Menu à gauche (en haut sur téléphone) ; l'onglet « Chantiers SDB » affiche l'appli de suivi SDB (index.html?sdb=1) dans un cadre. */
+:root{
+  --turq:#2FBFBF; --turq-ink:#178C8C; --turq-soft:#E3F6F6; --anth:#2E3238;
+  --bg:#F3F6F6; --surface:#FFFFFF; --surface-2:#F7FAFA; --line:#D3DEDE; --line-soft:#E6EEEE;
+  --fg:#2E3238; --muted:#5F6B72;
+  --warn:#B86E00; --warn-bg:#FFF4E0; --bad:#B3261E; --bad-bg:#FDECEA; --ok:#2E7D4F; --ok-bg:#E5F4EA;
+  --side:#2E3238; --side-fg:#DCE4E6; --side-mute:#8F9BA2; --side-act:#3A4048;
+  --shadow:0 10px 30px rgba(20,30,35,.18);
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --turq-ink:#5FD6D6; --turq-soft:#1D3436;
+  --bg:#181C20; --surface:#22272C; --surface-2:#1D2226; --line:#3A4249; --line-soft:#2E353B;
+  --fg:#E9EEEF; --muted:#9DA8AE;
+  --warn:#F2B04A; --warn-bg:#3A2E18; --bad:#FF8A80; --bad-bg:#3A1F1D; --ok:#7BD39A; --ok-bg:#1C3326;
+  --side:#111417; --side-act:#262C32; --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --turq-ink:#5FD6D6; --turq-soft:#1D3436;
+  --bg:#181C20; --surface:#22272C; --surface-2:#1D2226; --line:#3A4249; --line-soft:#2E353B;
+  --fg:#E9EEEF; --muted:#9DA8AE;
+  --warn:#F2B04A; --warn-bg:#3A2E18; --bad:#FF8A80; --bad-bg:#3A1F1D; --ok:#7BD39A; --ok-bg:#1C3326;
+  --side:#111417; --side-act:#262C32; --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--body);overflow:hidden}
+h1,h2,h3,h4{font-family:var(--display);font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0}
+button{font-family:var(--body)}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--turq-ink);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* cadre */
+.app{display:grid;grid-template-columns:212px minmax(0,1fr);height:100vh;height:100dvh}
+.side{background:var(--side);color:var(--side-fg);padding:14px 10px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:2px;font-size:14px;overflow-y:auto}
+.side .brand{font-family:var(--display);font-size:24px;font-weight:700;color:#fff;padding:2px 10px 12px;letter-spacing:.03em;display:flex;align-items:center;gap:8px}
+.side .brand i{width:9px;height:22px;background:var(--turq);display:inline-block}
+.side .brand small{font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--side-mute)}
+.side .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--side-mute);padding:14px 10px 4px}
+.nav{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;color:var(--side-fg);padding:8px 10px;border-radius:6px;cursor:pointer;min-height:38px}
+.nav:hover{background:var(--side-act)}
+.nav[aria-current="page"]{background:var(--side-act);color:#fff;box-shadow:inset 3px 0 0 var(--turq);font-weight:600}
+.nav.dim{color:var(--side-mute);cursor:default}
+.nav.dim:hover{background:none}
+.nav .soon{margin-left:auto;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border:1px solid #4A535B;border-radius:4px;padding:0 4px}
+.side .foot{margin-top:auto;display:grid;gap:6px;padding:12px 10px 0;font-size:12px;color:var(--side-mute)}
+.side .foot button{all:unset;cursor:pointer;color:var(--side-fg);text-decoration:underline;text-underline-offset:3px}
+.live{display:inline-flex;align-items:center;gap:6px}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:#7BD39A}
+.live.off::before{background:#F2B04A}
+.main{position:relative;min-width:0;min-height:0;display:grid}
+.view{min-height:0;overflow-y:auto}
+#v-sdb{overflow:hidden}
+#v-sdb iframe{display:block;width:100%;height:100%;border:0;background:var(--bg)}
+.page{max-width:1240px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:grid;gap:16px;align-content:start}
+
+/* tableau de bord */
+.topline h2{font-size:30px}
+.topline p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.alerts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.alerts b{font-size:12.5px}
+.al{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 12px;background:var(--bad-bg);color:var(--bad);font-weight:600;font-size:13px}
+.al:focus-visible{outline:2px solid var(--bad);outline-offset:2px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--surface)}
+.kpi .v{font-family:var(--display);font-size:34px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12.5px;color:var(--muted);margin-top:4px}
+.kpi.bad .v{color:var(--bad)}
+.cgroup{display:grid;gap:10px}
+.cgroup>header{display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--cc);padding-bottom:5px}
+.cgroup>header h3{font-size:21px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--cc)}
+.note{font-size:12.5px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
+.card{all:unset;box-sizing:border-box;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:12px 13px;display:grid;gap:7px;background:var(--surface);border-left:5px solid var(--cc);align-content:start}
+.card:hover{border-color:var(--cc)}
+.card:focus-visible{outline:2px solid var(--cc);outline-offset:2px}
+.card.sel{box-shadow:0 0 0 2px var(--cc)}
+.card .hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card .code{font:700 12px var(--body);letter-spacing:.06em;color:var(--cc)}
+.card h4{font-size:20px}
+.card .meta{font-size:12.5px;color:var(--muted)}
+.pct{display:flex;align-items:center;gap:10px}
+.pct .v{font:600 26px var(--display);font-variant-numeric:tabular-nums;min-width:60px}
+.bar{height:8px;border-radius:4px;background:var(--line-soft);overflow:hidden;flex:1}
+.bar i{display:block;height:100%;background:var(--cc,var(--turq));border-radius:4px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:11.5px;font-weight:700;border-radius:4px;padding:1px 7px;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.neu{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.empty{border:1px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--muted);background:var(--surface)}
+.btn{font:600 14px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:9px 14px;cursor:pointer;min-height:42px}
+.btn.pri{background:var(--turq);border-color:var(--turq);color:#0E2A2A}
+.btn.wide{width:100%}
+
+/* détail d'un chantier */
+.scrim{position:fixed;inset:0;background:rgba(20,26,30,.35);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);padding:18px 18px calc(24px + env(safe-area-inset-bottom,0px));display:grid;gap:14px;align-content:start;overflow-y:auto;z-index:21;--cc:var(--turq)}
+.drawer .x{position:absolute;top:12px;right:14px;min-height:36px;padding:6px 12px}
+.drawer h3{font-size:28px;padding-right:90px}
+.drawer .code{font:700 12px var(--body);letter-spacing:.06em;color:var(--cc)}
+.sec{display:grid;gap:6px}
+.sec>b{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--turq-ink)}
+.step{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px}
+.step .st{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);display:inline-grid;place-items:center;font-size:11px;font-weight:700}
+.step.done .st{background:var(--ok);border-color:var(--ok);color:#fff}
+.step.cur .st{border-color:var(--cc);box-shadow:inset 0 0 0 3px var(--surface);background:var(--cc)}
+.step .when{font-size:12px;color:var(--muted);text-align:right}
+.step.cur span:nth-child(2){font-weight:700}
+.pb{border:1px solid var(--line);border-left:4px solid var(--bad);border-radius:6px;padding:8px 10px;font-size:13px;display:grid;gap:2px}
+.pb strong{font-weight:700}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;border-bottom:1px dotted var(--line);padding:4px 0}
+.kv span:first-child{color:var(--muted)}
+.kv span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+
+/* connexion */
+.gate{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;padding:16px;z-index:40}
+.gcard{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px;display:grid;gap:12px}
+.gcard .brand{font-family:var(--display);font-size:26px;font-weight:700;display:flex;align-items:center;gap:10px;letter-spacing:.04em}
+.gcard .brand i{width:10px;height:24px;background:var(--turq);display:inline-block}
+.gcard .brand small{font:600 12px var(--body);color:var(--muted);letter-spacing:.04em}
+.gcard h2{font-size:24px}
+.gcard p{margin:0;color:var(--muted)}
+.form{display:grid;gap:10px}
+.form label{display:grid;gap:4px;font-weight:600;font-size:13px}
+.form input{font:16px var(--body);padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
+.gerr{color:var(--bad)!important;font-weight:600}
+
+/* téléphone : le menu passe en bandeau en haut */
+@media (max-width:860px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .side{flex-direction:row;align-items:center;gap:4px;padding:8px max(10px,env(safe-area-inset-left,0px));padding-top:calc(8px + env(safe-area-inset-top,0px));overflow-x:auto;overflow-y:hidden}
+  .side .brand{padding:0 8px 0 2px;font-size:20px}
+  .side .brand small,.side .grp,.side .nav.dim,.side .foot{display:none}
+  .nav{white-space:nowrap;min-height:36px;padding:6px 10px}
+  .nav[aria-current="page"]{box-shadow:inset 0 -3px 0 var(--turq)}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .topline h2{font-size:26px}
+  .drawer{top:auto;max-height:88dvh;width:100%;border-left:0;border-top:1px solid var(--line);border-radius:14px 14px 0 0}
+}
+</style>
+</head>
+<body>
+<div class="gate" id="gate"><div class="gcard"><div class="brand"><i></i>AFER <small>Gestion</small></div><p>Chargement…</p></div></div>
+
+<div class="app" id="app" hidden>
+  <nav class="side" aria-label="Menu AFER">
+    <div class="brand"><i></i>AFER <small>Gestion</small></div>
+    <div class="grp">Pilotage</div>
+    <button class="nav" data-view="dash" aria-current="page">Tableau de bord</button>
+    <button class="nav" data-view="sdb">Chantiers SDB</button>
+    <div class="grp">À venir</div>
+    <span class="nav dim">Planning global <span class="soon">bientôt</span></span>
+    <span class="nav dim">Rentabilité <span class="soon">bientôt</span></span>
+    <span class="nav dim">Personnel et matériel <span class="soon">bientôt</span></span>
+    <span class="nav dim">Clients <span class="soon">bientôt</span></span>
+    <div class="foot"><span class="live" id="live">En direct</span><button id="out">Se déconnecter</button></div>
+  </nav>
+  <main class="main">
+    <section class="view" id="v-dash" aria-label="Tableau de bord"><div class="page" id="dash"></div></section>
+    <section class="view" id="v-sdb" aria-label="Chantiers SDB" hidden></section>
+  </main>
+</div>
+<div id="detail"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script>
+const SB_URL="https://xgliespwrxlxiaqaxtzj.supabase.co",SB_KEY="sb_publishable_8UoZO8bXKkBgD47-wcLqCw_RlPkTslt";
+// Étapes de l'appli SDB : même liste que ALL_STEPS dans app/suivi-chantier-sdb.html (une étape est validée à 2 photos)
+const STEPS=[{id:"constat",t:"Constat avant travaux"},{id:"protection",t:"Protection et installation"},{id:"depose",t:"Dépose et démolition",opt:true},
+  {id:"plomberie",t:"Plomberie"},{id:"receveur",t:"Receveur extra-plat"},{id:"etancheite",t:"Étanchéité"},{id:"dalles",t:"Revêtement mural"},
+  {id:"colonne",t:"Robinetterie et colonne"},{id:"paroi",t:"Paroi de douche"},{id:"pmr",t:"Équipements PMR"},{id:"finitions",t:"Finitions et nettoyage"},{id:"reception",t:"Réception"}];
+const MIN=2;
+// Clients : code et couleur (turquoise réservé à AFER). Les chantiers SDB sont tous en sous-traitance DOMetVIE.
+const CLIENTS=[{id:"dmv",nom:"DOMetVIE",code:"DMV",c:"#3F7CC0",info:"Salles de bain PMR en sous-traitance"}];
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
+const fd=s=>s?new Date(s).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"}):"";
+const fdl=s=>s?new Date(s).toLocaleDateString("fr-FR"):"";
+const ft=s=>s?new Date(s).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" à "+new Date(s).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
+const fpct=p=>p>=100?"100":(Math.round(p*10)/10).toString().replace(".",","); // même arrondi que l'appli SDB
+const sameDay=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
+const plural=(n,a,b)=>n+" "+(n>1?b:a);
+
+let C=null,ROWS=[],EL={},VIEW="dash",SEL=null,online=true;
+
+/* ---------- connexion (même compte que l'appli SDB) ---------- */
+const gate=$("#gate");
+function showGate(html,bind){gate.innerHTML=`<div class="gcard"><div class="brand"><i></i>AFER <small>Gestion</small></div>${html}</div>`;gate.hidden=false;bind&&bind(gate)}
+function showLogin(msg){showGate(`<h2>Connexion AFER</h2>${msg?`<p>${esc(msg)}</p>`:""}<form class="form" id="lg"><label>Adresse e-mail<input id="lg-m" type="email" autocomplete="username" required></label><label>Mot de passe<input id="lg-p" type="password" autocomplete="current-password" required></label><p class="gerr" id="lg-e" hidden></p><button class="btn pri" type="submit">Se connecter</button></form><p>Technicien ou DOMetVIE : ouvrez le lien reçu par SMS ou par mail.</p>`,
+  g=>g.querySelector("#lg").onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector("button"),er=g.querySelector("#lg-e");b.disabled=true;er.hidden=true;
+    const {data,error}=await C.auth.signInWithPassword({email:g.querySelector("#lg-m").value.trim(),password:g.querySelector("#lg-p").value});
+    if(error){er.textContent=/fetch|network/i.test(error.message)?"Pas de connexion internet.":"Adresse ou mot de passe incorrect.";er.hidden=false;b.disabled=false;return}
+    enter(data.session)})}
+async function start(){
+  if(!SB_URL||!window.supabase)return showGate("<h2>Version en ligne seulement</h2><p>Le tableau de bord lit les chantiers dans la base : il s'ouvre depuis le lien de l'appli.</p>");
+  C=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  const {data:{session}}=await C.auth.getSession();
+  if(!session)return showLogin();
+  enter(session)}
+async function enter(session){
+  showGate("<p>Chargement des chantiers…</p>");
+  // lien technicien ou DOMetVIE (connexion anonyme) : ce tableau de bord est réservé à AFER, on renvoie vers l'appli SDB
+  if(session.user.is_anonymous)return location.replace("./");
+  const a=await C.from("admins").select("user_id").eq("user_id",session.user.id).maybeSingle();
+  if(a.error&&/fetch|network/i.test(a.error.message))return showGate(`<h2>Pas de connexion internet</h2><p>Réessayez quand le réseau revient.</p><button class="btn pri" onclick="location.reload()">Réessayer</button>`);
+  if(!a.data){await C.auth.signOut().catch(()=>{});return showLogin("Ce compte n'a pas accès à la gestion AFER.")}
+  C.auth.onAuthStateChange(ev=>{if(ev==="SIGNED_OUT")location.reload()});
+  await pull();gate.hidden=true;$("#app").hidden=false;
+  const h=location.hash.slice(1);if(h==="sdb"||h.startsWith("sdb="))openSdb(decodeURIComponent(h.slice(4))||null);else render();
+  listen();setInterval(()=>{if(document.visibilityState==="visible")pull().then(render)},60000);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pull().then(render)})}
+
+/* ---------- données : chantiers + éléments utiles au tableau de bord ---------- */
+async function fetchAll(q){const out=[];for(let i=0;;i+=1000){const {data,error}=await q().range(i,i+999);if(error)throw error;out.push(...data);if(data.length<1000)return out}}
+async function pull(){
+  try{const [chs,els]=await Promise.all([
+      fetchAll(()=>C.from("chantiers").select("id,nom,fiche,clos,created_at").order("created_at").order("id")),
+      fetchAll(()=>C.from("elements").select("chantier_id,type,id,data").in("type",["photo","pb","pv","etat"]).order("chantier_id").order("type").order("id"))]);
+    ROWS=chs;EL={};els.forEach(e=>{const c=EL[e.chantier_id]=EL[e.chantier_id]||{};(c[e.type]=c[e.type]||{})[e.id]=e.data});online=true}
+  catch(e){console.warn("Lecture impossible",e);online=false}
+  const l=$("#live");l.textContent=online?"En direct":"Hors ligne";l.classList.toggle("off",!online)}
+let tm=null;
+function listen(){const again=()=>{clearTimeout(tm);tm=setTimeout(()=>pull().then(render),1200)};
+  C.channel("gestion").on("postgres_changes",{event:"*",schema:"public",table:"elements"},again).on("postgres_changes",{event:"*",schema:"public",table:"chantiers"},again).subscribe()}
+
+/* ---------- état d'un chantier (même calcul que l'appli SDB) ---------- */
+function etat(r,i){
+  const E=EL[r.id]||{},f=r.fiche||{},cli=CLIENTS[0];
+  const variante=((E.etat||{}).variant||{}).v||f.variante||"avec";
+  const P={};Object.values(E.photo||{}).forEach(d=>{if(d&&d.slot)(P[d.slot]=P[d.slot]||[]).push(d.at)});Object.values(P).forEach(L=>L.sort());
+  const steps=STEPS.filter(s=>!s.opt||variante==="avec").map(s=>{const L=P[s.id]||[];return {...s,n:L.length,done:L.length>=MIN,at:L.length>=MIN?L[MIN-1]:null}});
+  const pct=steps.reduce((a,s)=>a+Math.min(s.n,MIN)/MIN,0)/steps.length*100;
+  const cur=steps.findIndex(s=>!s.done);
+  const pv=((E.pv||{}).pv||{}).v||null;
+  const clos=((E.etat||{}).closed||{}).v||(r.clos?{}:null);
+  const pbs=Object.values(E.pb||{}).filter(p=>p&&p.st!=="done").sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  const photos=Object.values(P).reduce((a,L)=>a+L.length,0);
+  const debut=(P.materiel||[])[0]||null;
+  const dates=[...Object.values(P).flat(),...Object.values(E.pb||{}).map(p=>p&&p.at),pv&&pv.at,clos&&clos.at].filter(Boolean).sort();
+  const statut=clos?"clos":pv?"pv":photos?"cours":"attente";
+  return {id:r.id,code:cli.code+"-"+String(i+1).padStart(3,"0"),cli,nom:f.ville?"Chantier "+f.ville:"Nouveau chantier",variante,steps,pct,cur,pv,clos,pbs,photos,debut,
+    fin:(pv&&pv.at)||(clos&&clos.at)||null,derniere:dates[dates.length-1]||null,statut,cree:f.created||r.created_at}}
+const ordre={cours:0,attente:1,pv:2,clos:3};
+function liste(){return ROWS.map(etat).sort((a,b)=>ordre[a.statut]-ordre[b.statut]||String(b.derniere||b.cree).localeCompare(String(a.derniere||a.cree)))}
+function ligneStatut(x){
+  if(x.statut==="clos")return "Clôturé"+(x.clos.at?" le "+fdl(x.clos.at):"");
+  if(x.statut==="pv")return "PV de réception signé le "+fdl(x.pv.at);
+  if(x.statut==="attente")return "Pas démarré";
+  const s=x.steps[x.cur<0?x.steps.length-1:x.cur];return x.cur<0?"Toutes les étapes validées":`Étape ${x.cur+1}/${x.steps.length} : ${s.t}`}
+
+/* ---------- affichage ---------- */
+function render(){if(VIEW!=="dash")return;
+  const L=liste(),now=new Date();
+  const enCours=L.filter(x=>x.statut==="cours").length,finis=L.filter(x=>x.statut==="pv"||x.statut==="clos").length;
+  const nbPb=L.reduce((a,x)=>a+x.pbs.length,0),auj=L.reduce((a,x)=>a+x.steps.filter(s=>s.at&&sameDay(s.at,now)).length,0);
+  const card=x=>`<button class="card${SEL===x.id?" sel":""}" data-ch="${esc(x.id)}" style="--cc:${x.cli.c}" title="Clic : détail · Clic droit : ouvrir le suivi SDB">
+      <div class="hd"><span class="code">${esc(x.code)}</span>${x.statut==="pv"||x.statut==="clos"?'<span class="pill ok">Terminé</span>':x.statut==="attente"?'<span class="pill neu">Pas démarré</span>':""}</div>
+      <h4>${esc(x.nom)}</h4>
+      <div class="meta">SDB PMR · ${x.variante==="avec"?"avec":"sans"} démolition${x.debut?" · début "+fd(x.debut):""}${x.fin?" → "+fd(x.fin):""}</div>
+      <div class="pct"><span class="v">${fpct(x.pct)} %</span><span class="bar" aria-hidden="true"><i style="width:${x.pct.toFixed(1)}%"></i></span></div>
+      <div class="meta">${esc(ligneStatut(x))}</div>
+      <div class="tags">${x.pbs.length?`<span class="pill bad">${plural(x.pbs.length,"problème à traiter","problèmes à traiter")}</span>`:""}${x.derniere&&x.statut==="cours"?`<span class="pill neu">Dernière activité ${ft(x.derniere)}</span>`:""}</div>
+    </button>`;
+  const grp=CLIENTS.map(k=>{const M=L.filter(x=>x.cli.id===k.id);if(!M.length)return"";
+    return `<section class="cgroup" style="--cc:${k.c}"><header><span class="dot"></span><h3>${esc(k.nom)}</h3><span class="note">${plural(M.length,"chantier","chantiers")} · ${esc(k.info)}</span></header><div class="cards">${M.map(card).join("")}</div></section>`}).join("");
+  const al=L.filter(x=>x.pbs.length).map(x=>`<button class="al" data-pb="${esc(x.id)}">⚠ ${esc(x.nom)} : ${plural(x.pbs.length,"problème à traiter","problèmes à traiter")}</button>`).join("");
+  $("#dash").innerHTML=`<div class="topline"><h2>Tableau de bord</h2><p>${esc(now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}))} · vue globale de tous les chantiers</p></div>
+    ${al?`<div class="alerts"><b>Alertes</b>${al}</div>`:""}
+    <div class="kpis">
+      <div class="kpi"><div class="v">${enCours}</div><div class="l">Chantiers en cours</div></div>
+      <div class="kpi"><div class="v">${finis}</div><div class="l">Terminés (PV signé)</div></div>
+      <div class="kpi${nbPb?" bad":""}"><div class="v">${nbPb}</div><div class="l">Problèmes à traiter</div></div>
+      <div class="kpi"><div class="v">${auj}</div><div class="l">Étapes validées aujourd'hui</div></div>
+    </div>
+    ${grp||'<div class="empty">Aucun chantier pour l\'instant. Crée le premier dans l\'onglet Chantiers SDB.</div>'}
+    <p class="hint">Clic sur un chantier : détail. Clic droit : ouvrir directement son suivi SDB. Les chiffres se mettent à jour en direct à chaque photo.</p>`;
+  if(SEL)renderDetail()}
+
+function renderDetail(){const x=liste().find(y=>y.id===SEL),box=$("#detail");if(!x){SEL=null;box.innerHTML="";return}
+  const st=x.steps.map((s,i)=>`<div class="step${s.done?" done":i===x.cur?" cur":""}"><span class="st" aria-hidden="true">${s.done?"✓":""}</span><span>${i+1}. ${esc(s.t)}</span><span class="when">${s.done?"validée le "+ft(s.at):s.n?plural(s.n,"photo","photos")+" sur 2":i===x.cur?"en cours":"à faire"}</span></div>`).join("");
+  const pb=x.pbs.map(p=>`<div class="pb"><strong>${esc(p.type||"Problème")}</strong>${p.note?`<span>${esc(p.note)}</span>`:""}<span class="note">Signalé le ${ft(p.at)}</span></div>`).join("");
+  box.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="d-t" style="--cc:${x.cli.c}">
+    <button class="btn x" data-close>Fermer</button>
+    <span class="code">${esc(x.code)} · ${esc(x.cli.nom)}</span>
+    <h3 id="d-t">${esc(x.nom)}</h3>
+    <div class="note">Salle de bain PMR · ${x.variante==="avec"?"avec":"sans"} démolition${x.debut?" · début le "+fdl(x.debut):" · pas encore démarré"}</div>
+    <button class="btn pri wide" data-open="${esc(x.id)}">Ouvrir le suivi SDB</button>
+    <div class="sec"><b>Avancement</b><div class="pct"><span class="v">${fpct(x.pct)} %</span><span class="bar" aria-hidden="true"><i style="width:${x.pct.toFixed(1)}%"></i></span></div><div>${st}</div></div>
+    ${pb?`<div class="sec"><b>Problèmes à traiter</b>${pb}<button class="btn" data-open="${esc(x.id)}">Les traiter dans le suivi</button></div>`:""}
+    <div class="sec"><b>Réception et activité</b>
+      <div class="kv"><span>PV de réception</span><span>${x.pv?"signé le "+ft(x.pv.at):"pas encore signé"}</span></div>
+      <div class="kv"><span>Chantier</span><span>${x.clos?"clôturé"+(x.clos.at?" le "+fdl(x.clos.at):""):"ouvert"}</span></div>
+      <div class="kv"><span>Photos</span><span>${x.photos}</span></div>
+      <div class="kv"><span>Dernière activité</span><span>${x.derniere?ft(x.derniere):"aucune"}</span></div>
+    </div></aside>`;
+  box.querySelector(".drawer [data-close]").focus({preventScroll:true})}
+
+/* ---------- onglets ---------- */
+function setView(v){VIEW=v;
+  document.querySelectorAll(".nav[data-view]").forEach(b=>{if(b.dataset.view===v)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+  $("#v-dash").hidden=v!=="dash";$("#v-sdb").hidden=v!=="sdb";if(v==="dash")render()}
+// L'appli SDB est chargée une fois dans le cadre, puis gardée : on repasse d'un onglet à l'autre sans recharger.
+let frame=null,frameReady=false,pending=null;
+function openSdb(ch){SEL=null;$("#detail").innerHTML="";
+  if(!frame){frame=document.createElement("iframe");frame.title="Chantiers SDB";frame.allow="clipboard-write; fullscreen";
+    frame.src="./?sdb=1"+(ch?"&ch="+encodeURIComponent(ch):"");$("#v-sdb").appendChild(frame)}
+  else if(ch){if(frameReady)frame.contentWindow.postMessage({gestion:"ouvrir",ch,tab:"suivi"},location.origin);else pending=ch}
+  history.replaceState(null,"","#sdb"+(ch?"="+encodeURIComponent(ch):""));setView("sdb")}
+addEventListener("message",e=>{if(e.origin!==location.origin||!e.data||e.data.gestion!=="pret")return;frameReady=true;
+  if(pending){frame.contentWindow.postMessage({gestion:"ouvrir",ch:pending,tab:"suivi"},location.origin);pending=null}});
+document.addEventListener("click",e=>{const t=e.target.closest("[data-view],[data-ch],[data-open],[data-pb],[data-close]");if(!t)return;
+  if(t.dataset.view){if(t.dataset.view==="sdb")openSdb(null);else{history.replaceState(null,"",location.pathname);setView("dash")}}
+  else if(t.dataset.ch){SEL=t.dataset.ch;render()}
+  else if(t.dataset.open)openSdb(t.dataset.open);
+  else if(t.dataset.pb)openSdb(t.dataset.pb);
+  else if(t.hasAttribute("data-close")){const id=SEL;SEL=null;$("#detail").innerHTML="";render();const c=document.querySelector(`.card[data-ch="${CSS.escape(id||"")}"]`);c&&c.focus()}});
+document.addEventListener("contextmenu",e=>{const t=e.target.closest(".card[data-ch]");if(!t)return;e.preventDefault();openSdb(t.dataset.ch)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&SEL){const c=$("#detail [data-close]");c&&c.click()}});
+$("#out").onclick=async()=>{await C.auth.signOut().catch(()=>{});location.replace(location.pathname)};
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+start();
+</script>
+</body>
+</html>
