@@ -374,6 +374,46 @@ kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--l
   .pop .phase{grid-template-columns:1fr 1fr}
 }
 @media (prefers-reduced-motion:no-preference){.card,.tcard,.chip,.res{transition:border-color .15s,box-shadow .15s}}
+/* devis et factures (V13) */
+.dvbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.dvbar select,.dvbar input[type=search]{font:13px var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px;min-width:0}
+.dvbar input[type=search]{margin-left:auto;min-width:200px;border-radius:6px}
+.dvsplit{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.dvlist{flex:1 1 640px;min-width:0}
+.dvside{flex:1 1 320px;max-width:420px;min-width:280px;position:sticky;top:0}
+tr.clk.sel td{background:var(--turq-soft)}
+.dvpanel{display:grid;gap:9px}
+.dvprev{border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:6px;max-height:430px;overflow-y:auto}
+.dvprev.big{max-height:none;border:0;background:transparent;padding:0}
+.dvpages svg{width:100%;height:auto;display:block;border:1px solid var(--line);background:#fff;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.dvmini{background:#fff;color:#2E3238;border:1px solid var(--line);padding:10px;font-size:12px;display:grid;gap:3px}
+.dvmini div{display:flex;justify-content:space-between;gap:8px}.dvmini .tot{border-top:1px solid var(--line);margin-top:4px;padding-top:4px}
+.dvact,.dvlinks,.dvpays{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.dvpays{display:grid;gap:3px}.dvlinks b,.dvpays b{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--turq-ink);width:100%}
+.dvedit{position:fixed;inset:0;z-index:29;background:var(--bg);display:flex;flex-direction:column}
+.dvedit>header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+.dvedit>header .ttl{font-family:var(--display);font-size:24px;font-weight:600}.dvedit>header .sp{flex:1}
+.dvbody{flex:1;min-height:0;display:flex;gap:14px;padding:12px 14px;align-items:flex-start}
+.dvleft{flex:1 1 640px;min-width:0;display:grid;gap:10px;overflow-y:auto;max-height:100%;padding-bottom:30px}
+.dvright{flex:0 1 460px;min-width:300px;max-height:100%;overflow-y:auto;display:grid;gap:8px;align-content:start}
+.dvedit label{display:grid;gap:3px;font-size:12px;color:var(--muted);font-weight:600;min-width:0}
+.dvedit input:not([type=checkbox]):not([type=radio]),.dvedit select,.dvedit textarea{font:13px var(--body);color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+.dvedit input:disabled,.dvedit select:disabled,.dvedit textarea:disabled{opacity:.85;background:transparent;border-color:transparent}
+.dvedit .fgrp{display:grid;gap:6px;border-top:1px solid var(--line-soft);padding-top:8px}.dvedit .fgrp>b{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--turq-ink)}
+.dvedit .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.dvedit details{margin-top:6px}.dvedit summary{cursor:pointer;font-weight:700;font-size:12.5px;padding:4px 0}
+.dvedit .chk{display:flex;flex-direction:row;align-items:center;gap:6px;color:var(--fg);font-weight:500;font-size:12.5px}.dvedit .chk input{width:auto}
+.dvlines td{vertical-align:top;white-space:normal}.dvlines td input[data-lf=qty]{width:70px}.dvlines td input[data-lf=pu]{width:96px}.dvlines td select{width:auto}
+.dvlines input.det{margin-top:4px;font-size:12px}.dvlines tr.ltitre td{background:var(--turq-soft);font-weight:700}
+.dvtot{max-width:340px;margin-left:auto;width:100%}
+.dvlib{display:grid;gap:3px;max-height:420px;overflow-y:auto}
+.dvlib button{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border:1px solid var(--line-soft);border-radius:6px;background:var(--surface);font-size:12.5px}
+.dvlib button:hover{background:var(--turq-soft)}.dvlib small{display:block;color:var(--muted);font-size:11px}
+.dvbig{position:fixed;inset:0;z-index:33;background:var(--bg);display:flex;flex-direction:column}
+.dvbighd{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+.dvbigbody{flex:1;overflow-y:auto;padding:14px;max-width:860px;width:100%;margin:0 auto}
+.dvissues{margin:0;padding-left:18px;display:grid;gap:4px}.dvissues li.bad{color:var(--bad);font-weight:600}
+@media (max-width:900px){.dvbody{flex-direction:column;overflow-y:auto}.dvleft,.dvright{max-height:none;overflow:visible;flex:none;width:100%}.dvedit .grid3{grid-template-columns:1fr 1fr}.dvside{position:static;max-width:none}}
 </style>
 </head>
 <body>
@@ -387,6 +427,8 @@ kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--l
     <button class="nav" data-view="sdb">Chantiers SDB</button>
     <button class="nav" data-view="plan">Planning global</button>
     <button class="nav" data-view="renta">Rentabilité</button>
+    <div class="grp">Documents</div>
+    <button class="nav" data-view="devis">Devis et factures</button>
     <div class="grp">Bases</div>
     <button class="nav" data-view="res">Personnel et matériel</button>
     <button class="nav" data-view="cli">Clients</button>
@@ -524,13 +566,15 @@ async function fetchAll(q){const out=[];for(let i=0;;i+=1000){const {data,error}
 async function pull(){
   try{const [chs,els]=await Promise.all([
       fetchAll(()=>C.from("chantiers").select("id,nom,fiche,clos,created_at").order("created_at").order("id")),
-      fetchAll(()=>C.from("elements").select("chantier_id,type,id,data").in("type",["photo","pb","pv","etat","devis","frais"]).order("chantier_id").order("type").order("id"))]);
+      fetchAll(()=>C.from("elements").select("chantier_id,type,id,data").in("type",["photo","pb","pv","etat","devis","devisinfo","frais"]).order("chantier_id").order("type").order("id"))]);
     ROWS=chs;EL={};els.forEach(e=>{const c=EL[e.chantier_id]=EL[e.chantier_id]||{};(c[e.type]=c[e.type]||{})[e.id]=e.data});online=true}
   catch(e){console.warn("Lecture impossible",e);online=false}
   // gestion : table créée par supabase/complement-v12-gestion.sql ; sans elle, les nouvelles fenêtres l'expliquent et le tableau de bord marche comme avant
   if(online)try{const rows=await fetchAll(()=>C.from("gestion").select("type,id,data,maj_le").order("type").order("id"));
       const g={};rows.forEach(r=>{(g[r.type]=g[r.type]||{})[r.id]=r.type==="excel_ecrire"?{...r.data,_maj:r.maj_le}:r.data});G=g;GOK=true;GERR=""}
     catch(e){if(/fetch|network/i.test(e.message||""))online=false;else{GOK=false;GERR=e.message||String(e);G={}}}
+  // bibliothèque d'ouvrages (BPU SDB + catalogue) et compteur de devis, pour la fenêtre Devis et factures
+  if(online)try{const {data}=await C.from("parametres").select("cle,valeur").in("cle",["catalogue","bpu","devis_compteur","devis_reglages"]);if(data){const p={};data.forEach(r=>p[r.cle]=r.valeur);PAR=p;LIBC=null}}catch(e){}
   const l=$("#live");l.textContent=online?"En direct":"Hors ligne";l.classList.toggle("off",!online)}
 let tm=null;
 function listen(){const again=()=>{clearTimeout(tm);tm=setTimeout(()=>pull().then(RENDER),1200)};
@@ -689,6 +733,7 @@ function alertes(){const t=today(),L=[];
   resList(r=>r.actif&&r.tool).forEach(r=>ech(r,"Vérification périodique : prochaine","vérification périodique",30));
   CH.filter(x=>x.pbs.length).forEach(x=>L.push({lvl:"bad",t:`${x.nom} : ${plural(x.pbs.length,"problème à traiter","problèmes à traiter")}`,go:{pb:x.id}}));
   const av=resList(r=>/vérifier/i.test(r.d.Statut||""));if(av.length)L.push({lvl:"warn",t:plural(av.length,"fiche à vérifier","fiches à vérifier")+" (statut « À vérifier »)",go:{res:av[0].id}});
+  if(GOK){const all=docsAll(),ech=all.filter(d=>d.kind==="facture"&&d.numero&&dInfo(d,all).cls==="bad");if(ech.length)L.push({lvl:"bad",t:plural(ech.length,"facture échue à relancer","factures échues à relancer"),go:{view:"devis"}})}
   const err=Object.values(gt("excel_ecrire")).filter(x=>x.erreur);if(err.length)L.push({lvl:"bad",t:plural(err.length,"modification n'est pas partie","modifications ne sont pas parties")+" dans l'Excel",go:{view:"sync"}});
   return L.sort((a,b)=>(a.lvl==="bad"?0:1)-(b.lvl==="bad"?0:1))}
 let ALS=[];
@@ -863,7 +908,7 @@ function closeFloat(){if(popEl){popEl.remove();popEl=null}if(scrimEl){scrimEl.re
 function placePop(anchor){if(!popEl||popEl.classList.contains("modal"))return;const a=anchor.getBoundingClientRect(),w=popEl.offsetWidth||320,h=popEl.offsetHeight||300,W=innerWidth,H=innerHeight;
   popEl.style.left=Math.max(8,Math.min(a.left,W-w-8))+"px";let top=a.bottom+6;if(top+h>H-8)top=Math.max(8,a.top-h-6);if(top+h>H-8)top=Math.max(8,H-h-8);popEl.style.top=top+"px"}
 function openPop(anchor,html,modal){closeFloat();if(modal){scrimEl=document.createElement("div");scrimEl.className="mscrim";scrimEl.onclick=closeFloat;document.body.appendChild(scrimEl)}
-  popEl=document.createElement("div");popEl.className="pop"+(modal?" modal":"");popEl.setAttribute("role","dialog");popEl.innerHTML=html;document.body.appendChild(popEl);if(anchor)placePop(anchor);
+  popEl=document.createElement("div");popEl.className="pop"+(modal?" modal":"");popEl._born=performance.now();popEl.setAttribute("role","dialog");popEl.innerHTML=html;document.body.appendChild(popEl);if(anchor)placePop(anchor);
   popEl.querySelectorAll("[data-x]").forEach(b=>b.onclick=closeFloat);const f=popEl.querySelector("input:not([type=hidden]):not([disabled]),select,textarea");if(f&&modal)f.focus({preventScroll:true});return popEl}
 const openModal=html=>openPop(null,html,true);
 function toast(t){const old=document.querySelector(".toast");if(old)old.remove();const el=document.createElement("div");el.className="toast";el.setAttribute("role","status");el.textContent=t;document.body.appendChild(el);setTimeout(()=>el.remove(),3600)}
@@ -1139,15 +1184,335 @@ function vSync(){const e=gid("excel_etat","dernier")||null,Q=Object.entries(gt("
   <div class="why"><b>Règles des Excel</b>Ne renomme ni les onglets, ni les tableaux, ni les titres de colonnes. Une ligne = une fiche, avec son ID (P-001, V-01…) : une ligne ajoutée dans l'Excel sans ID en reçoit un automatiquement. Une modification faite dans l'Excel arrive ici en 3 minutes au plus.</div>`}
 
 /* ---------- moteur ---------- */
-const VIEWS={dash:vDash,plan:vPlan,renta:vRenta,res:vRes,cli:vCli,sync:vSync};
-const TITRES={dash:"Tableau de bord",plan:"Planning global",renta:"Rentabilité",res:"Personnel et matériel",cli:"Clients",sync:"Synchronisation"};
+/* ---------- 6. Devis et factures (V13, 26/10/2026) ----------
+   Registre de tous les documents de vente. Lignes gestion type « doc » : {kind:devis|facture|avoir, genre:acompte|situation|finale|libre, numero, date, statut,
+   cli, client{}, chId, chantier{}, objet, contexte, paiement, note, options, validite, echeance, parent, refDoc, lines[], paiements[], pdf, emisLe}.
+   Les devis du suivi SDB (elements devis + devisinfo) apparaissent dans le registre sans copie (id « sdb:<chantier> »).
+   Mise en page et PDF : par l'appli SDB (cadre caché), message {gestion:"rendre"} : mêmes pages A4 que l'onglet Devis. */
+const DT={devis:{pre:"DEV",nom:"Devis",pl:"Devis"},facture:{pre:"FAC",nom:"Facture",pl:"Factures"},avoir:{pre:"AV",nom:"Avoir",pl:"Avoirs"}};
+const DUNITS=["u","ml","m²","m³","forfait","h","jour","semaine","kWc"];
+const CTX=[["logement","Logement de plus de 2 ans",0],["pro","Locaux pro ou logement neuf",1],["st","Sous-traitance (autoliquidation)",2]];
+const TXS=[[0,"0 %"],[0.055,"5,5 %"],[0.1,"10 %"],[0.2,"20 %"]];
+const MODES=["Virement","Chèque","Espèces","Carte bancaire","Autre"];
+const MENT_DEF={penalites:"Pénalités de retard : en cas de paiement après la date d'échéance, des pénalités sont exigibles de plein droit, au taux de trois fois le taux d'intérêt légal.",
+  indemnite:"Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement (professionnels) : 40 € (article D.441-5 du Code de commerce).",escompte:"Aucun escompte pour paiement anticipé."};
+let PAR={},LIBC=null,DVF={t:"all",st:"",cli:"",ch:"",an:"",q:""},DSEL=null,ED=null;
+const cts=v=>Math.round((Number(v)||0)*100);
+const m2=c=>(c/100).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}).replace(/[\s ]/g," ")+" €";
+const pcx=r=>(Math.round(r*1000)/10).toLocaleString("fr-FR")+" %";
+const kr=r=>Math.round(r*1000);
+const slug=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
+const clone=o=>JSON.parse(JSON.stringify(o));
+function totDoc(lines){const by=new Map();let ht=0;for(const l of lines||[]){if(l.kind==="titre")continue;const t=Math.round((Number(l.qty)||0)*cts(l.pu));by.set(kr(Number(l.tx)||0),(by.get(kr(Number(l.tx)||0))||0)+t);ht+=t}
+  const rates=[...by.keys()].sort((a,b)=>a-b).map(k=>({r:k/1000,base:by.get(k),tva:Math.round(by.get(k)*k/1000)})),tva=rates.reduce((s,x)=>s+x.tva,0);return{ht,tva,ttc:ht+tva,rates}}
+// ---- les documents : lignes gestion « doc » + devis du suivi SDB ----
+function docsAll(){const out=[];Object.entries(gt("doc")).forEach(([id,d])=>out.push({...d,id}));
+  ROWS.forEach(r=>{const e=EL[r.id]||{},ls=Object.values(e.devis||{}),inf=((e.devisinfo||{}).H||{}).v; // l'élément « devisinfo » enveloppe l'en-tête dans {v:…}
+    if(!ls.length&&!inf)return;
+    const ctx=(inf&&inf.contexte)||"st",srt=ls.slice().sort((a,b)=>(a.ord??(a.base?-1:1e6))-(b.ord??(b.base?-1:1e6))||String(a.at).localeCompare(String(b.at)));
+    out.push({id:"sdb:"+r.id,kind:"devis",sdb:true,chId:r.id,numero:(inf&&inf.numero)||null,date:(inf&&inf.date)||dayOf(r.created_at),statut:(inf&&inf.statut)||"brouillon",cli:"dmv",client:(inf&&inf.client)||{},
+      objet:(inf&&inf.objet)||"",contexte:ctx,chantier:(inf&&inf.chantier)||{},paiement:inf&&inf.paiement,note:inf&&inf.note,options:inf&&inf.options,validite:inf&&inf.validite,
+      lines:srt.filter(l=>l.st!=="ref").map(l=>({...l,tx:l.tx!=null?Number(l.tx):l.tvaMode==="manual"?Number(l.tva):ctx==="st"?0:0.2})),att:ls.filter(l=>l.st==="att"&&l.kind!=="titre").length})});
+  return out}
+const docById=(id,all)=>(all||docsAll()).find(d=>d.id===id);
+function dInfo(d,all){const t=totDoc(d.lines);let lab="Brouillon",cls="neu",reste=null;
+  if(d.kind==="devis"){[lab,cls]=({brouillon:["Brouillon","neu"],envoye:["Envoyé","warn"],accepte:["Accepté","ok"],refuse:["Refusé","bad"]})[d.statut]||["Brouillon","neu"]}
+  else if(d.kind==="avoir"){if(d.numero){lab="Émis";cls="ok"}}
+  else if(d.numero){const paye=(d.paiements||[]).reduce((s,p)=>s+cts(p.montant),0),cred=-all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===d.id).reduce((s,a)=>s+totDoc(a.lines).ttc,0);
+    reste=Math.max(0,t.ttc-paye-cred);
+    if(reste<=0){lab=t.ttc>0&&cred>=t.ttc?"Annulée par avoir":"Payée";cls="ok"}
+    else{const j=d.echeance&&d.echeance<today()?daysBetween(d.echeance,today()):0;if(j>0){lab="Échue "+j+" j";cls="bad"}else{lab=paye>0?"Partielle":"À encaisser";cls="warn"}}}
+  return{t,lab,cls,reste}}
+const dNum=d=>d.numero||(d.sdb?"Devis SDB (sans n°)":"Brouillon");
+// ---- numérotation : un compteur par type, sans trou, attribué à l'émission ----
+function fmtNum(k,n,date){const d=date&&isK(date)?PK(date):new Date();return `${DT[k].pre}-${d.getFullYear()}/${pad(d.getMonth()+1)}-${String(n).padStart(4,"0")}`}
+function maxUsed(k,all){let n=0;all.filter(d=>d.kind===k&&d.numero).forEach(d=>{const m=String(d.numero).match(/-(\d+)$/);if(m)n=Math.max(n,+m[1])});return n}
+async function lireCompteur(k,all){const mx=maxUsed(k,all)+1;
+  if(k==="devis"){const {data}=await C.from("parametres").select("cle,valeur").in("cle",["devis_compteur","devis_reglages"]);const m={};(data||[]).forEach(p=>m[p.cle]=p.valeur);
+    return Math.max(Number(m.devis_compteur)||0,Number((m.devis_reglages||{}).numeroDepart)||1,mx)}
+  const {data}=await C.from("gestion").select("data").eq("type","compteur").eq("id",k).maybeSingle();return Math.max(Number(data&&data.data&&data.data.n)||1,mx)}
+async function ecrireCompteur(k,n){if(k==="devis"){const {error}=await C.from("parametres").upsert({cle:"devis_compteur",valeur:n,maj_le:new Date().toISOString()});return !error}
+  const {error}=await C.from("gestion").upsert({type:"compteur",id:k,data:{n}});return !error}
+// ---- rendu (appli SDB dans le cadre caché) ----
+let RQ=[],RW={},RID=0,RC={};
+function ensureFrame(){if(frame)return;frame=document.createElement("iframe");frame.title="Chantiers SDB";frame.allow="clipboard-write; fullscreen";frame.src="./?sdb=1";$("#v-sdb").appendChild(frame)}
+function rendre(dv,opt={}){return new Promise((res,rej)=>{ensureFrame();
+  const go=()=>{const id=++RID;RW[id]={res,rej,t:setTimeout(()=>{delete RW[id];rej(new Error("L'appli de devis ne répond pas : recharge la page."))},25000)};frame.contentWindow.postMessage({gestion:"rendre",id,dv,pdf:!!opt.pdf,provisoire:"BROUILLON"},location.origin)};
+  if(frameReady)go();else{const to=setTimeout(()=>{RQ=RQ.filter(f=>f!==g2);rej(new Error("L'appli de devis n'est pas prête : recharge la page."))},30000),g2=()=>{clearTimeout(to);go()};RQ.push(g2)}})}
+addEventListener("message",e=>{const d=e.data;if(e.origin!==location.origin||!d)return;
+  if(d.gestion==="pret"){const q=RQ;RQ=[];q.forEach(f=>f())}
+  if(d.gestion==="rendu"&&RW[d.id]){const w=RW[d.id];clearTimeout(w.t);delete RW[d.id];d.erreur?w.rej(new Error(d.erreur)):w.res(d)}});
+const mentionsReg=()=>({...MENT_DEF,...(gid("reglage","docs")||{})});
+function mentionsFor(d){if(d.kind==="devis")return null;const R=mentionsReg(),L=[];
+  if(d.kind==="facture"){if(R.penalites)L.push(R.penalites);if(R.indemnite&&(d.client||{}).type!=="particulier")L.push(R.indemnite);if(R.escompte)L.push(R.escompte)}return L}
+function titreDoc(d){return d.kind==="avoir"?"Avoir":d.kind==="facture"?({acompte:"Facture d'acompte",situation:"Facture de situation"})[d.genre]||"Facture":"Devis"}
+function dvIn(d){return{numero:d.numero||null,date:d.date,validite:d.validite,objet:d.objet,client:d.client||{},chantier:d.chantier||{},contexte:d.contexte,paiement:d.paiement,note:d.note,
+  options:d.options||{details:true,sousTotaux:false,revision:true},docType:d.kind,titre:titreDoc(d),echeance:d.echeance,refDevis:d.refDoc,mentionsExtra:mentionsFor(d),lines:(d.lines||[]).map(l=>({...l}))}}
+async function rendreDoc(d,pdf){const key=JSON.stringify([dvIn(d),!!pdf]);if(!pdf&&RC[key])return RC[key];const r=await rendre(dvIn(d),{pdf});if(!pdf){RC[key]=r;const ks=Object.keys(RC);if(ks.length>30)delete RC[ks[0]]}return r}
+function dlBlob(b,name){const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)}
+const pdfName=d=>(slug(d.numero||"brouillon-"+DT[d.kind].nom)+"-"+slug((d.client||{}).nom||"")).replace(/-$/,"")+".pdf";
+async function dvPdf(d){try{if(d.pdf){const {data,error}=await C.storage.from("fichiers").download(d.pdf);if(!error&&data){dlBlob(data,pdfName(d));return}}
+    toast("Préparation du PDF…");const r=await rendreDoc(d,true);dlBlob(r.pdf,pdfName(d))}catch(e){toast("PDF impossible : "+e.message)}}
+function pagesHtml(r){return `<div class="dvpages">${r.pages.join("")}</div>`}
+function miniPrev(d){const t=totDoc(d.lines);return `<div class="dvmini"><b>${esc(titreDoc(d))} ${esc(d.numero||"")}</b><div class="note">${esc((d.client||{}).nom||"")} · ${esc(d.objet||"")}</div>${(d.lines||[]).map(l=>l.kind==="titre"?`<div><b>${esc(l.designation)}</b></div>`:`<div>${esc(l.designation)}<span>${m2(Math.round((+l.qty||0)*cts(l.pu)))}</span></div>`).join("")}<div class="tot"><b>Total HT</b><b>${m2(t.ht)}</b></div></div>`}
+async function fillPrev(el,d,tok){if(!el)return;el.dataset.tok=tok;try{const r=await rendreDoc(d,false);if(el.dataset.tok===tok&&el.isConnected)el.innerHTML=pagesHtml(r)}catch(e){if(el.dataset.tok===tok&&el.isConnected)el.innerHTML=miniPrev(d)+`<p class="note">Aperçu A4 indisponible (${esc(e.message)}). Aperçu simplifié.</p>`}}
+// ---- registre ----
+function dvFilter(all){const F=DVF,q=norm(F.q);return all.filter(d=>(F.t==="all"||d.kind===F.t)&&(!F.st||dInfo(d,all).lab.replace(/ \d+ j$/,"")===F.st)&&(!F.cli||d.cli===F.cli)&&(!F.ch||d.chId===F.ch)&&(!F.an||String(d.date||"").slice(0,4)===F.an)
+  &&(!q||norm([d.numero,(d.client||{}).nom,d.objet,(CHI[d.chId]||{}).code].join(" ")).includes(q))).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))||String(b.numero||"~").localeCompare(String(a.numero||"~")))}
+function vDevis(){if(GOK===false)return baseManquante("Devis et factures");
+  const all=docsAll(),F=DVF,rows=dvFilter(all),mois=today().slice(0,7),I=new Map(all.map(d=>[d.id,dInfo(d,all)]));
+  const att=all.filter(d=>d.kind==="devis"&&d.statut==="envoye").length,due=all.filter(d=>d.kind==="facture"&&d.numero).reduce((s,d)=>s+(I.get(d.id).reste||0),0),
+    fm=all.filter(d=>d.numero&&d.kind!=="devis"&&String(d.date||"").slice(0,7)===mois).reduce((s,d)=>s+I.get(d.id).t.ht,0),
+    ech=all.filter(d=>d.kind==="facture"&&I.get(d.id).cls==="bad"&&I.get(d.id).reste>0).length;
+  const ans=[...new Set(all.map(d=>String(d.date||"").slice(0,4)).filter(Boolean))].sort().reverse(),sel=DSEL&&docById(DSEL,all);
+  const stat=[...new Set(all.map(d=>I.get(d.id).lab.replace(/ \d+ j$/,"")))].sort();
+  return `<div class="topline"><div><h2>Devis et factures</h2><p>Tous les documents de vente d'AFER, numérotés dans l'ordre et sans trou, avec leur PDF figé. Les devis du suivi SDB y sont déjà. Clic sur une ligne : aperçu à droite. Double clic : ouvre le document.</p></div>
+    <div class="tools"><button class="btn sm" data-dvset>Numérotation et mentions</button><button class="btn sm" data-dvnew="avoir">+ Avoir</button><button class="btn sm" data-dvnew="facture">+ Facture</button><button class="btn sm pri" data-dvnew="devis">+ Devis</button></div></div>
+  <div class="kpis"><div class="kpi"><div class="v">${att}</div><div class="l">Devis en attente de réponse</div></div><div class="kpi"><div class="v">${m2(due)}</div><div class="l">Factures à encaisser (TTC)</div></div>
+    <div class="kpi"><div class="v">${m2(fm)}</div><div class="l">Facturé ce mois (HT, avoirs déduits)</div></div><div class="kpi${ech?" bad":""}"><div class="v">${ech}</div><div class="l">Factures échues à relancer</div></div></div>
+  <div class="dvbar">${[["all","Tous"],["devis","Devis"],["facture","Factures"],["avoir","Avoirs"]].map(([k,l])=>`<button class="chip" aria-pressed="${F.t===k}" data-dvt="${k}">${l}</button>`).join("")}
+    <select data-dvf="st" aria-label="Statut"><option value="">Statut : tous</option>${opts(stat,F.st,false)}</select>
+    <select data-dvf="cli" aria-label="Client"><option value="">Client : tous</option>${clientsList().map(c=>`<option value="${esc(c.id)}"${c.id===F.cli?" selected":""}>${esc(c.nom)}</option>`).join("")}</select>
+    <select data-dvf="ch" aria-label="Chantier"><option value="">Chantier : tous</option>${liste().map(c=>`<option value="${esc(c.id)}"${c.id===F.ch?" selected":""}>${esc(c.code)} · ${esc(c.nom)}</option>`).join("")}</select>
+    <select data-dvf="an" aria-label="Année"><option value="">Toutes les années</option>${opts(ans,F.an,false)}</select>
+    <input type="search" data-dvq placeholder="Rechercher un n° ou un client…" value="${esc(F.q)}" aria-label="Rechercher"></div>
+  <div class="dvsplit"><div class="dvlist"><div class="scroll"><table><thead><tr><th>N°</th><th>Client</th><th>Chantier</th><th>Date</th><th>Statut</th><th class="num">Total HT</th><th class="num">Reste dû</th></tr></thead><tbody>
+    ${rows.length?rows.map(d=>{const i=I.get(d.id),c=CHI[d.chId];return `<tr class="clk${d.id===DSEL?" sel":""}" data-dvsel="${esc(d.id)}" tabindex="0"><td><b>${d.numero?esc(d.numero):`<span class="ph dim">${d.sdb?"devis SDB sans n°":"n° à l'émission"}</span>`}</b>${d.sdb?' <span class="pill neu">SDB</span>':""}</td>
+      <td class="wrap">${esc((d.client||{}).nom||"")||'<span class="ph dim">client à choisir</span>'}</td><td>${c?esc(c.code):"—"}</td><td>${fkl(d.date)}</td><td><span class="pill ${i.cls}">${esc(i.lab)}</span></td><td class="num">${m2(i.t.ht)}</td><td class="num">${i.reste==null?"—":m2(i.reste)}</td></tr>`}).join(""):`<tr><td colspan="7" class="empty">Aucun document pour ces filtres.</td></tr>`}
+    </tbody></table></div></div>
+    <aside class="dvside" id="dvside">${sel?dvPanel(sel,all,I.get(sel.id)):`<div class="box"><b>Numérotation</b><div class="note">${["devis","facture","avoir"].map(k=>`${DT[k].pl} ${DT[k].pre}-AAAA/MM-NNNN : ${maxUsed(k,all)?"dernier "+maxUsed(k,all):"aucun"}`).join("<br>")}</div><p class="note">Le numéro est donné à l'émission, dans l'ordre. Un document numéroté n'est plus modifiable : on duplique, ou on émet un avoir.</p></div>`}</aside></div>`}
+function dvPanel(d,all,i){const kids=all.filter(x=>x.parent===d.id),par=d.parent&&docById(d.parent,all),fr=d.kind==="facture"&&d.numero,lock=!!d.numero||d.sdb;
+  return `<div class="box dvpanel"><div class="row2" style="justify-content:space-between"><b>${esc(dNum(d))}</b><span class="pill ${i.cls}">${esc(i.lab)}</span></div>
+    <div class="note">${esc((d.client||{}).nom||"Client à choisir")}${CHI[d.chId]?" · "+esc(CHI[d.chId].code):""} · ${fkl(d.date)}</div>
+    ${d.att?`<div class="note" style="color:var(--warn)">${plural(d.att,"ligne attend","lignes attendent")} la validation de DOMetVIE (hors total).</div>`:""}
+    <div class="dvprev" id="dvprev"><p class="note">Chargement de l'aperçu…</p></div>
+    <div class="dvact">${d.sdb?`<button class="btn sm" data-dvsdb="${esc(d.chId)}">Ouvrir dans le suivi SDB</button>`:`<button class="btn sm pri" data-dvopen="${esc(d.id)}">${lock?"Ouvrir":"Modifier"}</button>`}
+      <button class="btn sm" data-dvbig="${esc(d.id)}">Aperçu A4</button><button class="btn sm" data-dvpdf="${esc(d.id)}">PDF</button>
+      ${d.kind==="devis"&&(d.numero||d.sdb)?`<button class="btn sm pri" data-dvfac="${esc(d.id)}">Créer la facture ▾</button>`:""}
+      ${fr?`<button class="btn sm" data-dvpay="${esc(d.id)}">+ Paiement</button><button class="btn sm" data-dvavoir="${esc(d.id)}">Créer un avoir</button>`:""}
+      ${!d.sdb?`<button class="btn sm" data-dvdup="${esc(d.id)}">Dupliquer</button>`:""}
+      ${d.kind==="devis"&&d.numero&&!d.sdb&&d.statut==="envoye"?`<button class="btn sm" data-dvst="${esc(d.id)}|accepte">Marquer accepté</button><button class="btn sm" data-dvst="${esc(d.id)}|refuse">Marquer refusé</button>`:""}
+      ${!d.numero&&!d.sdb?`<button class="btn sm dang" data-dvdel="${esc(d.id)}">Supprimer</button>`:""}
+      ${(d.client||{}).email&&d.numero?`<a class="btn sm" href="mailto:${esc(d.client.email)}?subject=${encodeURIComponent(titreDoc(d)+" "+d.numero+" · AFER")}">Écrire un mail</a>`:""}</div>
+    ${fr||(d.paiements||[]).length?`<div class="dvpays"><b>Paiements</b>${(d.paiements||[]).map((p,k)=>`<div class="kv"><span>${fkl(p.date)} · ${esc(p.mode||"")}</span><span>${m2(cts(p.montant))} <button class="btn xs" data-dvpaydel="${esc(d.id)}|${k}" aria-label="Retirer ce paiement">✕</button></span></div>`).join("")||'<span class="note">Aucun paiement enregistré.</span>'}
+      ${i.reste!=null?`<div class="kv tot"><span>Reste dû (TTC)</span><span>${m2(i.reste)}</span></div>`:""}</div>`:""}
+    ${par||kids.length?`<div class="dvlinks"><b>Documents liés</b>${par?`<button class="btn xs" data-dvsel="${esc(par.id)}">↑ ${esc(dNum(par))}</button>`:""}${kids.map(k=>`<button class="btn xs" data-dvsel="${esc(k.id)}">${esc(k.numero||"Brouillon "+DT[k.kind].nom.toLowerCase())}</button>`).join("")}</div>`:""}
+    ${d.pdf?`<div class="note">PDF figé dans la base${d.emisLe?", émis le "+fkl(d.emisLe):""} ; copié ensuite dans SharePoint (Gestion AFER › Devis et factures).</div>`:d.numero&&!d.sdb?`<div class="note" style="color:var(--warn)">PDF pas encore enregistré : bouton PDF pour le régénérer.</div><button class="btn xs" data-dvregen="${esc(d.id)}">Enregistrer le PDF</button>`:""}</div>`}
+function dvAfter(){const d=DSEL&&docById(DSEL);const el=$("#dvprev");if(d&&el)fillPrev(el,d,"p"+Date.now())}
+// ---- création, copie, suppression ----
+function clientDoc(cli){const k=clientsMap()[cli]||{};let c={type:"pro",nom:k.nom||"",adresse1:k.adresse||"",adresse2:"",cp:"",ville:"",pays:"France",siren:"",siret:k.siret||"",tva:"",tel:k.tel||"",email:k.email||""};
+  if(cli==="dmv"){for(const r of ROWS){const inf=(((EL[r.id]||{}).devisinfo||{}).H||{}).v;if(inf&&inf.client){c={...c,...inf.client};break}}}return c}
+function chantierDoc(chId){const r=ROWS.find(x=>x.id===chId),g=gid("chantier",chId)||{};return{adresse:(r&&r.fiche&&r.fiche.adresse)||g.adresse||"",debut:"",duree:""}}
+function baseDoc(kind,extra={}){const cli=extra.cli||"",ctx=cli==="dmv"?"st":"pro";
+  return{kind,genre:kind==="facture"?"libre":null,numero:null,statut:"brouillon",date:today(),cli,client:cli?clientDoc(cli):{type:"pro",nom:"",adresse1:"",adresse2:"",cp:"",ville:"",pays:"France",siren:"",siret:"",tva:"",tel:"",email:""},chId:"",chantier:{adresse:"",debut:"",duree:""},
+    objet:"",contexte:ctx,paiement:"Paiement en espèces, par chèque ou par virement bancaire.",note:"",options:{details:true,sousTotaux:false,revision:kind==="devis"},validite:"3 mois",echeance:"",delai:"",parent:null,refDoc:"",lines:[],paiements:[],cree:new Date().toISOString(),...extra}}
+async function dvCreate(d,open=true){const id=uid("d-");if(!await gput("doc",id,d))return null;DSEL=id;if(open)edOpen(id);return id}
+async function dvDup(id){const s=docById(id);if(!s)return;const d=clone(s);["numero","pdf","emisLe","parent","refDoc","pct","sdb","att","id"].forEach(k=>delete d[k]);
+  Object.assign(d,{statut:"brouillon",date:today(),echeance:"",delai:"",paiements:[],cree:new Date().toISOString(),lines:(s.lines||[]).filter(l=>s.sdb?l.st==="val"||l.kind==="titre":true).map(l=>({...l,id:uid("l-")}))});
+  if(s.sdb){d.kind="devis";d.cli=s.cli;d.chId=s.chId;delete d.statut;d.statut="brouillon"}
+  const nid=await dvCreate(d);if(nid)toast("Copie créée en brouillon.")}
+async function dvDel(id){const d=docById(id);if(!d||d.numero||d.sdb)return;if(!confirm("Supprimer ce brouillon ? Il n'a pas de numéro, rien n'est perdu côté numérotation."))return;if(await gdelMany("doc",[id])){if(DSEL===id)DSEL=null;toast("Brouillon supprimé.");RENDER()}}
+// ---- facturation : acompte, situation, finale, avoir ----
+function marcheLines(P){const L=(P.lines||[]).filter(l=>!P.sdb||l.kind==="titre"||l.st==="val"),out=[];
+  L.forEach((l,i)=>{if(l.kind!=="titre"){out.push(l);return}const n=L.slice(i+1).findIndex(x=>x.kind==="titre"),seg=n<0?L.slice(i+1):L.slice(i+1,i+1+n);if(seg.some(x=>x.kind!=="titre"))out.push(l)});return out}
+function dejaFact(pid,all){const by=new Map(),add=(r,v)=>by.set(kr(r),(by.get(kr(r))||0)+v);
+  all.filter(f=>f.kind==="facture"&&f.numero&&f.parent===pid&&f.genre!=="finale").forEach(f=>{totDoc(f.lines).rates.forEach(x=>add(x.r,x.base));all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id).forEach(a=>totDoc(a.lines).rates.forEach(x=>add(x.r,x.base)))});return by}
+function finaleFaite(pid,all){return all.some(f=>f.kind==="facture"&&f.numero&&f.parent===pid&&f.genre==="finale"&&totDoc(f.lines).ht-(-all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id).reduce((s,a)=>s+totDoc(a.lines).ht,0))>0)}
+const lg=(designation,pu,tx,extra={})=>({id:uid("l-"),kind:"article",designation,detail:"",qty:1,unit:"forfait",pu,tx,...extra});
+function calcFacture(P,all,genre,pct){const L=marcheLines(P),M=totDoc(L);if(!M.ht)return{err:"Le devis est à 0 € : rien à facturer."};
+  const done=dejaFact(P.id,all),sfx=x=>M.rates.length>1?" (TVA "+pcx(x.r)+")":"",out=[],ref=P.numero||"";
+  if(genre==="finale"){if(finaleFaite(P.id,all))return{err:"Ce devis a déjà une facture finale. Pour la refaire, émets d'abord un avoir."};
+    L.forEach(l=>out.push({...l,id:uid("l-")}));M.rates.forEach(x=>{const d=done.get(kr(x.r))||0;if(d)out.push(lg("À déduire : acomptes et situations déjà facturés"+sfx(x),-d/100,x.r))})}
+  else{if(!(pct>0&&pct<=100))return{err:"Indique un pourcentage entre 0 et 100."};
+    for(const x of M.rates){const want=Math.round(x.base*pct/100),d=done.get(kr(x.r))||0;
+      if(genre==="acompte"){if(d+want>x.base)return{err:"Avec ce pourcentage, le total facturé dépasserait le devis."};out.push(lg(`Acompte de ${pct.toLocaleString("fr-FR")} % sur le devis n° ${ref}${sfx(x)}`,want/100,x.r))}
+      else{out.push(lg(`Travaux exécutés : avancement cumulé de ${pct.toLocaleString("fr-FR")} % du devis n° ${ref}${sfx(x)}`,want/100,x.r));if(d)out.push(lg("À déduire : déjà facturé (acomptes et situations précédentes)"+sfx(x),-d/100,x.r))}}}
+  const t=totDoc(out);if(t.ht<=0)return{err:genre==="situation"?"Rien à facturer : ce pourcentage est déjà facturé.":"Le montant à facturer est nul ou négatif."};return{lines:out,t,M}}
+function dvFacModal(pid){const all=docsAll(),P=docById(pid,all);if(!P)return;
+  if(!P.numero){const p=openModal(`<h3>Le devis n'a pas encore de numéro</h3><p class="note">Une facture reprend le numéro du devis. ${P.sdb?"Dans le suivi SDB, génère le PDF du devis (il prend son numéro) ou clique « Envoyer ».":"Émets d'abord le devis."}</p><div class="acts">${P.sdb?`<button class="btn sm pri" data-dvsdb="${esc(P.chId)}">Ouvrir le devis dans le suivi SDB</button>`:""}<button class="btn sm" data-x>Fermer</button></div>`);return}
+  const M=totDoc(marcheLines(P)),done=dejaFact(pid,all),dn=[...done.values()].reduce((s,v)=>s+v,0),avSdb=P.chId&&CHI[P.chId]&&CHI[P.chId].sdb?Math.round(CHI[P.chId].av||0):null,bro=all.filter(f=>f.kind==="facture"&&!f.numero&&f.parent===pid).length;
+  const p=openModal(`<h3>Créer une facture · ${esc(P.numero)}</h3>
+    <div class="note">Marché ${m2(M.ht)} HT · déjà facturé ${m2(dn)} HT · reste ${m2(M.ht-dn)} HT${P.att?` · ${plural(P.att,"ligne attend","lignes attendent")} DOMetVIE (non facturée${P.att>1?"s":""})`:""}${bro?` · ${plural(bro,"brouillon de facture existe déjà","brouillons de facture existent déjà")}`:""}</div>
+    <div class="fgrp"><label class="chk"><input type="radio" name="fg" value="acompte"> <span>Facture d'acompte <small class="note">pourcentage du marché</small></span></label>
+      <label class="chk"><input type="radio" name="fg" value="situation"> <span>Facture de situation <small class="note">pourcentage d'avancement cumulé${avSdb!=null?` (suivi SDB : ${avSdb} %)`:""}</small></span></label>
+      <label class="chk"><input type="radio" name="fg" value="finale" checked> <span>Facture finale <small class="note">solde : devis complet moins les acomptes et situations</small></span></label>
+      <label id="fg-pct" hidden>Pourcentage (%)<input type="number" id="fg-p" min="1" max="100" step="0.5" placeholder="${avSdb?avSdb:"ex. 30"}"></label></div>
+    <div class="box" id="fg-res"></div><div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="fg-ok">Créer le brouillon</button></div>`);
+  let res=null;const upd=()=>{const g=p.querySelector("[name=fg]:checked").value,pc=num(p.querySelector("#fg-p").value);p.querySelector("#fg-pct").hidden=g==="finale";
+    res=calcFacture(P,all,g,pc);p.querySelector("#fg-res").innerHTML=res.err?`<span class="note" style="color:var(--bad)">${esc(res.err)}</span>`:`${res.lines.filter(l=>l.kind!=="titre").map(l=>`<div class="kv"><span>${esc(l.designation)}</span><span>${m2(Math.round(l.qty*cts(l.pu)))}</span></div>`).join("")}<div class="kv tot"><span>Total HT · TTC</span><span>${m2(res.t.ht)} · ${m2(res.t.ttc)}</span></div>`;
+    p.querySelector("#fg-ok").disabled=!!res.err};
+  p.addEventListener("input",upd);p.addEventListener("change",upd);upd();
+  p.querySelector("#fg-ok").onclick=async()=>{if(res.err)return;const g=p.querySelector("[name=fg]:checked").value,pc=num(p.querySelector("#fg-p").value);
+    const nSit=all.filter(f=>f.kind==="facture"&&f.parent===pid&&f.genre==="situation").length+1;
+    const d=baseDoc("facture",{genre:g,cli:P.cli,client:clone(P.client||{}),chId:P.chId||"",chantier:clone(P.chantier||{}),objet:P.objet||"",contexte:P.contexte,paiement:P.paiement||"",parent:pid,pct:g==="finale"?null:pc,
+      refDoc:"Établie sur le devis n° "+P.numero+(P.date?" du "+fkl(P.date):""),options:{details:true,sousTotaux:false,revision:false},lines:res.lines,note:g==="situation"?"Situation n° "+nSit:""});
+    closeFloat();const id=await dvCreate(d);if(id)toast("Brouillon de facture créé : vérifie-le puis émets-le.")}}
+async function dvAvoir(fid){const all=docsAll(),f=docById(fid,all);if(!f||!f.numero)return;
+  const d=baseDoc("avoir",{genre:"avoir",cli:f.cli,client:clone(f.client||{}),chId:f.chId||"",chantier:clone(f.chantier||{}),objet:f.objet||"",contexte:f.contexte,paiement:"",parent:fid,refDoc:"Avoir sur la facture n° "+f.numero+(f.date?" du "+fkl(f.date):""),options:{details:true,sousTotaux:false,revision:false},
+    lines:(f.lines||[]).map(l=>l.kind==="titre"?{...l,id:uid("l-")}:{...l,id:uid("l-"),qty:-(Number(l.qty)||0)})});
+  const id=await dvCreate(d);if(id)toast("Avoir en brouillon : toutes les lignes sont reprises en négatif. Supprime ou ajuste celles que tu ne rembourses pas.")}
+// ---- paiements, statuts ----
+function payModal(fid){const all=docsAll(),f=docById(fid,all),i=dInfo(f,all);
+  const p=openModal(`<h3>Paiement · ${esc(f.numero)}</h3><div class="note">Reste dû : ${m2(i.reste||0)} TTC</div><div class="grid2"><label>Date<input type="date" id="pp-d" value="${today()}"></label><label>Montant TTC (€)<input type="number" id="pp-m" step="0.01" min="0" value="${((i.reste||0)/100).toFixed(2)}"></label></div>
+    <label>Mode<select id="pp-mo">${opts(MODES,"Virement",false)}</select></label><div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="pp-ok">Enregistrer</button></div>`);
+  p.querySelector("#pp-ok").onclick=()=>{const m=num(p.querySelector("#pp-m").value),d=p.querySelector("#pp-d").value;if(!(m>0)||!d){toast("Date et montant requis.");return}
+    const nf={...gid("doc",fid),paiements:[...(f.paiements||[]),{date:d,montant:m,mode:p.querySelector("#pp-mo").value}]};closeFloat();gput("doc",fid,nf).then(ok=>{if(ok&&ED&&ED.id===fid){ED.d=clone(docById(fid));edRender(true)}});toast("Paiement enregistré.")}}
+async function dvSetStatut(id,st){const d=gid("doc",id);if(d)await gput("doc",id,{...d,statut:st})}
+// ---- émission : contrôle, numéro, PDF figé ----
+function dvIssues(d,all){const L=[],B=(t)=>L.push({t,block:true}),W=(t)=>L.push({t}),cl=d.client||{},arts=(d.lines||[]).filter(l=>l.kind!=="titre"),t=totDoc(d.lines);
+  if(!cl.nom)B("Choisis le client.");if(!arts.length)B("Aucune ligne.");if(arts.some(l=>!String(l.designation||"").trim()))B("Une ligne n'a pas de désignation.");
+  if(!d.objet)W("Pas d'objet.");if(!cl.adresse1||!cl.cp||!cl.ville)(d.kind==="devis"?W:B)("Adresse complète du client manquante (voie, code postal, ville).");
+  if(d.kind==="facture"){if(t.ht<=0)B("Le total de la facture doit être positif.");if(!d.echeance)B("Choisis le délai de paiement : la date d'échéance est obligatoire sur une facture.");
+    if(!(gid("reglage","docs")||{}).confirme)B("Confirme d'abord les mentions légales des factures (bouton « Numérotation et mentions »).");
+    const dern=all.filter(x=>x.kind==="facture"&&x.numero).map(x=>x.date).sort().pop();if(dern&&d.date<dern)W("La date est antérieure à la dernière facture émise ("+fkl(dern)+") : les numéros doivent suivre l'ordre des dates.");
+    if(d.client&&d.client.type==="pro"&&!cl.siret&&!cl.siren)W("SIREN ou SIRET du client absent.")}
+  if(d.kind==="avoir"){if(t.ht>=0)B("Un avoir doit avoir un total négatif.");const f=d.parent&&docById(d.parent,all);
+    if(f){const ant=all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id&&a.id!==d.id).reduce((s,a)=>s+totDoc(a.lines).ht,0);if(-t.ht>totDoc(f.lines).ht+ant)B("Cet avoir dépasse le montant restant de la facture "+f.numero+".")}}
+  if(d.kind==="devis"&&!d.validite)W("Pas de durée de validité.");if(arts.some(l=>l.tx==null||l.tx===""))B("Une ligne n'a pas de taux de TVA.");return L}
+function issuesModal(L,titre,ok){const bl=L.some(i=>i.block);const p=openModal(`<h3>${esc(titre)}</h3><ul class="dvissues">${L.map(i=>`<li class="${i.block?"bad":""}">${esc(i.t)}</li>`).join("")}</ul>${bl?"":`<p class="note">Ces points ne bloquent pas.</p>`}<div class="acts"><button class="btn sm" data-x>${bl?"Fermer":"Revenir"}</button>${bl?"":`<button class="btn sm pri" id="is-ok">Émettre quand même</button>`}</div>`);
+  const b=p.querySelector("#is-ok");if(b)b.onclick=()=>{closeFloat();ok()}}
+let emitting=false;
+async function dvEmettre(id){if(emitting)return;const all=docsAll(),d=ED&&ED.id===id?ED.d:docById(id,all);if(!d||d.numero||d.sdb)return;
+  const L=dvIssues(d,all);if(L.length){if(L.some(i=>i.block)){issuesModal(L,"À corriger avant d'émettre");return}return issuesModal(L,"À vérifier avant d'émettre",()=>dvEmettre2(id,d))}return dvEmettre2(id,d)}
+async function dvEmettre2(id,d0){if(emitting)return;emitting=true;try{
+    const all=docsAll(),k=d0.kind;try{await rendreDoc(d0,false)}catch(e){toast("Aperçu impossible, rien n'est numéroté : "+e.message);return}
+    const n=await lireCompteur(k,all),numero=fmtNum(k,n,d0.date),d={...d0,numero,statut:k==="devis"?"envoye":k==="facture"?"emise":"emis",emisLe:new Date().toISOString(),date:d0.date||today()};
+    if(k==="facture"&&!d.echeance)d.echeance=addK(d.date,0);
+    let pdfOk=false;try{const r=await rendreDoc(d,true),path=`gestion/doc/${d.date.slice(0,4)}/${slug(numero)}.pdf`;const {error}=await C.storage.from("fichiers").upload(path,r.pdf,{upsert:true,contentType:"application/pdf"});if(error)throw error;d.pdf=path;pdfOk=true}catch(e){console.warn("PDF non enregistré",e)}
+    const frais=await lireCompteur(k,all);if(frais!==n){toast("Un autre document vient d'être numéroté : réessaie.");return}
+    if(k==="devis"){if(!await gput("doc",id,d))return;await ecrireCompteur("devis",n+1)}else if(!await gputMany([{type:"compteur",id:k,data:{n:n+1}},{type:"doc",id,data:d}]))return;
+    if(ED&&ED.id===id){ED.d=d;ED.ro=true;edRender()}toast(`${numero} émis.`+(pdfOk?"":" Le PDF n'a pas pu être enregistré : bouton « Enregistrer le PDF ».")); DSEL=id;RENDER()}
+  finally{emitting=false}}
+async function dvRegen(id){const d=gid("doc",id);if(!d||!d.numero)return;try{const r=await rendreDoc({...d,id},true),path=`gestion/doc/${String(d.date).slice(0,4)}/${slug(d.numero)}.pdf`;const {error}=await C.storage.from("fichiers").upload(path,r.pdf,{upsert:true,contentType:"application/pdf"});if(error)throw error;await gput("doc",id,{...d,pdf:path});toast("PDF enregistré.")}catch(e){toast("PDF impossible : "+e.message)}}
+// ---- réglages : numérotation et mentions ----
+function dvSettings(){const all=docsAll(),R=mentionsReg(),cf=(gid("reglage","docs")||{}).confirme;
+  const p=openModal(`<h3>Numérotation et mentions</h3><div class="fgrp"><b>Prochain numéro</b>
+    ${["devis","facture","avoir"].map(k=>`<label>${DT[k].pl} · ${DT[k].pre}-AAAA/MM-NNNN (dernier utilisé : ${maxUsed(k,all)||"aucun"})<input type="number" min="${maxUsed(k,all)+1}" step="1" data-dvn="${k}" placeholder="chargement…"></label>`).join("")}
+    <span class="note">Un compteur par type, tous chantiers confondus, sans trou. On peut seulement avancer le compteur (pour reprendre une série existante), jamais reculer sous le dernier numéro utilisé. Format FAC et AV calqué sur DEV : ${PH("à confirmer")}</span></div>
+  <div class="fgrp"><b>Mentions ajoutées aux factures</b><label>Pénalités de retard<textarea id="mn-pen" rows="2">${esc(R.penalites)}</textarea></label><label>Indemnité de recouvrement (clients professionnels)<textarea id="mn-ind" rows="2">${esc(R.indemnite)}</textarea></label><label>Escompte<textarea id="mn-esc" rows="1">${esc(R.escompte)}</textarea></label>
+    <label class="chk"><input type="checkbox" id="mn-ok"${cf?" checked":""}> <span>J'ai vérifié ces mentions (obligatoire avant d'émettre une facture)<small class="note">Textes proposés d'après les règles courantes ; à valider avec ton comptable.</small></span></label></div>
+  <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="mn-save">Enregistrer</button></div>`);
+  Promise.all(["devis","facture","avoir"].map(k=>lireCompteur(k,all))).then(v=>["devis","facture","avoir"].forEach((k,i)=>{const e=p.querySelector(`[data-dvn="${k}"]`);if(e){e.value=v[i];e.dataset.cur=v[i]}}));
+  p.querySelector("#mn-save").onclick=async()=>{for(const k of ["devis","facture","avoir"]){const e=p.querySelector(`[data-dvn="${k}"]`),v=Math.floor(num(e.value)),cur=+e.dataset.cur;
+      if(!e.dataset.cur||v===cur)continue;if(!(v>=maxUsed(k,all)+1)){toast(`${DT[k].pl} : le prochain numéro doit dépasser ${maxUsed(k,all)}.`);return}if(!await ecrireCompteur(k,v)){toast("Compteur pas enregistré.");return}}
+    const v=s=>p.querySelector(s).value.trim();closeFloat();await gput("reglage","docs",{penalites:v("#mn-pen"),indemnite:v("#mn-ind"),escompte:v("#mn-esc"),confirme:p.querySelector("#mn-ok").checked});toast("Réglages enregistrés.")}}
+// ---- grand aperçu ----
+async function bigPrev(id){const d=docById(id);if(!d)return;const w=document.createElement("div");w.className="dvbig";w.innerHTML=`<div class="dvbighd"><b>${esc(dNum(d))}</b><span><button class="btn sm" data-dvpdf="${esc(id)}">PDF</button> <button class="btn sm" data-dvbigx>Fermer</button></span></div><div class="dvbigbody"><p class="note">Chargement…</p></div>`;
+  document.body.appendChild(w);w.querySelector("[data-dvbigx]").onclick=()=>w.remove();w.addEventListener("keydown",e=>{if(e.key==="Escape")w.remove()});
+  try{w.querySelector(".dvbigbody").innerHTML=pagesHtml(await rendreDoc(d,false))}catch(e){w.querySelector(".dvbigbody").innerHTML=miniPrev(d)}}
+// ---- éditeur ----
+function edOpen(id){const d=docById(id);if(!d||d.sdb)return;ED={id,d:clone(d),ro:!!d.numero,tab:"prev",lq:"",lot:"",sel:new Set(),T:null,PT:null};edRender()}
+function edClose(){if(ED){edFlush();const o=$("#dved");if(o)o.remove();ED=null;RENDER()}}
+function edDirty(){if(!ED||ED.ro)return;clearTimeout(ED.T);ED.T=setTimeout(edFlush,900)}
+function edFlush(){if(!ED||ED.ro||!ED.T)return Promise.resolve();clearTimeout(ED.T);ED.T=null;return gput("doc",ED.id,ED.d)}
+function edPrev(){clearTimeout(ED.PT);ED.PT=setTimeout(()=>{const el=$("#edprev");if(el&&ED)fillPrev(el,ED.d,"e"+Date.now())},450)}
+const lineHtml=(l,i,ro)=>l.kind==="titre"?`<tr class="ltitre" data-li="${i}"><td></td><td colspan="6"><input data-lf="designation" value="${esc(l.designation)}" placeholder="Titre de section" ${ro?"disabled":""}></td><td>${ro?"":edBtns(i)}</td></tr>`
+  :`<tr data-li="${i}"><td><input type="checkbox" data-lsel ${ED.sel.has(l.id)?"checked":""} aria-label="Sélectionner la ligne" ${ro?"disabled":""}></td><td class="wrap"><input data-lf="designation" value="${esc(l.designation)}" placeholder="Désignation" ${ro?"disabled":""}><input data-lf="detail" class="det" value="${esc(l.detail||"")}" placeholder="Détail (facultatif)" ${ro?"disabled":""}></td>
+    <td><input data-lf="qty" type="number" step="any" value="${l.qty}" ${ro?"disabled":""}></td><td><select data-lf="unit" ${ro?"disabled":""}>${opts(DUNITS.includes(l.unit)||!l.unit?DUNITS:[...DUNITS,l.unit],l.unit||"u",false)}</select></td>
+    <td><input data-lf="pu" type="number" step="0.01" value="${l.pu}" ${ro?"disabled":""}></td><td><select data-lf="tx" ${ro?"disabled":""}>${TXS.map(([v,t])=>`<option value="${v}"${Number(l.tx)===v?" selected":""}>${t}</option>`).join("")}</select></td><td class="num" data-lt>${m2(Math.round((+l.qty||0)*cts(l.pu)))}</td><td>${ro?"":edBtns(i)}</td></tr>`;
+const edBtns=i=>`<button class="btn xs" data-edmv="${i}|-1" aria-label="Monter">↑</button><button class="btn xs" data-edmv="${i}|1" aria-label="Descendre">↓</button><button class="btn xs" data-eddel="${i}" aria-label="Supprimer la ligne">✕</button>`;
+function totHtml(d){const t=totDoc(d.lines);return `<div class="kv"><span>Total HT</span><b>${m2(t.ht)}</b></div>${t.rates.map(x=>`<div class="kv"><span>TVA à ${pcx(x.r)}${x.r===0&&d.contexte==="st"?" (autoliquidation)":""}</span><span>${m2(x.tva)}</span></div>`).join("")}<div class="kv tot"><span>Total TTC</span><b>${m2(t.ttc)}</b></div>`}
+function libHtml(){const rows=libRows(),c=PAR.catalogue||{},q=norm(ED.lq),lots=(c.lots||[]);
+  if(!rows.length)return `<p class="note">La bibliothèque n'est pas encore dans la base. Ouvre une fois l'onglet Devis d'un chantier du suivi SDB (il la dépose), ou importe parametres-devis-afer.json. ${PH("bibliothèque à importer")}</p>`;
+  const f=rows.filter(r=>(!ED.lot||r.lot===ED.lot)&&(!q||r._s.includes(q))).slice(0,40),ouv=Object.entries(gt("ouvrage"));
+  return `<div class="grid2"><select data-edlot aria-label="Lot"><option value="">Tous les lots</option><option value="SDB"${ED.lot==="SDB"?" selected":""}>SDB · BPU salle de bain</option>${lots.filter(l=>l.code!=="SDB").map(l=>`<option value="${esc(l.code)}"${ED.lot===l.code?" selected":""}>${esc(l.name)}</option>`).join("")}</select><input type="search" data-edlq placeholder="Rechercher une prestation…" value="${esc(ED.lq)}"></div>
+  <div class="dvlib">${f.map(r=>`<button data-libadd="${esc(r.code)}"><span><b>${esc(r.des)}</b><small>${esc(r.code)} · ${esc(r.unit)}</small></span><span>${r.pu==null?'<span class="ph">prix à compléter</span>':m2(cts(r.pu))}</span></button>`).join("")||'<p class="note">Aucun résultat.</p>'}</div>
+  <div class="fgrp"><b>Mes ouvrages</b>${ouv.map(([id,o])=>`<div class="kv"><span>${esc(o.nom)} <small class="note">${plural((o.lines||[]).length,"ligne","lignes")}</small></span><span><button class="btn xs" data-ouvadd="${esc(id)}">+</button> <button class="btn xs" data-ouvdel="${esc(id)}" aria-label="Supprimer l'ouvrage">✕</button></span></div>`).join("")||'<span class="note">Coche des lignes du document puis « Enregistrer comme ouvrage » : le regroupement est réutilisable.</span>'}
+  <button class="btn xs" data-ouvsave>Enregistrer les lignes cochées comme ouvrage</button></div>`}
+function libRows(){if(LIBC)return LIBC;const out=[];if(Array.isArray(PAR.bpu))PAR.bpu.forEach(b=>out.push({code:"SDB-"+b.id,lot:"SDB",fam:b.cat||"BPU",des:b.lib||"",desc:"",unit:b.u||"u",pu:b.pu==null||b.pu===""?null:Number(b.pu),cat:"C"}));
+  const c=PAR.catalogue;if(c&&Array.isArray(c.rows))c.rows.forEach(r=>{const o=Array.isArray(r)?{code:r[0],lot:r[1],fam:r[2],des:r[3],desc:r[4]||"",unit:r[5]||"u",pu:Number(r[9])||0,cat:r[10]||"C",rem:r[11]||""}:r;if(!/obsol/i.test(o.rem||""))out.push(o)});
+  out.forEach(o=>o._s=norm([o.code,o.des,o.desc,o.fam,o.lot].join(" ")));LIBC=out;return out}
+function txFor(cat,ctx){const i=(CTX.find(c=>c[0]===ctx)||CTX[1])[2],t=((PAR.catalogue||{}).tva||{})[cat];return t&&t.rates&&t.rates[i]!=null?Number(t.rates[i]):ctx==="st"?0:0.2}
+function addLine(l){ED.d.lines.push({id:uid("l-"),kind:"article",designation:"",detail:"",qty:1,unit:"u",pu:0,tx:txFor("C",ED.d.contexte),...l});edDirty();edRender(true)}
+function edRender(keepScroll){const d=ED.d,ro=ED.ro,k=d.kind,lock=!!d.numero,all=docsAll(),I=dInfo(d,all);let o=$("#dved");const sc=o&&keepScroll?o.querySelector(".dvleft").scrollTop:0;
+  if(!o){o=document.createElement("div");o.id="dved";o.className="dvedit";o.setAttribute("role","dialog");document.body.appendChild(o)}
+  const cl=d.client||{},fl=(lbl,path,v,extra="")=>`<label>${lbl}<input data-ef="${path}" value="${esc(v||"")}" ${ro?"disabled":""} ${extra}></label>`;
+  o.innerHTML=`<header><button class="btn sm" data-edx>← Retour au registre</button><b class="ttl">${esc(titreDoc(d))} ${d.numero?esc(d.numero):'<span class="ph dim">numéro à l\'émission</span>'}</b><span class="pill ${I.cls}">${esc(I.lab)}</span><span class="sp"></span>
+    <span class="note" id="edsave">${ro?"Document numéroté : non modifiable":"Enregistré automatiquement"}</span><button class="btn sm" data-dvpdf="${esc(ED.id)}">PDF</button>${ro?"":`<button class="btn sm pri" data-dvemit="${esc(ED.id)}">${k==="devis"?"Émettre le devis":k==="facture"?"Émettre la facture":"Émettre l'avoir"}</button>`}</header>
+  <div class="dvbody"><div class="dvleft">
+    ${lock?`<div class="box warn"><b>Ce document est numéroté et figé.</b><span class="note">Pour corriger : ${k==="facture"?"émets un avoir puis refais une facture (bouton Dupliquer).":"duplique-le en brouillon."}</span></div>`:""}
+    <div class="box"><div class="grid3">
+      <label>Client<select data-ef="cli" ${ro?"disabled":""}><option value="">— choisir —</option>${clientsList().map(c=>`<option value="${esc(c.id)}"${c.id===d.cli?" selected":""}>${esc(c.nom)}</option>`).join("")}</select></label>
+      <label>Chantier<select data-ef="chId" ${ro?"disabled":""}><option value="">— aucun —</option>${liste().map(c=>`<option value="${esc(c.id)}"${c.id===d.chId?" selected":""}>${esc(c.code)} · ${esc(c.nom)}</option>`).join("")}</select></label>
+      <label>Date<input type="date" data-ef="date" value="${esc(d.date||"")}" ${ro?"disabled":""}></label></div>
+      <div class="grid3"><label style="grid-column:span 2">Objet<input data-ef="objet" value="${esc(d.objet||"")}" placeholder="Réhabilitation de salle de bain PMR" ${ro?"disabled":""}></label>
+      <label>Contexte de TVA<select data-ef="contexte" ${ro?"disabled":""}>${CTX.map(([v,t])=>`<option value="${v}"${v===d.contexte?" selected":""}>${esc(t)}</option>`).join("")}</select></label></div>
+      ${k==="devis"?`<div class="grid3"><label>Validité<input data-ef="validite" value="${esc(d.validite||"")}" ${ro?"disabled":""}></label><label>Début des travaux<input data-ef="chantier.debut" value="${esc((d.chantier||{}).debut||"")}" placeholder="date ou texte" ${ro?"disabled":""}></label><label>Durée estimée<input data-ef="chantier.duree" value="${esc((d.chantier||{}).duree||"")}" ${ro?"disabled":""}></label></div>`
+        :k==="facture"?`<div class="grid3"><label>Délai de paiement<select data-ef="delai" ${ro?"disabled":""}><option value="">— choisir —</option>${[["0","À réception"],["15","15 jours"],["30","30 jours"],["45","45 jours"],["60","60 jours"]].map(([v,t])=>`<option value="${v}"${String(d.delai)===v?" selected":""}>${t}</option>`).join("")}</select></label><label>Échéance<input type="date" data-ef="echeance" value="${esc(d.echeance||"")}" ${ro?"disabled":""}></label><label>Référence<input data-ef="refDoc" value="${esc(d.refDoc||"")}" ${ro?"disabled":""}></label></div>`
+        :`<label>Référence<input data-ef="refDoc" value="${esc(d.refDoc||"")}" ${ro?"disabled":""}></label>`}
+      <details${cl.nom?"":" open"}><summary>Coordonnées du client</summary><div class="grid3">${fl("Nom","client.nom",cl.nom)}${fl("Adresse","client.adresse1",cl.adresse1)}${fl("Code postal","client.cp",cl.cp)}${fl("Ville","client.ville",cl.ville)}${fl("SIREN","client.siren",cl.siren)}${fl("SIRET","client.siret",cl.siret)}${fl("N° TVA intra.","client.tva",cl.tva)}${fl("E-mail","client.email",cl.email)}${fl("Téléphone","client.tel",cl.tel)}
+        <label>Type<select data-ef="client.type" ${ro?"disabled":""}><option value="pro"${cl.type!=="particulier"?" selected":""}>Professionnel</option><option value="particulier"${cl.type==="particulier"?" selected":""}>Particulier</option></select></label></div>${ro||!d.cli?"":`<button class="btn xs" data-edcli>Mettre à jour la fiche client avec ces coordonnées</button>`}</details>
+      <details><summary>Chantier, paiement, note</summary><div class="grid3">${fl("Adresse du chantier","chantier.adresse",(d.chantier||{}).adresse)}<label style="grid-column:span 2">Conditions de paiement<input data-ef="paiement" value="${esc(d.paiement||"")}" ${ro?"disabled":""}></label></div><label>Note (en bas du document)<textarea data-ef="note" rows="2" ${ro?"disabled":""}>${esc(d.note||"")}</textarea></label>
+        <label class="chk"><input type="checkbox" data-ef="options.details"${(d.options||{}).details!==false?" checked":""} ${ro?"disabled":""}> <span>Afficher le détail sous chaque ligne</span></label><label class="chk"><input type="checkbox" data-ef="options.sousTotaux"${(d.options||{}).sousTotaux?" checked":""} ${ro?"disabled":""}> <span>Sous-totaux par section</span></label></details></div>
+    <div class="box" style="padding:0"><div class="scroll"><table class="dvlines"><thead><tr><th></th><th>Désignation</th><th>Qté</th><th>Unité</th><th>P.U. HT (€)</th><th>TVA</th><th class="num">Total HT</th><th></th></tr></thead><tbody>${(d.lines||[]).map((l,i)=>lineHtml(l,i,ro)).join("")||`<tr><td colspan="8" class="empty">Aucune ligne. Ajoute-en depuis la bibliothèque à droite ou une ligne libre.</td></tr>`}</tbody></table></div>
+      ${ro?"":`<div class="acts" style="padding:8px"><button class="btn xs" data-edadd="art">+ Ligne libre</button><button class="btn xs" data-edadd="titre">+ Titre de section</button></div>`}</div>
+    <div class="box dvtot" id="edtot">${totHtml(d)}</div>
+    ${(d.paiements||[]).length||k==="facture"&&lock?`<div class="box"><b>Paiements</b>${(d.paiements||[]).map(p=>`<div class="kv"><span>${fkl(p.date)} · ${esc(p.mode||"")}</span><span>${m2(cts(p.montant))}</span></div>`).join("")||'<span class="note">Aucun.</span>'}${k==="facture"&&lock?`<button class="btn xs" data-dvpay="${esc(ED.id)}">+ Paiement</button>`:""}</div>`:""}
+  </div><div class="dvright"><div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="${ED.tab==="prev"}" data-edtab="prev">Aperçu A4</button>${ro?"":`<button class="tab" role="tab" aria-selected="${ED.tab==="lib"}" data-edtab="lib">Bibliothèque</button>`}</div>
+    ${ED.tab==="lib"&&!ro?`<div id="edlib">${libHtml()}</div>`:`<div id="edprev" class="dvprev big"><p class="note">Chargement de l'aperçu…</p></div>`}</div></div>`;
+  const left=o.querySelector(".dvleft");if(left)left.scrollTop=sc;if(ED.tab!=="lib"||ro)edPrev()}
+function edSet(path,v){const d=ED.d,P=path.split(".");let o=d;for(let i=0;i<P.length-1;i++)o=o[P[i]]=o[P[i]]||{};o[P[P.length-1]]=v}
+function edField(e){const t=e.target,f=t.dataset.ef;if(!ED||ED.ro)return;const v=t.type==="checkbox"?t.checked:t.value;edSet(f,v);const d=ED.d;
+  if(f==="cli"){d.client=v?clientDoc(v):d.client;if(v&&!d.chId)d.contexte=v==="dmv"?"st":d.contexte;edDirty();edRender(true);return}
+  if(f==="chId"){if(v){d.chantier={...d.chantier,adresse:chantierDoc(v).adresse};const c=CHI[v];if(c&&c.cli&&!d.cli){d.cli=c.cli.id;d.client=clientDoc(c.cli.id);if(c.cli.id==="dmv")d.contexte="st"}}edDirty();edRender(true);return}
+  if(f==="contexte"){d.lines.forEach(l=>{if(l.kind!=="titre"&&!l.txManuel)l.tx=txFor(l.cat||"C",v)});edDirty();edRender(true);return}
+  if(f==="delai"&&v!==""){d.echeance=addK(d.date||today(),+v);edDirty();edRender(true);return}
+  if(f==="date"&&d.delai!==""&&d.delai!=null&&d.kind==="facture"){d.echeance=addK(v||today(),+d.delai);const e2=$("#dved [data-ef=echeance]");if(e2)e2.value=d.echeance}
+  edDirty();edPrev()}
+function edLine(e){const t=e.target,tr=t.closest("[data-li]");if(!tr||!ED||ED.ro)return;const l=ED.d.lines[+tr.dataset.li],f=t.dataset.lf;if(!l)return;
+  l[f]=["qty","pu","tx"].includes(f)?(f==="tx"?Number(t.value):t.value===""?"":Number(t.value)):t.value;if(f==="tx")l.txManuel=true;
+  const c=tr.querySelector("[data-lt]");if(c)c.textContent=m2(Math.round((+l.qty||0)*cts(l.pu)));$("#edtot").innerHTML=totHtml(ED.d);edDirty();edPrev()}
+function libAdd(code){const r=libRows().find(x=>x.code===code);if(!r)return;addLine({code:r.code,lot:r.lot,designation:r.des,detail:r.desc||"",unit:r.unit,pu:r.pu==null?0:r.pu,cat:r.cat||"C",tx:txFor(r.cat||"C",ED.d.contexte)});toast(r.pu==null?"Ligne ajoutée : le prix est à compléter.":"Ligne ajoutée.")}
+async function ouvSave(){const L=ED.d.lines.filter(l=>ED.sel.has(l.id));if(!L.length){toast("Coche d'abord les lignes à regrouper.");return}const nom=prompt("Nom de l'ouvrage ?");if(!nom||!nom.trim())return;
+  if(await gput("ouvrage",uid("o-"),{nom:nom.trim(),lines:L.map(l=>{const {id,st,valAt,at,...r}=l;return r})})){ED.sel.clear();edRender(true);toast("Ouvrage enregistré.")}}
+document.addEventListener("input",e=>{if(!ED||!e.target.closest("#dved"))return;if(e.target.dataset.edlq!==undefined){ED.lq=e.target.value;const el=$("#edlib");if(el){const pos=e.target.selectionStart;el.innerHTML=libHtml();const n=el.querySelector("[data-edlq]");n.focus();n.setSelectionRange(pos,pos)}return}
+  if(e.target.dataset.ef&&e.target.type!=="checkbox"&&e.target.tagName!=="SELECT")edField(e);else if(e.target.dataset.lf&&e.target.tagName==="INPUT")edLine(e)});
+document.addEventListener("change",e=>{if(!ED||!e.target.closest("#dved"))return;const t=e.target;
+  if(t.dataset.ef&&(t.type==="checkbox"||t.tagName==="SELECT"))edField(e);else if(t.dataset.lf&&t.tagName==="SELECT")edLine(e);else if(t.dataset.lsel!==undefined){const id=ED.d.lines[+t.closest("[data-li]").dataset.li].id;t.checked?ED.sel.add(id):ED.sel.delete(id)}else if(t.dataset.edlot!==undefined){ED.lot=t.value;$("#edlib").innerHTML=libHtml()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ED&&!popEl){e.stopPropagation();edClose()}},true);
+document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);let el;
+  if(el=q("#dved [data-edx]")){edClose();return}
+  if(el=q("[data-edtab]")){ED.tab=el.dataset.edtab;edRender(true);return}
+  if(el=q("[data-edadd]")){addLine(el.dataset.edadd==="titre"?{kind:"titre",designation:""}:{});return}
+  if(el=q("[data-eddel]")){ED.d.lines.splice(+el.dataset.eddel,1);edDirty();edRender(true);return}
+  if(el=q("[data-edmv]")){const [i,s]=el.dataset.edmv.split("|").map(Number),L=ED.d.lines,j=i+s;if(j<0||j>=L.length)return;[L[i],L[j]]=[L[j],L[i]];edDirty();edRender(true);return}
+  if(el=q("[data-libadd]")){libAdd(el.dataset.libadd);return}
+  if(el=q("[data-ouvadd]")){const o=gid("ouvrage",el.dataset.ouvadd);if(o){(o.lines||[]).forEach(l=>ED.d.lines.push({...l,id:uid("l-"),tx:l.kind==="titre"?l.tx:(l.txManuel?l.tx:txFor(l.cat||"C",ED.d.contexte))}));edDirty();edRender(true);toast("Ouvrage ajouté.")}return}
+  if(el=q("[data-ouvdel]")){if(confirm("Supprimer cet ouvrage de la bibliothèque ?"))gdelMany("ouvrage",[el.dataset.ouvdel]).then(()=>ED&&edRender(true));return}
+  if(q("[data-ouvsave]")){ouvSave();return}
+  if(q("[data-edcli]")){const d=ED.d,k=gid("client",d.cli)||{},c=d.client||{};gput("client",d.cli,{...k,nom:c.nom||k.nom,adresse:[c.adresse1,[c.cp,c.ville].filter(Boolean).join(" ")].filter(Boolean).join(", "),tel:c.tel||"",email:c.email||"",siret:c.siret||""}).then(ok=>ok&&toast("Fiche client mise à jour."));return}
+  if(el=q("[data-dvemit]")){const id=el.dataset.dvemit;edFlush().then(()=>dvEmettre(id));return}
+  if(el=q("[data-dvpdf]")){const d=ED&&ED.id===el.dataset.dvpdf?ED.d:docById(el.dataset.dvpdf);if(d)dvPdf(d);return}
+  if(el=q("[data-dvnew]")){if(!needBase()){const k=el.dataset.dvnew;dvCreate(baseDoc(k,k==="avoir"?{genre:"avoir"}:{}))}return}
+  if(q("[data-dvset]")){dvSettings();return}
+  if(el=q("[data-dvt]")){DVF.t=el.dataset.dvt;RENDER();return}
+  if(el=q("[data-dvsel]")){DSEL=el.dataset.dvsel;RENDER();if(innerWidth<1100){const s=$("#dvside");s&&s.scrollIntoView({behavior:"smooth",block:"start"})}return}
+  if(el=q("[data-dvopen]")){edOpen(el.dataset.dvopen);return}
+  if(el=q("[data-dvsdb]")){closeFloat();const o=$("#dved");if(o){o.remove();ED=null}openSdb(el.dataset.dvsdb);if(frameReady&&frame)frame.contentWindow.postMessage({gestion:"ouvrir",ch:el.dataset.dvsdb,tab:"devis"},location.origin);return}
+  if(el=q("[data-dvbig]")){bigPrev(el.dataset.dvbig);return}
+  if(el=q("[data-dvfac]")){dvFacModal(el.dataset.dvfac);return}
+  if(el=q("[data-dvpay]")){payModal(el.dataset.dvpay);return}
+  if(el=q("[data-dvpaydel]")){const [id,k]=el.dataset.dvpaydel.split("|"),d=gid("doc",id);if(d&&confirm("Retirer ce paiement ?"))gput("doc",id,{...d,paiements:(d.paiements||[]).filter((_,i)=>i!==+k)});return}
+  if(el=q("[data-dvavoir]")){dvAvoir(el.dataset.dvavoir);return}
+  if(el=q("[data-dvdup]")){dvDup(el.dataset.dvdup);return}
+  if(el=q("[data-dvdel]")){dvDel(el.dataset.dvdel);return}
+  if(el=q("[data-dvst]")){const [id,s]=el.dataset.dvst.split("|");dvSetStatut(id,s);return}
+  if(el=q("[data-dvregen]")){dvRegen(el.dataset.dvregen);return}
+});
+document.addEventListener("change",e=>{const f=e.target.dataset&&e.target.dataset.dvf;if(f){DVF[f]=e.target.value;RENDER()}});
+document.addEventListener("input",e=>{if(e.target.dataset&&e.target.dataset.dvq!==undefined){DVF.q=e.target.value;clearTimeout(DVF.T);DVF.T=setTimeout(()=>{RENDER();const n=$("[data-dvq]");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}},250)}});
+document.addEventListener("dblclick",e=>{const r=e.target.closest("[data-dvsel]");if(r&&r.tagName==="TR"){const d=docById(r.dataset.dvsel);if(d&&d.sdb)openSdb(d.chId);else if(d)edOpen(d.id)}});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches&&e.target.matches("tr[data-dvsel]"))e.target.click()});
+
+const VIEWS={dash:vDash,plan:vPlan,renta:vRenta,devis:vDevis,res:vRes,cli:vCli,sync:vSync};
+const TITRES={dash:"Tableau de bord",plan:"Planning global",renta:"Rentabilité",devis:"Devis et factures",res:"Personnel et matériel",cli:"Clients",sync:"Synchronisation"};
 function RENDER(){if(!C)return;buildAll();renderAlerts();
   if(VIEW==="sdb")return;
   if(popEl){needRender=true;return} // une fenêtre est ouverte : on redessine en la fermant
   if(document.activeElement&&document.activeElement.matches&&document.activeElement.matches("[data-rk]")){needRender=true;return}
   const v=$("#v-main"),y=v.scrollTop,sx=[...document.querySelectorAll("#page .scroll")].map(s=>s.scrollLeft);
   sel=null;drag=null;hideTip();
-  $("#page").innerHTML=VIEWS[VIEW]();
+  $("#page").innerHTML=VIEWS[VIEW]();if(VIEW==="devis")dvAfter();
   v.scrollTop=y;document.querySelectorAll("#page .scroll").forEach((s,i)=>{if(sx[i])s.scrollLeft=sx[i]});
   document.body.classList.toggle("picking",!!active&&VIEW==="plan");
   if(SEL)renderDetail()}
@@ -1171,7 +1536,7 @@ function closeDetail(){const id=SEL;SEL=null;$("#detail").innerHTML="";RENDER();
 
 document.addEventListener("click",e=>{const t=e.target;
   if(justSel)return;
-  if(popEl&&!popEl.contains(t)&&!t.closest("[data-aff],[data-pilot],[data-conge],[data-cell],[data-abs]"))closeFloat();
+  if(popEl&&!popEl.contains(t)&&performance.now()-popEl._born>80&&!t.closest("[data-aff],[data-pilot],[data-conge],[data-cell],[data-abs]"))closeFloat(); // une fenêtre ouverte par ce même clic (Devis et factures) reste ouverte
   if(popEl&&popEl.contains(t)&&!t.closest("[data-view]"))return;
   const q=s=>t.closest(s);let el;
   if(el=q("[data-al]")){const a=ALS[+el.dataset.al];if(!a)return;if(a.go.pb)openSdb(a.go.pb);else if(a.go.res){const r=RES[a.go.res];if(r){resTab=r.veh?"vehicule":r.tool?"materiel":r.grp==="bureau"?"bureau":"chantier";selRes=r.id;if(!r.actif)voirSortis=true}go("res")}else if(a.go.view)go(a.go.view);return}

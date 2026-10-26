@@ -1250,8 +1250,14 @@ const Engine = (() => {
     // --- numéro, date, validité ---
     const devisBase = Math.max(259.1, boxBottom + 36.7, companyBottom + 40);
     const numero = dv.numero || cfg.provisionalNumber || 'DEV-…';
-    T(28.4, devisBase, 'Devis n° ' + numero, 'B', 14.2, C.title);
-    T(28.4, devisBase + 15.5, 'Valable ' + (dv.validite || '3 mois'), 'R', 9.7);
+    const isDevis = !dv.docType || dv.docType === 'devis';
+    T(28.4, devisBase, (dv.titre || 'Devis') + ' n° ' + numero, 'B', 14.2, C.title);
+    if (isDevis) T(28.4, devisBase + 15.5, 'Valable ' + (dv.validite || '3 mois'), 'R', 9.7);
+    else {
+      let ey = devisBase + 15.5;
+      if (dv.echeance) { T(28.4, ey, 'Échéance : ' + dateFR(dv.echeance), 'R', 9.7); ey += 12.5; }
+      if (dv.refDevis) T(28.4, ey, dv.refDevis, 'R', 9.7);
+    }
     T(335.9, devisBase - 5.4, 'En date du', 'R', 9.7);
     T(335.9 + tw('En date du', 'R', 9.7) + 10, devisBase - 5.4, dateFR(dv.date), 'R', 9.7);
 
@@ -1380,7 +1386,8 @@ const Engine = (() => {
     const reduced = totals.rates.some(x => x.r > 0 && x.r < 0.2 && x.base !== 0);
     if (reduced && cfg.mentions.attestation) paras.push(cfg.mentions.attestation);
     if (dv.contexte === 'st' && cfg.mentions.autoliquidation) paras.push(cfg.mentions.autoliquidation);
-    if (dv.options?.revision !== false && cfg.mentions.revision) paras.push(cfg.mentions.revision);
+    if (isDevis && dv.options?.revision !== false && cfg.mentions.revision) paras.push(cfg.mentions.revision);
+    if (!isDevis && Array.isArray(dv.mentionsExtra)) dv.mentionsExtra.forEach(m => { if (m && String(m).trim()) paras.push(String(m).trim()); });
     if (dv.note && dv.note.trim()) paras.push(dv.note.trim());
     let mb = cursor + 26.8; let lastBase = null;
     paras.forEach((p, pi) => {
@@ -1392,6 +1399,7 @@ const Engine = (() => {
     });
 
     // --- signatures ---
+    if (isDevis) {
     let lc = lastBase !== null ? lastBase + 47.1 : cursor + 40;
     if (lc + 82.2 > FOOT_LIMIT + 4) lc = (lastBase !== null ? lastBase : cursor - 12) + 30; // espace réduit si ça tient
     if (lc + 82.2 > FOOT_LIMIT + 4) { newPage(); lc = CONT_TOP + 10; }
@@ -1404,6 +1412,7 @@ const Engine = (() => {
     T(325.1, st + 15.9, (co.signataire || '').toUpperCase(), 'B', 11.2);
     R(325.1, st + 20.9, 214.6, 56.3, C.box, 3);
     if (cfg.showSignature) I('sig', 390.0, st + 22.4, 86.0, 54.5);
+    }
 
     // --- pieds de page ---
     const N = pages.length;
@@ -2640,6 +2649,11 @@ SB.logout=async()=>{if(OB.length){gsay("Envoi en cours, réessayez dans un insta
 addEventListener("message",e=>{const d=e.data;if(e.origin!==location.origin||!d||d.gestion!=="ouvrir"||!SB.ready||!SB.afer)return;
   if(d.ch&&d.ch!==CH.key&&chantiers.some(x=>x.id===d.ch))switchChantier(d.ch);if(d.tab)setTab(d.tab)});
 
+/* --- Gestion AFER : fenêtre Devis et factures. Le tableau de bord envoie un document, l'appli renvoie les pages (SVG) et, sur demande, le PDF --- */
+addEventListener("message",async e=>{const d=e.data;if(e.origin!==location.origin||!d||d.gestion!=="rendre"||!SB.ready||!SB.afer)return;
+  const rep=o=>{try{e.source.postMessage({gestion:"rendu",id:d.id,...o},location.origin)}catch(x){}};
+  try{rep(await DV.rendre(d.dv||{},d.provisoire,!!d.pdf))}catch(x){rep({erreur:String(x&&x.message||x)})}});
+
 /* --- Liens d'accès (AFER) --- */
 const linkUrl=t=>location.origin+location.pathname+"?k="+t;
 async function openLinks(){if(!SB.ready){gsay("Disponible dans la version en ligne");return}
@@ -3744,7 +3758,17 @@ $('#dvimpIn').addEventListener('change', async e => {
   try { importPack(JSON.parse(await f.text()), f.name, out); } catch (err) { out.innerHTML = `<div class="box err"><h3>Fichier non reconnu</h3><p style="margin:0">${esc(err.message || err)}</p></div>`; }
   e.target.value = '';
 });
-return { render, addLine, baseLine, mig, par, flush };
+// Gestion AFER (fenêtre Devis et factures) : mêmes pages A4 et même PDF que l'onglet Devis, pour un document envoyé par le tableau de bord
+async function rendre(dv, provisoire, wantPdf) {
+  dv.lines = (dv.lines || []).map(l => ({ kind: 'article', ...l }));
+  const isDevis = !dv.docType || dv.docType === 'devis';
+  const cfg = { company: S.company, mentions: S.mentions, rateOf: l => Number(l.tx) || 0, showSignature: isDevis && S.showSignature && !!IMGS.sig, showBadges: S.showBadges, provisionalNumber: provisoire || '…' };
+  const L = Engine.layoutDevis(dv, cfg);
+  const o = { pages: L.pages.map(p => Engine.toSVG(p, IMGS)), totals: L.totals };
+  if (wantPdf) { await LIB.jspdf(); o.pdf = Engine.toPDF(window.jspdf.jsPDF, L.pages, DATA.fonts, IMGS, { title: `${dv.titre || 'Devis'} ${dv.numero || ''}`.trim(), author: 'Agence Française des Energies Renouvelables' }); }
+  return o;
+}
+return { render, addLine, baseLine, mig, par, flush, rendre };
 })();
 
 // Branchement sur le stockage de l'appareil
