@@ -14,14 +14,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
-/* Gestion AFER : tableau de bord général de l'espace AFER (maquette V4 validée le 21/10/2026).
-   Menu à gauche (en haut sur téléphone) ; l'onglet « Chantiers SDB » affiche l'appli de suivi SDB (index.html?sdb=1) dans un cadre. */
+/* Gestion AFER : espace AFER (maquette V4 validée le 21/10/2026).
+   Menu à gauche (en haut sur téléphone), bandeau d'alertes permanent ; « Chantiers SDB » affiche l'appli SDB (index.html?sdb=1) dans un cadre.
+   V12 (26/10/2026) : planning, rentabilité, personnel et matériel (copie des 2 Excel SharePoint), clients, synchronisation. */
 :root{
   --turq:#2FBFBF; --turq-ink:#178C8C; --turq-soft:#E3F6F6; --anth:#2E3238;
   --bg:#F3F6F6; --surface:#FFFFFF; --surface-2:#F7FAFA; --line:#D3DEDE; --line-soft:#E6EEEE;
   --fg:#2E3238; --muted:#5F6B72;
   --warn:#B86E00; --warn-bg:#FFF4E0; --bad:#B3261E; --bad-bg:#FDECEA; --ok:#2E7D4F; --ok-bg:#E5F4EA;
   --side:#2E3238; --side-fg:#DCE4E6; --side-mute:#8F9BA2; --side-act:#3A4048;
+  --row-ch:#2E3238; --row-ch-fg:#F1F5F5; --row-ph:#EAF0F0;
+  --mo:#5B7FA6; --mat:#C08A2E; --veh:#8A6BB0; --stt:#6B6F76;
   --shadow:0 10px 30px rgba(20,30,35,.18);
   --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -31,20 +34,21 @@
   --bg:#181C20; --surface:#22272C; --surface-2:#1D2226; --line:#3A4249; --line-soft:#2E353B;
   --fg:#E9EEEF; --muted:#9DA8AE;
   --warn:#F2B04A; --warn-bg:#3A2E18; --bad:#FF8A80; --bad-bg:#3A1F1D; --ok:#7BD39A; --ok-bg:#1C3326;
-  --side:#111417; --side-act:#262C32; --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}}
+  --side:#111417; --side-act:#262C32; --row-ch:#111417; --row-ph:#2A3036; --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}}
 :root[data-theme="dark"]{
   --turq-ink:#5FD6D6; --turq-soft:#1D3436;
   --bg:#181C20; --surface:#22272C; --surface-2:#1D2226; --line:#3A4249; --line-soft:#2E353B;
   --fg:#E9EEEF; --muted:#9DA8AE;
   --warn:#F2B04A; --warn-bg:#3A2E18; --bad:#FF8A80; --bad-bg:#3A1F1D; --ok:#7BD39A; --ok-bg:#1C3326;
-  --side:#111417; --side-act:#262C32; --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}
+  --side:#111417; --side-act:#262C32; --row-ch:#111417; --row-ph:#2A3036; --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--body);overflow:hidden}
 h1,h2,h3,h4{font-family:var(--display);font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0}
 button{font-family:var(--body)}
-button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--turq-ink);outline-offset:2px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--turq-ink);outline-offset:2px}
 [hidden]{display:none!important}
+a{color:var(--turq-ink)}
 
 /* cadre */
 .app{display:grid;grid-template-columns:212px minmax(0,1fr);height:100vh;height:100dvh}
@@ -64,59 +68,122 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .live{display:inline-flex;align-items:center;gap:6px}
 .live::before{content:"";width:8px;height:8px;border-radius:50%;background:#7BD39A}
 .live.off::before{background:#F2B04A}
-.main{position:relative;min-width:0;min-height:0;display:grid}
+.main{position:relative;min-width:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr)}
 .view{min-height:0;overflow-y:auto}
 #v-sdb{overflow:hidden}
 #v-sdb iframe{display:block;width:100%;height:100%;border:0;background:var(--bg)}
-.page{max-width:1240px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:grid;gap:16px;align-content:start}
+.page{max-width:1280px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:grid;gap:16px;align-content:start;min-width:0}
+
+/* bandeau d'alertes, visible partout */
+.alerts{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:8px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);background:var(--surface-2);font-size:12.5px}
+.alerts>b{font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.alerts>b span{background:var(--bad);color:#fff;border-radius:999px;font-size:11px;padding:0 6px}
+.al{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 11px;background:var(--warn-bg);color:var(--warn);font-weight:600;font-size:12.5px}
+.al.bad{background:var(--bad-bg);color:var(--bad)}
+.al:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+/* éléments communs */
+.topline{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;justify-content:space-between}
+.topline h2{font-size:30px}
+.topline p{margin:2px 0 0;color:var(--muted);font-size:13px;max-width:80ch}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.note{font-size:12.5px;color:var(--muted)}
+.ph{color:var(--warn);font-style:italic}
+.ph.dim{color:var(--muted)}
+.btn{font:600 14px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:9px 14px;cursor:pointer;min-height:42px}
+.btn.pri{background:var(--turq);border-color:var(--turq);color:#0E2A2A}
+.btn.sm{min-height:32px;padding:5px 10px;font-size:12.5px;border-radius:6px}
+.btn.xs{min-height:26px;padding:2px 8px;font-size:11.5px;border-radius:5px}
+.btn.wide{width:100%}
+.btn.dang{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:5px;font:12.5px var(--body);border-radius:999px;padding:4px 10px;background:var(--surface);border:1px solid var(--line);white-space:nowrap;cursor:pointer;color:var(--fg)}
+.chip[aria-pressed="true"]{border-color:var(--cc,var(--turq));box-shadow:inset 0 0 0 1px var(--cc,var(--turq));font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{all:unset;cursor:pointer;padding:6px 12px;font-size:12.5px;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--turq);color:#0E2A2A}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--cc);display:inline-block}
+.pill{font-size:11.5px;font-weight:700;border-radius:4px;padding:1px 7px;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.neu{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.empty{border:1px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--muted);background:var(--surface)}
+.why{border-left:3px solid var(--turq);padding:9px 12px;background:var(--surface);border-radius:0 6px 6px 0;font-size:13px;display:grid;gap:3px}
+.why b{font-family:var(--display);font-size:17px;font-weight:600}
+.box{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--surface);display:grid;gap:8px}
+.box.warn{border-color:var(--warn);background:var(--warn-bg)}
+.box h3{font-size:20px}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:middle}
+td{white-space:nowrap}
+td.wrap{white-space:normal;min-width:180px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2);font-weight:700;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.clk{cursor:pointer} tr.clk:hover td{background:var(--turq-soft)} tr.sel td{background:var(--turq-soft)}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;border-bottom:1px dotted var(--line);padding:4px 0}
+.kv span:first-child{color:var(--muted)}
+.kv span:last-child{text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:break-word}
+.kv.tot{border-bottom:0;border-top:2px solid var(--fg);font-weight:700;padding-top:6px}
+.sec{display:grid;gap:6px}
+.sec>b{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--turq-ink)}
+.lock{font-size:11px;color:var(--warn);text-transform:none;letter-spacing:0}
+
+/* avatars */
+.av{width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;font:700 11px var(--body);color:#fff;background:var(--ac,#6b7a80);border:2px solid var(--surface);flex:none;margin-right:-6px}
+.av.big{width:46px;height:46px;font-size:15px;margin:0}
+.av.veh{background:var(--surface-2);color:var(--fg);border-color:var(--line)}
+.av svg{width:60%;height:60%}
+.avs{display:flex;align-items:center}
+.avs .more{font-size:11px;color:var(--muted);margin-left:10px}
+.pilot{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.pilot .av{width:20px;height:20px;font-size:8px;margin:0;border:0}
 
 /* tableau de bord */
-.topline h2{font-size:30px}
-.topline p{margin:2px 0 0;color:var(--muted);font-size:13px}
-.alerts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.alerts b{font-size:12.5px}
-.al{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 12px;background:var(--bad-bg);color:var(--bad);font-weight:600;font-size:13px}
-.al:focus-visible{outline:2px solid var(--bad);outline-offset:2px}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .kpi{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--surface)}
 .kpi .v{font-family:var(--display);font-size:34px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
 .kpi .l{font-size:12.5px;color:var(--muted);margin-top:4px}
 .kpi.bad .v{color:var(--bad)}
 .cgroup{display:grid;gap:10px}
-.cgroup>header{display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--cc);padding-bottom:5px}
+.cgroup>header{display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--cc);padding-bottom:5px;flex-wrap:wrap}
 .cgroup>header h3{font-size:21px}
-.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--cc)}
-.note{font-size:12.5px;color:var(--muted)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
-.card{all:unset;box-sizing:border-box;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:12px 13px;display:grid;gap:7px;background:var(--surface);border-left:5px solid var(--cc);align-content:start}
+.card{all:unset;box-sizing:border-box;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:12px 13px;display:grid;gap:7px;background:var(--surface);border-left:5px solid var(--cc);align-content:start;position:relative}
 .card:hover{border-color:var(--cc)}
 .card:focus-visible{outline:2px solid var(--cc);outline-offset:2px}
 .card.sel{box-shadow:0 0 0 2px var(--cc)}
+.card.opp{border-style:dashed;border-left-style:solid}
 .card .hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .card .code{font:700 12px var(--body);letter-spacing:.06em;color:var(--cc)}
-.card h4{font-size:20px}
+.card h4{font-size:20px;display:flex;align-items:center;gap:8px}
 .card .meta{font-size:12.5px;color:var(--muted)}
+.card .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:22px}
+.eur{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--cc);color:var(--cc);font:700 12px var(--body);cursor:help;flex:none}
+.eur:hover{background:var(--cc);color:#fff}
 .pct{display:flex;align-items:center;gap:10px}
 .pct .v{font:600 26px var(--display);font-variant-numeric:tabular-nums;min-width:60px}
 .bar{height:8px;border-radius:4px;background:var(--line-soft);overflow:hidden;flex:1}
 .bar i{display:block;height:100%;background:var(--cc,var(--turq));border-radius:4px}
 .tags{display:flex;flex-wrap:wrap;gap:6px}
-.pill{font-size:11.5px;font-weight:700;border-radius:4px;padding:1px 7px;white-space:nowrap}
-.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.neu{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
-.hint{font-size:12px;color:var(--muted);margin:0}
-.empty{border:1px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--muted);background:var(--surface)}
-.btn{font:600 14px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:9px 14px;cursor:pointer;min-height:42px}
-.btn.pri{background:var(--turq);border-color:var(--turq);color:#0E2A2A}
-.btn.wide{width:100%}
+
+/* infobulle rentabilité */
+.tip{position:fixed;z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:10px 12px;width:280px;display:grid;gap:6px;font-size:12.5px;pointer-events:none}
+.tip b{font-family:var(--display);font-size:16px;font-weight:600}
+.tip .kv{font-size:12.5px}
+.mbar{display:flex;height:16px;border-radius:4px;overflow:hidden;background:var(--line-soft)}
+.mbar span{display:block;height:100%}
+.mbar.outline{border:1px dashed var(--muted);background:transparent}
+.leg{display:flex;flex-wrap:wrap;gap:8px 12px;font-size:11.5px;color:var(--muted)}
+.leg span{display:inline-flex;align-items:center;gap:4px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block;background:var(--cc)}
 
 /* détail d'un chantier */
 .scrim{position:fixed;inset:0;background:rgba(20,26,30,.35);z-index:20}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);padding:18px 18px calc(24px + env(safe-area-inset-bottom,0px));display:grid;gap:14px;align-content:start;overflow-y:auto;z-index:21;--cc:var(--turq)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(470px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);padding:18px 18px calc(24px + env(safe-area-inset-bottom,0px));display:grid;gap:14px;align-content:start;overflow-y:auto;z-index:21;--cc:var(--turq)}
 .drawer .x{position:absolute;top:12px;right:14px;min-height:36px;padding:6px 12px}
 .drawer h3{font-size:28px;padding-right:90px}
 .drawer .code{font:700 12px var(--body);letter-spacing:.06em;color:var(--cc)}
-.sec{display:grid;gap:6px}
-.sec>b{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--turq-ink)}
+.row2{display:flex;gap:6px;flex-wrap:wrap}
 .step{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px}
 .step .st{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);display:inline-grid;place-items:center;font-size:11px;font-weight:700}
 .step.done .st{background:var(--ok);border-color:var(--ok);color:#fff}
@@ -125,12 +192,155 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .step.cur span:nth-child(2){font-weight:700}
 .pb{border:1px solid var(--line);border-left:4px solid var(--bad);border-radius:6px;padding:8px 10px;font-size:13px;display:grid;gap:2px}
 .pb strong{font-weight:700}
-.kv{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;border-bottom:1px dotted var(--line);padding:4px 0}
-.kv span:first-child{color:var(--muted)}
-.kv span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.chip-res{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px 10px 2px 2px;font-size:12.5px;font-weight:600}
+.chip-res .av{margin:0;width:24px;height:24px;border:0}
+
+/* fenêtres (formulaires, choix) */
+.pop{position:fixed;z-index:32;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:12px;display:grid;gap:9px;width:320px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow-y:auto;font-size:13px}
+.pop.modal{left:50%;top:50%;transform:translate(-50%,-50%);width:min(620px,calc(100vw - 16px))}
+.pop h3{font-size:21px}
+.pop label{display:grid;gap:3px;font-size:12px;color:var(--muted);font-weight:600}
+.pop select,.pop textarea,.pop input:not([type=checkbox]):not([type=radio]){font:14px var(--body);color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%;min-width:0}
+.pop .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pop .fgrp{border-top:1px solid var(--line-soft);padding-top:8px;display:grid;gap:8px}
+.pop .fgrp>b{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--turq-ink)}
+.pop .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.pop .acts .left{margin-right:auto}
+.pop .list{display:grid;gap:3px;max-height:240px;overflow-y:auto}
+.pop .list.cols{grid-template-columns:1fr 1fr;max-height:280px}
+.pop .list .gh3{grid-column:1/-1;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding-top:4px}
+.pop .list button{all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:5px}
+.pop .list button:hover{background:var(--turq-soft)}
+.pop .list .av{margin:0;border:0;width:22px;height:22px;font-size:9px}
+.pop .chk{display:flex;flex-direction:row;align-items:center;gap:6px;color:var(--fg);font-weight:500;font-size:12.5px;padding:3px 4px;border-radius:5px;cursor:pointer}
+.pop .chk:hover{background:var(--turq-soft)}
+.pop .chk>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pop .chk .note{font-size:10.5px;flex:none;margin-left:auto}
+.pop .scope{display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px}
+.pop .inline{display:flex;gap:6px;align-items:end}
+.pop .inline label{flex:1}
+.pop .swatches{display:flex;gap:6px;flex-wrap:wrap}
+.pop .swatches button{all:unset;cursor:pointer;width:26px;height:26px;border-radius:6px;background:var(--cc);border:2px solid transparent}
+.pop .swatches button[aria-pressed="true"]{border-color:var(--fg)}
+.pop .phase{display:grid;grid-template-columns:minmax(0,1.4fr) 1fr 1fr 70px 30px;gap:6px;align-items:end}
+.mscrim{position:fixed;inset:0;background:rgba(20,26,30,.35);z-index:31}
+.toast{position:fixed;z-index:40;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--anth);color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:var(--shadow);max-width:min(560px,92vw)}
+
+/* planning : ressources */
+.tray{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-start;border:1px dashed var(--line);border-radius:8px;padding:10px;background:var(--surface)}
+.tray .tg{display:grid;gap:4px;min-width:0}
+.tray .tg>span{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.tray .row{display:flex;flex-wrap:wrap;gap:6px}
+.res{all:unset;cursor:grab;display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px 10px 2px 2px;font-size:12.5px;font-weight:600;max-width:240px}
+.res>span.n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.res .av{margin:0;width:26px;height:26px;border-width:0}
+.res:active{cursor:grabbing}
+.res.on{border-color:var(--turq);box-shadow:0 0 0 3px var(--turq-soft);background:var(--turq-soft)}
+.res .cg{font-size:10px;font-weight:700;color:var(--warn);background:var(--warn-bg);border-radius:4px;padding:0 4px;flex:none}
+.hintbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--turq-soft);border:1px solid var(--turq);border-radius:8px;padding:7px 12px;font-size:13px}
+kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+/* planning : grille */
+.wk{display:grid;font-size:12.5px;user-select:none;-webkit-user-select:none}
+.wk>div{border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft);padding:5px 6px;min-height:40px;min-width:0}
+.wk .hd{background:var(--surface-2);font-weight:700;font-size:12px;text-align:center;position:sticky;top:0;z-index:1}
+.wk .hd.today{background:var(--turq-soft);color:var(--turq-ink)}
+.wk .hd small{display:block;font-weight:500;color:var(--muted)}
+.wk .we{background:var(--surface-2)}
+.wk .bh{grid-column:1/-1;background:var(--row-ch);color:var(--row-ch-fg);font-weight:700;display:flex;gap:8px;align-items:center;min-height:36px;flex-wrap:wrap}
+.wk .bh .code{font-size:11px;letter-spacing:.06em;color:var(--cc);background:var(--surface);border-radius:3px;padding:0 5px}
+.wk .bh .nm{all:unset;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px}
+.wk .bh .nm:hover{text-decoration-color:currentColor}
+.wk .bh .right{margin-left:auto;display:flex;align-items:center;gap:8px;font-weight:500;flex-wrap:wrap}
+.wk .bh .pilot{color:var(--row-ch-fg);opacity:.95;cursor:pointer;border:1px solid transparent;border-radius:999px;padding:1px 8px 1px 2px;background:none;font:inherit;font-size:12px}
+.wk .bh .pilot:hover{border-color:var(--turq)}
+.wk .bh .eur{border-color:var(--row-ch-fg);color:var(--row-ch-fg)}
+.wk .bh .btn{min-height:26px;padding:2px 8px;font-size:11.5px;background:transparent;color:var(--row-ch-fg);border-color:#59626B}
+.wk .bh.opp{background:transparent;color:var(--fg);border:1px dashed var(--muted)}
+.wk .bh.abs{background:var(--row-ph);color:var(--fg)}
+.wk .bh.abs .btn{color:var(--fg);border-color:var(--line)}
+.wk .lab{color:var(--muted);display:flex;align-items:center;gap:6px;font-size:12px}
+.wk .lab .av{width:22px;height:22px;font-size:9px;margin:0;border:0}
+.cell{display:flex;flex-direction:column;gap:3px;cursor:pointer}
+.cell.month{flex-direction:row;flex-wrap:wrap;gap:2px;padding:4px 3px}
+.cell:hover{background:var(--turq-soft)}
+.cell.drop{background:var(--turq-soft);outline:2px dashed var(--turq);outline-offset:-3px}
+.cell.blocked{background:repeating-linear-gradient(45deg,var(--warn-bg) 0 5px,transparent 5px 10px);cursor:not-allowed}
+.cell.off{background:repeating-linear-gradient(45deg,var(--line-soft) 0 5px,transparent 5px 10px);color:var(--muted);font-size:11.5px;justify-content:center;align-items:center;text-align:center}
+.cell.half{background:linear-gradient(135deg,var(--line-soft) 50%,transparent 50%)}
+.cell.out{opacity:.55}
+.picking .cell{cursor:copy}
+.cell.sel{background:var(--turq-soft);box-shadow:inset 0 0 0 2px var(--turq)}
+.as{all:unset;cursor:pointer;display:flex;align-items:center;gap:5px;border-radius:5px;padding:2px 5px;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-left:3px solid var(--cc);font-size:11.5px;line-height:1.25;flex-wrap:wrap;min-width:0}
+.as>span.n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.as .av{width:18px;height:18px;font-size:8.5px;margin:0;border:0}
+.as.clash{border-color:var(--bad);background:var(--bad-bg)}
+.as.grp{box-shadow:0 0 0 2px var(--turq);background:var(--turq-soft)}
+.as .m{width:6px;height:6px;border-radius:50%;background:var(--turq-ink);margin-left:auto;flex:none}
+.as .mis{flex-basis:100%;color:var(--muted);font-size:11.5px;padding-left:23px;white-space:normal}
+.as.mini{padding:1px;border-left-width:2px}
+/* Gantt */
+.gt{display:grid;grid-template-columns:minmax(220px,300px) 110px 52px minmax(560px,1fr);font-size:12.5px}
+.gt>div{border-bottom:1px solid var(--line-soft);padding:5px 8px;min-height:30px;display:flex;align-items:center;gap:6px;min-width:0}
+.gt .gh{background:var(--surface-2);font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.gt .r-ch{background:var(--row-ch);color:var(--row-ch-fg);font-weight:700}
+.gt .r-ch .nm{all:unset;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gt .r-ph{background:var(--row-ph);font-weight:700;font-size:11.5px;text-transform:uppercase}
+.gt .tl{position:relative;padding:0;overflow:hidden}
+.gt .tl .b{position:absolute;top:50%;height:10px;transform:translateY(-50%);border-radius:3px;background:var(--cc)}
+.gt .tl .b.pr{background:transparent;border:1px solid var(--cc)} .gt .tl .b.pr i{display:block;height:100%;background:var(--cc)}
+.gt .tl .b.op{background:repeating-linear-gradient(45deg,var(--muted) 0 3px,transparent 3px 7px);opacity:.6;height:12px}
+.gt .tl .b.cg{background:repeating-linear-gradient(45deg,var(--warn) 0 3px,transparent 3px 7px);height:12px;opacity:.8}
+.gt .tl .today{position:absolute;top:0;bottom:0;width:2px;background:var(--bad)}
+.gt .tl .wkl{position:absolute;top:0;bottom:0;width:1px;background:var(--line-soft)}
+.gt .tl .wesh{position:absolute;top:0;bottom:0;background:var(--surface-2)}
+.wkh{position:relative;width:100%;height:100%} .wkh span{position:absolute;top:50%;transform:translateY(-50%);font-size:11px;text-align:center;overflow:hidden;white-space:nowrap}
+
+/* personnel et matériel */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:flex-end}
+.tab{font:600 13.5px var(--body);background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px;color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{color:var(--fg);border-color:var(--turq)}
+.tabs .right{margin-left:auto;padding-bottom:6px}
+.trombi{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.tcard{all:unset;cursor:pointer;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:12px 8px;display:grid;justify-items:center;gap:4px;text-align:center;background:var(--surface);position:relative;align-content:start}
+.tcard:hover,.tcard.sel{border-color:var(--turq);box-shadow:0 0 0 2px var(--turq-soft)}
+.tcard b{font-size:13.5px;overflow-wrap:anywhere} .tcard small{color:var(--muted);font-size:11.5px}
+.tcard .flag{position:absolute;top:7px;right:7px;width:10px;height:10px;border-radius:50%;background:var(--warn)}
+.tcard .flag.bad{background:var(--bad)}
+.tcard.off{opacity:.6}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
+.fiche{border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:12px;align-content:start;background:var(--surface);position:sticky;top:0}
+.fiche h3{font-size:24px}
+.fiche .head{display:flex;gap:10px;align-items:center}
+.gauge .bar i{background:var(--warn)}
+.gauge.ok .bar i{background:var(--ok)}
+.gauge.bad .bar i{background:var(--bad)}
+.subh{font-family:var(--display);font-size:19px;font-weight:600;display:flex;align-items:center;gap:8px}
+
+/* clients */
+.swatch{width:22px;height:22px;border-radius:5px;background:var(--cc);display:inline-block;vertical-align:middle;border:1px solid rgba(0,0,0,.08)}
+/* rentabilité */
+.rchart{display:grid;gap:7px;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface)}
+.rrow{display:grid;grid-template-columns:240px minmax(0,1fr) 110px;gap:10px;align-items:center;font-size:12.5px;cursor:pointer;border-radius:5px;padding:2px 4px}
+.rrow:hover{background:var(--turq-soft)}
+.rrow .rb{height:18px;display:flex;border-radius:4px;overflow:hidden;background:transparent}
+.rrow .rb span{display:block;height:100%}
+.rrow .rb.outline{border:1px dashed var(--muted)}
+.rrow .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.detail{border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:12px;background:var(--surface);border-top:4px solid var(--cc)}
+.detail h3{font-size:21px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.minput{display:flex;gap:6px;align-items:center}
+.minput input{font:14px var(--body);width:120px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--fg);text-align:right}
+/* synchronisation */
+.flow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
+.fbox{border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:8px;align-content:start;background:var(--surface)}
+.fbox.ok{border-color:var(--ok);box-shadow:inset 3px 0 0 var(--ok)}
+.fbox.warn{border-color:var(--warn);box-shadow:inset 3px 0 0 var(--warn)}
+.fbox.bad{border-color:var(--bad);box-shadow:inset 3px 0 0 var(--bad)}
+.fbox h3{font-size:20px}
 
 /* connexion */
-.gate{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;padding:16px;z-index:40}
+.gate{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;padding:16px;z-index:50}
 .gcard{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px;display:grid;gap:12px}
 .gcard .brand{font-family:var(--display);font-size:26px;font-weight:700;display:flex;align-items:center;gap:10px;letter-spacing:.04em}
 .gcard .brand i{width:10px;height:24px;background:var(--turq);display:inline-block}
@@ -142,6 +352,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .form input{font:16px var(--body);padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
 .gerr{color:var(--bad)!important;font-weight:600}
 
+@media (max-width:1100px){.split{grid-template-columns:1fr}.fiche{position:static}}
 /* téléphone : le menu passe en bandeau en haut */
 @media (max-width:860px){
   .app{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
@@ -150,10 +361,19 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
   .side .brand small,.side .grp,.side .nav.dim,.side .foot{display:none}
   .nav{white-space:nowrap;min-height:36px;padding:6px 10px}
   .nav[aria-current="page"]{box-shadow:inset 0 -3px 0 var(--turq)}
+  .alerts{flex-wrap:nowrap;overflow-x:auto}
+  .al{white-space:nowrap}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .topline h2{font-size:26px}
   .drawer{top:auto;max-height:88dvh;width:100%;border-left:0;border-top:1px solid var(--line);border-radius:14px 14px 0 0}
+  .flow{grid-template-columns:1fr}
+  .rrow{grid-template-columns:1fr 70px;gap:3px 8px}
+  .rrow>div{grid-column:1/-1;grid-row:2}
+  .pop:not(.modal){left:8px!important;right:8px;top:auto!important;bottom:calc(8px + env(safe-area-inset-bottom,0px));width:auto;max-height:70dvh}
+  .pop .grid2,.pop .list.cols{grid-template-columns:1fr}
+  .pop .phase{grid-template-columns:1fr 1fr}
 }
+@media (prefers-reduced-motion:no-preference){.card,.tcard,.chip,.res{transition:border-color .15s,box-shadow .15s}}
 </style>
 </head>
 <body>
@@ -165,15 +385,18 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
     <div class="grp">Pilotage</div>
     <button class="nav" data-view="dash" aria-current="page">Tableau de bord</button>
     <button class="nav" data-view="sdb">Chantiers SDB</button>
-    <div class="grp">À venir</div>
-    <span class="nav dim">Planning global <span class="soon">bientôt</span></span>
-    <span class="nav dim">Rentabilité <span class="soon">bientôt</span></span>
-    <span class="nav dim">Personnel et matériel <span class="soon">bientôt</span></span>
-    <span class="nav dim">Clients <span class="soon">bientôt</span></span>
+    <button class="nav" data-view="plan">Planning global</button>
+    <button class="nav" data-view="renta">Rentabilité</button>
+    <div class="grp">Bases</div>
+    <button class="nav" data-view="res">Personnel et matériel</button>
+    <button class="nav" data-view="cli">Clients</button>
+    <div class="grp">Système</div>
+    <button class="nav" data-view="sync">Synchronisation</button>
     <div class="foot"><span class="live" id="live">En direct</span><button id="out">Se déconnecter</button></div>
   </nav>
   <main class="main">
-    <section class="view" id="v-dash" aria-label="Tableau de bord"><div class="page" id="dash"></div></section>
+    <div class="alerts" id="alerts" hidden></div>
+    <section class="view" id="v-main" aria-live="off"><div class="page" id="page"></div></section>
     <section class="view" id="v-sdb" aria-label="Chantiers SDB" hidden></section>
   </main>
 </div>
@@ -187,19 +410,87 @@ const STEPS=[{id:"constat",t:"Constat avant travaux"},{id:"protection",t:"Protec
   {id:"plomberie",t:"Plomberie"},{id:"receveur",t:"Receveur extra-plat"},{id:"etancheite",t:"Étanchéité"},{id:"dalles",t:"Revêtement mural"},
   {id:"colonne",t:"Robinetterie et colonne"},{id:"paroi",t:"Paroi de douche"},{id:"pmr",t:"Équipements PMR"},{id:"finitions",t:"Finitions et nettoyage"},{id:"reception",t:"Réception"}];
 const MIN=2;
-// Clients : code et couleur (turquoise réservé à AFER). Les chantiers SDB sont tous en sous-traitance DOMetVIE.
-const CLIENTS=[{id:"dmv",nom:"DOMetVIE",code:"DMV",c:"#3F7CC0",info:"Salles de bain PMR en sous-traitance"}];
+// Clients : code et couleur (turquoise réservé à AFER). DOMetVIE existe toujours : les chantiers SDB sont en sous-traitance DOMetVIE.
+const PALETTE=["#3F7CC0","#D9822B","#8A6BB0","#C2577A","#6E9A2E","#9A6B43","#2F8F83","#B5A021","#5A6FD6","#C0463A"];
+const DEF_CLIENTS={dmv:{nom:"DOMetVIE",code:"DMV",c:"#3F7CC0",type:"Donneur d'ordre (sous-traitance)",info:"Salles de bain PMR en sous-traitance",ordre:0}};
+const FORFAIT_SDB=900; // forfait de base d'une salle de bain simple (HT), comme dans l'appli SDB
+const AV_COL=["#3F6E8C","#7A5C3E","#5E7D3A","#8A4F7D","#6B6F76","#4F6D9A","#80603A","#9A5B4F","#5B7F6E","#6A5A9C"];
+const VAN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 16V7h11v9M13 10h4l3 3v3h-7"/><circle cx="6.5" cy="17" r="1.8"/><circle cx="16.5" cy="17" r="1.8"/></svg>';
+const TOOL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20l7-7M14 4a4 4 0 0 0 5 5l-3 3-5-5z"/></svg>';
 
+/* Colonnes des Excel quand la synchronisation n'a pas encore tourné (ensuite : excel_meta, lu dans les fichiers) */
+const LISTES={StatutPers:["Actif","Sorti","À vérifier"],Categorie:["Chantier","Bureau","Direction"],StatutPro:["Ouvrier","Employé","Agent de maîtrise","Cadre","Mandataire social","Apprenti","Stagiaire"],
+  Contrat:["CDI","CDD","CDI de chantier","Apprentissage","Stage","Intérim","Sous-traitant","Sans contrat de travail"],Temps:["Temps plein","Temps partiel"],OuiNon:["Oui","Non"],
+  TypeVeh:["VL (voiture)","VUL (utilitaire)","Poids lourd","Nacelle","Quadricycle / scooter","Engin","Remorque"],StatutVeh:["En service","Immobilisé","Vendu","À vérifier"],
+  Propriete:["Propriété AFER","Location courte","LLD","Crédit-bail","Véhicule personnel"],Carburant:["Gazole","Essence","Électrique","AdBlue"],
+  StatutMat:["Disponible","Sur chantier","En réparation","Perdu / volé","Réformé"],TypeAbs:["Congés payés","RTT","Maladie","Accident du travail","Formation","Absence autorisée","Absence injustifiée","Autre"],Duree:["Journée","Matin","Après-midi"]};
+const col=(nom,type="texte",liste)=>({nom,type,...(liste?{liste:LISTES[liste]}:{})});
+const COLS_DEF={
+  personne:[col("ID"),col("Matricule paie"),col("Nom"),col("Prénom"),col("Nom affiché dans l'appli"),col("Statut","texte","StatutPers"),col("Catégorie","texte","Categorie"),col("Emploi (registre)"),col("Métier pour le planning"),
+    col("Statut professionnel","texte","StatutPro"),col("Niveau"),col("Position"),col("Coefficient"),col("Type de contrat","texte","Contrat"),col("Temps de travail","texte","Temps"),col("Date d'entrée (contrat en cours)","date"),col("Date de sortie","date"),
+    col("Téléphone"),col("E-mail"),col("Permis B","texte","OuiNon"),col("Habilitations et qualifications"),col("Titre de séjour : fin de validité","date"),col("Visite médicale : prochaine","date"),
+    col("Coût global mensuel employeur (€)","euro"),col("Jours travaillés par mois","nombre"),col("Coût chargé par jour (€)","formule"),col("Photo (fichier)"),col("Remarques"),col("Source")],
+  vehicule:[col("ID"),col("Marque / modèle"),col("Immatriculation"),col("Type","texte","TypeVeh"),col("Statut","texte","StatutVeh"),col("Propriété","texte","Propriete"),col("Mise en circulation","date"),col("Conducteur habituel (ID personne)"),
+    col("Kilométrage (dernier relevé)","nombre"),col("Date du relevé km","date"),col("Dernière vidange : date","date"),col("Dernière vidange : km","nombre"),col("Prochaine vidange : km","nombre"),col("Prochaine vidange : date","date"),
+    col("Contrôle technique : dernier","date"),col("Contrôle technique : prochain","date"),col("Assureur"),col("N° de contrat d'assurance"),col("Assurance : date d'effet","date"),col("Assurance : échéance","date"),
+    col("Géolocalisation","texte","OuiNon"),col("Carte carburant (n°)"),col("Carburant","texte","Carburant"),col("Coût fixe mensuel (€)","euro"),col("Photo (fichier)"),col("Dossier SharePoint"),col("Remarques"),col("Source")],
+  materiel:[col("ID"),col("Désignation"),col("Marque / modèle"),col("N° de série"),col("Statut","texte","StatutMat"),col("Affecté à (chantier ou ID personne)"),col("Vérification périodique : dernière","date"),col("Vérification périodique : prochaine","date"),col("Valeur d'achat (€)","euro"),col("Photo (fichier)"),col("Remarques")],
+  absence:[col("ID"),col("Personne (ID)"),col("Nom affiché","formule"),col("Type","texte","TypeAbs"),col("Du","date"),col("Au","date"),col("Durée","texte","Duree"),col("Jours ouvrés","formule"),col("Validé","texte","OuiNon"),col("Remarques")]};
+// Regroupement des colonnes dans les fiches (une colonne absente d'ici va dans « Autres informations »)
+const GROUPES={
+  personne:[["Identité et contact",["Nom","Prénom","Nom affiché dans l'appli","Téléphone","E-mail","Photo (fichier)"]],
+    ["Poste",["Statut","Catégorie","Emploi (registre)","Métier pour le planning","Habilitations et qualifications","Permis B"]],
+    ["Contrat et paie",["Matricule paie","Statut professionnel","Niveau","Position","Coefficient","Type de contrat","Temps de travail","Date d'entrée (contrat en cours)","Date de sortie","Coût global mensuel employeur (€)","Jours travaillés par mois","Coût chargé par jour (€)"],true],
+    ["Échéances",["Titre de séjour : fin de validité","Visite médicale : prochaine"]],["Remarques",["Remarques","Source"]]],
+  vehicule:[["Véhicule",["Marque / modèle","Immatriculation","Type","Statut","Propriété","Mise en circulation","Conducteur habituel (ID personne)","Carburant","Carte carburant (n°)","Géolocalisation","Coût fixe mensuel (€)"]],
+    ["Kilométrage et vidange",["Kilométrage (dernier relevé)","Date du relevé km","Dernière vidange : date","Dernière vidange : km","Prochaine vidange : km","Prochaine vidange : date"]],
+    ["Contrôle technique et assurance",["Contrôle technique : dernier","Contrôle technique : prochain","Assureur","N° de contrat d'assurance","Assurance : date d'effet","Assurance : échéance"]],
+    ["Documents et remarques",["Dossier SharePoint","Photo (fichier)","Remarques","Source"]]],
+  materiel:[["Matériel",["Désignation","Marque / modèle","N° de série","Statut","Affecté à (chantier ou ID personne)","Valeur d'achat (€)"]],["Vérifications",["Vérification périodique : dernière","Vérification périodique : prochaine"]],["Remarques",["Photo (fichier)","Remarques"]]]};
+// Cases à compléter (mêmes règles que le surlignage jaune des Excel)
+const A_COMPLETER={personne:{si:d=>d.Statut!=="Sorti",cols:["Type de contrat","Temps de travail","Téléphone","Permis B","Coût global mensuel employeur (€)","Jours travaillés par mois"]},
+  vehicule:{si:d=>d.Statut==="En service",cols:["Type","Propriété","Kilométrage (dernier relevé)","Dernière vidange : date","Contrôle technique : prochain","Assureur","Assurance : échéance"]}};
+const ID_FMT={personne:["P-",3],absence:["A-",4],vehicule:["V-",2],materiel:["M-",2]}; // formats des ID déjà dans les Excel (A-0001…)
+
+/* ---------- outils ---------- */
 const $=s=>document.querySelector(s);
-const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+const pad=n=>String(n).padStart(2,"0");
+const K=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const PK=k=>{const [y,m,d]=String(k).slice(0,10).split("-").map(Number);return new Date(y,m-1,d)};
+const isK=k=>/^\d{4}-\d{2}-\d{2}/.test(String(k||""));
+const dayOf=ts=>ts?K(new Date(ts)):null;
+const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const addK=(k,n)=>K(addD(PK(k),n));
+const monday=d=>{const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
+const isoWeek=d=>{const x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=x.getUTCDay()||7;x.setUTCDate(x.getUTCDate()+4-n);const y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil(((x-y)/864e5+1)/7)};
+const range=n=>Array.from({length:n},(_,i)=>i);
+const isWE=d=>d.getDay()===0||d.getDay()===6;
+const DN=["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"],MN=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
 const fd=s=>s?new Date(s).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"}):"";
 const fdl=s=>s?new Date(s).toLocaleDateString("fr-FR"):"";
 const ft=s=>s?new Date(s).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" à "+new Date(s).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
+const fk=k=>isK(k)?pad(PK(k).getDate())+"/"+pad(PK(k).getMonth()+1):"";
+const fkl=k=>isK(k)?PK(k).toLocaleDateString("fr-FR"):"";
 const fpct=p=>p>=100?"100":(Math.round(p*10)/10).toString().replace(".",","); // même arrondi que l'appli SDB
 const sameDay=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
 const plural=(n,a,b)=>n+" "+(n>1?b:a);
+const num=v=>{if(v==null||v==="")return null;const n=typeof v==="number"?v:Number(String(v).replace(/\s/g,"").replace(",","."));return isFinite(n)?n:null};
+const eur=n=>n==null?null:(Math.round(n*100)/100).toLocaleString("fr-FR",{minimumFractionDigits:Number.isInteger(Math.round(n*100)/100)?0:2,maximumFractionDigits:2})+"\u00a0€";
+const PH=t=>`<span class="ph">[À COMPLÉTER${t?" : "+esc(t):""}]</span>`;
+const today=()=>K(new Date());
+const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+const hashCol=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return AV_COL[h%AV_COL.length]};
+const initials=n=>String(n||"?").replace(/[\[\]().]/g," ").trim().split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+const daysBetween=(a,b)=>Math.round((PK(b)-PK(a))/864e5);
+function workdays(a,b){const out=[];if(!isK(a)||!isK(b))return out;for(let d=PK(a<b?a:b),e=PK(a<b?b:a);d<=e;d=addD(d,1))if(!isWE(d))out.push(K(d));return out}
+function addWork(k,n){let d=PK(k);while(isWE(d))d=addD(d,1);let i=0;while(i<n){d=addD(d,1);if(!isWE(d))i++}return K(d)}
 
-let C=null,ROWS=[],EL={},VIEW="dash",SEL=null,online=true;
+let C=null,ROWS=[],EL={},G={},GOK=null,GERR="",VIEW="dash",SEL=null,online=true;
+// état des fenêtres
+let cliFilter="all",planMode="sem",zoom="semaine",cur=new Date(),gZoom="semaine",gCur=new Date(),active=null,resTab="chantier",selRes=null,voirSortis=false,selRenta=null;
+let popEl=null,scrimEl=null,tipEl=null,clickTimer=null,drag=null,sel=null,justSel=false,needRender=false;
 
 /* ---------- connexion (même compte que l'appli SDB) ---------- */
 const gate=$("#gate");
@@ -224,31 +515,88 @@ async function enter(session){
   if(!a.data){await C.auth.signOut().catch(()=>{});return showLogin("Ce compte n'a pas accès à la gestion AFER.")}
   C.auth.onAuthStateChange(ev=>{if(ev==="SIGNED_OUT")location.reload()});
   await pull();gate.hidden=true;$("#app").hidden=false;
-  const h=location.hash.slice(1);if(h==="sdb"||h.startsWith("sdb="))openSdb(decodeURIComponent(h.slice(4))||null);else render();
-  listen();setInterval(()=>{if(document.visibilityState==="visible")pull().then(render)},60000);
-  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pull().then(render)})}
+  route(location.hash.slice(1));
+  listen();setInterval(()=>{if(document.visibilityState==="visible")pull().then(RENDER)},60000);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pull().then(RENDER)})}
 
-/* ---------- données : chantiers + éléments utiles au tableau de bord ---------- */
+/* ---------- données ---------- */
 async function fetchAll(q){const out=[];for(let i=0;;i+=1000){const {data,error}=await q().range(i,i+999);if(error)throw error;out.push(...data);if(data.length<1000)return out}}
 async function pull(){
   try{const [chs,els]=await Promise.all([
       fetchAll(()=>C.from("chantiers").select("id,nom,fiche,clos,created_at").order("created_at").order("id")),
-      fetchAll(()=>C.from("elements").select("chantier_id,type,id,data").in("type",["photo","pb","pv","etat"]).order("chantier_id").order("type").order("id"))]);
+      fetchAll(()=>C.from("elements").select("chantier_id,type,id,data").in("type",["photo","pb","pv","etat","devis","frais"]).order("chantier_id").order("type").order("id"))]);
     ROWS=chs;EL={};els.forEach(e=>{const c=EL[e.chantier_id]=EL[e.chantier_id]||{};(c[e.type]=c[e.type]||{})[e.id]=e.data});online=true}
   catch(e){console.warn("Lecture impossible",e);online=false}
+  // gestion : table créée par supabase/complement-v12-gestion.sql ; sans elle, les nouvelles fenêtres l'expliquent et le tableau de bord marche comme avant
+  if(online)try{const rows=await fetchAll(()=>C.from("gestion").select("type,id,data,maj_le").order("type").order("id"));
+      const g={};rows.forEach(r=>{(g[r.type]=g[r.type]||{})[r.id]=r.type==="excel_ecrire"?{...r.data,_maj:r.maj_le}:r.data});G=g;GOK=true;GERR=""}
+    catch(e){if(/fetch|network/i.test(e.message||""))online=false;else{GOK=false;GERR=e.message||String(e);G={}}}
   const l=$("#live");l.textContent=online?"En direct":"Hors ligne";l.classList.toggle("off",!online)}
 let tm=null;
-function listen(){const again=()=>{clearTimeout(tm);tm=setTimeout(()=>pull().then(render),1200)};
-  C.channel("gestion").on("postgres_changes",{event:"*",schema:"public",table:"elements"},again).on("postgres_changes",{event:"*",schema:"public",table:"chantiers"},again).subscribe()}
+function listen(){const again=()=>{clearTimeout(tm);tm=setTimeout(()=>pull().then(RENDER),1200)};
+  C.channel("gestion").on("postgres_changes",{event:"*",schema:"public",table:"elements"},again).on("postgres_changes",{event:"*",schema:"public",table:"chantiers"},again)
+    .on("postgres_changes",{event:"*",schema:"public",table:"gestion"},again).subscribe()}
+const gt=t=>G[t]||{};
+const gid=(t,id)=>(G[t]||{})[id];
 
-/* ---------- état d'un chantier (même calcul que l'appli SDB) ---------- */
-function etat(r,i){
-  const E=EL[r.id]||{},f=r.fiche||{},cli=CLIENTS[0];
+/* ---------- écritures dans la base ---------- */
+function gErr(error){toast("Pas enregistré : "+(/fetch|network/i.test(error.message||"")?"pas de connexion internet.":error.message));pull().then(RENDER)}
+function needBase(){if(GOK)return false;toast("La base de gestion n'est pas encore installée (voir Synchronisation).");return true}
+async function gput(type,id,data){if(needBase())return false;(G[type]=G[type]||{})[id]=data;RENDER();const {error}=await C.from("gestion").upsert({type,id,data});if(error){gErr(error);return false}return true}
+async function gputMany(rows){if(needBase())return false;if(!rows.length)return true;rows.forEach(r=>(G[r.type]=G[r.type]||{})[r.id]=r.data);RENDER();const {error}=await C.from("gestion").upsert(rows);if(error){gErr(error);return false}return true}
+async function gdelMany(type,ids){if(needBase())return false;if(!ids.length)return true;ids.forEach(id=>delete (G[type]||{})[id]);RENDER();
+  for(let i=0;i<ids.length;i+=100){const {error}=await C.from("gestion").delete().eq("type",type).in("id",ids.slice(i,i+100));if(error){gErr(error);return false}}return true}
+// Fiche Excel : l'appli dépose la modification (excel_ecrire), la fonction synchro-excel l'écrit dans le fichier SharePoint ; la copie s'affiche tout de suite
+async function excelEcrire(type,id,valeurs,opt={}){if(needBase())return false;
+  const k=type+":"+id,old=gid("excel_ecrire",k);
+  const data={table:type,id,valeurs:{...(old?old.valeurs:{}),...valeurs},at:new Date().toISOString()};
+  if(opt.nouveau||(old&&old.nouveau))data.nouveau=true;if(opt.supprimer)data.supprimer=true;
+  const m={...(gid(type,id)||{ID:id})};Object.entries(valeurs).forEach(([c,v])=>{if(v==null||v==="")delete m[c];else m[c]=v});m._attente=true;if(opt.supprimer)m._supprime=true;
+  return gputMany([{type:"excel_ecrire",id:k,data},{type,id,data:m}])}
+function nextId(type){const [p,w]=ID_FMT[type];let n=0;[...Object.keys(gt(type)),...Object.values(gt("excel_ecrire")).filter(x=>x.table===type).map(x=>x.id)].forEach(id=>{const m=String(id).match(/^[A-Z]+-(\d+)$/);if(m)n=Math.max(n,+m[1])});return p+String(n+1).padStart(w,"0")}
+
+/* ---------- modèle : clients ---------- */
+function clientsMap(){const o={};Object.entries(DEF_CLIENTS).forEach(([id,d])=>o[id]={id,...d});Object.entries(gt("client")).forEach(([id,d])=>o[id]={id,...(o[id]||{}),...d});return o}
+function clientsList(){return Object.values(clientsMap()).filter(c=>!c.archive).sort((a,b)=>(a.ordre??9)-(b.ordre??9)||String(a.cree||"").localeCompare(String(b.cree||""))||a.nom.localeCompare(b.nom))}
+const INCONNU={id:"?",nom:"Client à choisir",code:"???",c:"#6B6F76"};
+
+/* ---------- modèle : ressources (copie des Excel) ---------- */
+let RES={};
+function buildRes(){RES={};
+  Object.entries(gt("personne")).forEach(([id,d])=>{if(d._supprime)return;const contrat=String(d["Type de contrat"]||"");
+    const grp=/sous-traitant|intérim|interim/i.test(contrat)?"externe":/bureau|direction/i.test(d["Catégorie"]||"")?"bureau":"chantier";
+    RES["p:"+id]={id:"p:"+id,xid:id,t:"personne",d,grp,nom:d["Nom affiché dans l'appli"]||d["Prénom"]||d["Nom"]||id,metier:d["Métier pour le planning"]||d["Emploi (registre)"]||"",ac:hashCol(id),actif:d.Statut!=="Sorti"}});
+  Object.entries(gt("vehicule")).forEach(([id,d])=>{if(d._supprime)return;const mod=String(d["Marque / modèle"]||id).replace(/\s*\(.*?\)\s*/g," ").trim();
+    RES["v:"+id]={id:"v:"+id,xid:id,t:"vehicule",d,grp:"materiel",veh:true,nom:mod+(d.Immatriculation?" · "+d.Immatriculation:""),metier:[d.Type,d.Immatriculation].filter(Boolean).join(" · ")||"Véhicule",actif:d.Statut!=="Vendu"}});
+  Object.entries(gt("materiel")).forEach(([id,d])=>{if(d._supprime)return;
+    RES["m:"+id]={id:"m:"+id,xid:id,t:"materiel",d,grp:"materiel",tool:true,nom:d["Désignation"]||id,metier:d["Marque / modèle"]||"Matériel",actif:!/perdu|réformé|reforme/i.test(d.Statut||"")}})}
+const rs=id=>RES[id]||{id,nom:"Ressource retirée",metier:"",grp:"chantier",ac:"#6B6F76",d:{},actif:false};
+const resList=(f=()=>true)=>Object.values(RES).filter(f).sort((a,b)=>a.nom.localeCompare(b.nom,"fr"));
+const rowOf=r=>r.veh||r.tool?"veh":r.grp==="externe"?"ext":"eq";
+function avatar(r,cls=""){if(r.veh)return `<span class="av veh ${cls}" title="${esc(r.nom)}">${VAN}</span>`;if(r.tool)return `<span class="av veh ${cls}" title="${esc(r.nom)}">${TOOL}</span>`;return `<span class="av ${cls}" style="--ac:${r.ac}" title="${esc(r.nom)}">${esc(initials(r.nom))}</span>`}
+// Absences (onglet « Absences et congés » de l'Excel du personnel)
+function absences(){return Object.entries(gt("absence")).filter(([,a])=>!a._supprime&&a["Personne (ID)"]&&isK(a.Du)).map(([id,a])=>({id,r:"p:"+a["Personne (ID)"],deb:a.Du,fin:isK(a.Au)?a.Au:a.Du,type:a.Type||"Absence",duree:a["Durée"]||"Journée",valide:a["Validé"],note:a.Remarques||"",attente:!!a._attente}))}
+let ABS=[];
+const absOn=(r,k)=>ABS.find(a=>a.r===r&&k>=a.deb&&k<=a.fin);
+const bloque=(r,k)=>{const a=absOn(r,k);return a&&!/matin|après-midi|apres-midi/i.test(a.duree)?a:null};
+// Affectations : une ligne par ressource, chantier et jour
+let AFF=[],AFFI={},AFFR={};
+function buildAff(){AFF=Object.entries(gt("aff")).map(([id,a])=>({id,...a})).filter(a=>a.r&&a.ch&&isK(a.d));AFFI={};AFFR={};
+  AFF.forEach(a=>{(AFFI[a.ch+"|"+a.d]=AFFI[a.ch+"|"+a.d]||[]).push(a);(AFFR[a.r+"|"+a.d]=AFFR[a.r+"|"+a.d]||[]).push(a)})}
+const affId=(r,ch,d)=>r+"|"+ch+"|"+d;
+const clash=(r,k)=>(AFFR[r+"|"+k]||[]).length>1;
+const team=ch=>[...new Set(AFF.filter(a=>a.ch===ch).map(a=>a.r))].map(rs);
+// Coût chargé d'une personne par jour : colonne calculée de l'Excel, sinon coût mensuel ÷ jours travaillés (même formule que l'Excel)
+function coutJour(r){const d=r.d||{},c=num(d["Coût chargé par jour (€)"]);if(c!=null)return c;const m=num(d["Coût global mensuel employeur (€)"]),j=num(d["Jours travaillés par mois"]);return m!=null&&j?m/j:null}
+
+/* ---------- modèle : chantiers (SDB + autres) ---------- */
+function etatSdb(r,code,cli){
+  const E=EL[r.id]||{},f=r.fiche||{};
   const variante=((E.etat||{}).variant||{}).v||f.variante||"avec";
   const P={};Object.values(E.photo||{}).forEach(d=>{if(d&&d.slot)(P[d.slot]=P[d.slot]||[]).push(d.at)});Object.values(P).forEach(L=>L.sort());
   const steps=STEPS.filter(s=>!s.opt||variante==="avec").map(s=>{const L=P[s.id]||[];return {...s,n:L.length,done:L.length>=MIN,at:L.length>=MIN?L[MIN-1]:null}});
   const pct=steps.reduce((a,s)=>a+Math.min(s.n,MIN)/MIN,0)/steps.length*100;
-  const cur=steps.findIndex(s=>!s.done);
+  const curS=steps.findIndex(s=>!s.done);
   const pv=((E.pv||{}).pv||{}).v||null;
   const clos=((E.etat||{}).closed||{}).v||(r.clos?{}:null);
   const pbs=Object.values(E.pb||{}).filter(p=>p&&p.st!=="done").sort((a,b)=>String(b.at).localeCompare(String(a.at)));
@@ -256,67 +604,559 @@ function etat(r,i){
   const debut=(P.materiel||[])[0]||null;
   const dates=[...Object.values(P).flat(),...Object.values(E.pb||{}).map(p=>p&&p.at),pv&&pv.at,clos&&clos.at].filter(Boolean).sort();
   const statut=clos?"clos":pv?"pv":photos?"cours":"attente";
-  return {id:r.id,code:cli.code+"-"+String(i+1).padStart(3,"0"),cli,nom:f.ville?"Chantier "+f.ville:"Nouveau chantier",variante,steps,pct,cur,pv,clos,pbs,photos,debut,
-    fin:(pv&&pv.at)||(clos&&clos.at)||null,derniere:dates[dates.length-1]||null,statut,cree:f.created||r.created_at}}
+  const x={id:r.id,sdb:true,code,cli,nom:f.ville?"Chantier "+f.ville:"Nouveau chantier",cat:"SDB PMR",variante,steps,pct,cur:curS,pv,clos,pbs,photos,debut,
+    fin0:(pv&&pv.at)||(clos&&clos.at)||null,derniere:dates[dates.length-1]||null,statut,cree:f.created||r.created_at};
+  const g=gid("chantier",r.id)||{};
+  const premier=dates[0]||null;
+  x.deb=isK(g.deb)?g.deb:dayOf(debut||premier)||dayOf(x.cree);
+  x.fin=isK(g.fin)?g.fin:x.fin0?dayOf(x.fin0):addWork(x.deb,1); // objectif : 2 jours par salle de bain
+  if(x.fin<x.deb)x.fin=x.deb;
+  x.pilote=g.pilote||null;x.av=pct;x.datesFixees=isK(g.deb);
+  return x}
+function chantiers(){const cm=clientsMap(),dmv=cm.dmv||{id:"dmv",...DEF_CLIENTS.dmv};
+  const gen=Object.entries(gt("chantier")).filter(([id,d])=>!d.sdb&&d.nom&&!ROWS.some(r=>r.id===id));
+  // codes SDB : ordre de création, en sautant les numéros déjà pris par un autre chantier du même client
+  const pris=new Set(gen.map(([,d])=>d.code));let n=0;
+  const L=ROWS.map(r=>{let code;do{n++;code=dmv.code+"-"+String(n).padStart(3,"0")}while(pris.has(code));return etatSdb(r,code,dmv)});
+  gen.forEach(([id,d])=>{const cli=cm[d.client]||INCONNU,t=today();
+    const ph=(d.phases||[]).filter(p=>p&&p.n);
+    let av=num(d.av);if(av==null&&ph.length){const w=ph.map(p=>Math.max(1,workdays(p.deb,p.fin).length));av=ph.reduce((a,p,i)=>a+(num(p.av)||0)*w[i],0)/w.reduce((a,b)=>a+b,0)}
+    const deb=isK(d.deb)?d.deb:null,fin=isK(d.fin)?d.fin:deb;
+    const statut=d.clos?"clos":!deb||t<deb?"attente":"cours";
+    const enCours=ph.find(p=>isK(p.deb)&&p.deb<=t&&(!isK(p.fin)||p.fin>=t)&&(num(p.av)||0)<100);
+    L.push({id,sdb:false,code:d.code||cli.code+"-???",cli,nom:d.nom,cat:d.cat||"",ville:d.ville||"",deb:deb||today(),fin:fin||deb||today(),sansDates:!deb,pilote:d.pilote||null,av:av??0,avConnu:av!=null,
+      phases:ph,statut,clos:d.clos?{at:d.closLe||null}:null,pbs:[],steps:[],photos:0,derniere:null,cree:d.cree||"",recette:num(d.recette),phaseEnCours:enCours,note:d.note||""})});
+  return L}
+let CH=[],CHI={};
+function buildAll(){buildRes();ABS=absences();buildAff();CH=chantiers();CHI={};CH.forEach(c=>CHI[c.id]=c)}
 const ordre={cours:0,attente:1,pv:2,clos:3};
-function liste(){return ROWS.map(etat).sort((a,b)=>ordre[a.statut]-ordre[b.statut]||String(b.derniere||b.cree).localeCompare(String(a.derniere||a.cree)))}
+function liste(){return CH.slice().sort((a,b)=>ordre[a.statut]-ordre[b.statut]||String(b.derniere||b.cree||b.deb).localeCompare(String(a.derniere||a.cree||a.deb)))}
 function ligneStatut(x){
-  if(x.statut==="clos")return "Clôturé"+(x.clos.at?" le "+fdl(x.clos.at):"");
+  if(x.statut==="clos")return "Clôturé"+(x.clos&&x.clos.at?" le "+fdl(x.clos.at):"");
   if(x.statut==="pv")return "PV de réception signé le "+fdl(x.pv.at);
+  if(!x.sdb){if(x.statut==="attente")return x.sansDates?"Dates à fixer":"Démarre le "+fkl(x.deb);return x.phaseEnCours?"Phase en cours : "+x.phaseEnCours.n:"En cours jusqu'au "+fkl(x.fin)}
   if(x.statut==="attente")return "Pas démarré";
   const s=x.steps[x.cur<0?x.steps.length-1:x.cur];return x.cur<0?"Toutes les étapes validées":`Étape ${x.cur+1}/${x.steps.length} : ${s.t}`}
 
-/* ---------- affichage ---------- */
-function render(){if(VIEW!=="dash")return;
+/* ---------- rentabilité ---------- */
+const imputeA=(txt,c)=>{const t=norm(txt);if(!t)return false;return t===norm(c.code)||t.includes(norm(c.code))||t===norm(c.nom)||(c.sdb&&t===norm(c.nom.replace(/^Chantier /,"")))};
+function renta(c){const R=gid("renta",c.id)||{},E=EL[c.id]||{};
+  // recette HT
+  let recette=null,recNote="",attente=0;
+  if(num(R.recette)!=null){recette=num(R.recette);recNote="saisie dans la rentabilité"}
+  else if(c.sdb){const L=Object.values(E.devis||{}).filter(l=>l&&l.kind!=="titre"&&l.kind!=="soustotal");
+    if(!L.length){recette=FORFAIT_SDB;recNote="forfait de base (devis pas encore ouvert)"}
+    else{const q=l=>num(l.qty??l.q)||0;recette=L.filter(l=>l.st==="val").reduce((a,l)=>a+Math.round(q(l)*(num(l.pu)||0)*100)/100,0);attente=L.filter(l=>l.st==="att").reduce((a,l)=>a+q(l)*(num(l.pu)||0),0);
+      recNote="devis : forfait + lignes validées par DOMetVIE"+(attente?" ("+eur(attente)+" en attente de validation)":"")}}
+  else if(c.recette!=null){recette=c.recette;recNote="montant du chantier"}
+  // main-d'œuvre : jours du planning × coût chargé
+  const jours={};AFF.filter(a=>a.ch===c.id).forEach(a=>{jours[a.r]=(jours[a.r]||0)+1});
+  const pers=Object.keys(jours).map(rs).filter(r=>r.t==="personne"),vehs=Object.keys(jours).map(rs).filter(r=>r.veh||r.tool);
+  const moL=pers.map(r=>({r,j:jours[r.id],cj:coutJour(r)}));const moManque=moL.filter(x=>x.cj==null).map(x=>x.r.nom);
+  const mo=!moL.length||moManque.length?null:moL.reduce((a,x)=>a+x.j*x.cj,0);
+  // véhicules : carburant et entretien imputés (Excel), dépenses carburant et péage (appli SDB), coût fixe mensuel au prorata des jours
+  const vehL=[];
+  vehs.filter(r=>r.veh).forEach(r=>{const f=num(r.d["Coût fixe mensuel (€)"]);if(f!=null)vehL.push({l:`${r.nom} · ${plural(jours[r.id],"jour","jours")} × coût fixe ÷ 21,67`,v:f/21.67*jours[r.id]})});
+  Object.values(gt("carburant")).filter(x=>imputeA(x["Chantier imputé"],c)).forEach(x=>{const v=num(x["Montant (€)"]);if(v!=null)vehL.push({l:"Plein du "+fkl(x.Date)+" · "+(x["Véhicule (immatriculation)"]||""),v})});
+  Object.values(gt("entretien")).filter(x=>imputeA(x["Chantier imputé"],c)).forEach(x=>{const v=num(x["Montant (€)"]);if(v!=null)vehL.push({l:(x.Type||"Entretien")+" du "+fkl(x.Date),v})});
+  const frais=Object.values(E.frais||{}).filter(x=>x&&num(x.amt)!=null);
+  frais.filter(x=>/carburant|péage|peage|stationnement/i.test(x.cat||"")).forEach(x=>vehL.push({l:(x.cat||"Dépense")+" du "+fdl(x.at)+" (TTC)",v:num(x.amt)}));
+  const vehSansCout=vehs.filter(r=>r.veh&&num(r.d["Coût fixe mensuel (€)"])==null).map(r=>r.nom);
+  const veh=vehL.reduce((a,x)=>a+x.v,0);
+  // matériaux et sous-traitance : saisis ; pour une SDB, le matériel est fourni par DOMetVIE (seules les petites dépenses de l'appli comptent)
+  const matFrais=frais.filter(x=>!/carburant|péage|peage|stationnement/i.test(x.cat||""));
+  let mat=num(R.mat),matNote="saisi";if(mat==null&&c.sdb){mat=matFrais.reduce((a,x)=>a+num(x.amt),0);matNote=matFrais.length?"petites dépenses de l'appli SDB (TTC)":"matériel fourni par DOMetVIE, aucune dépense saisie"}
+  let st=num(R.st),stNote="saisie";if(st==null&&c.sdb){st=0;stNote="aucune sous-traitance saisie"}
+  const autres=num(R.autres)||0;
+  const manque=[];if(recette==null)manque.push("recette");if(mo==null)manque.push(moL.length?"coût chargé de "+moManque.join(", "):"équipe à affecter dans le planning");if(mat==null)manque.push("matériaux");if(st==null)manque.push("sous-traitance");
+  const tot=manque.filter(m=>m!=="recette").length?null:mo+veh+mat+st+autres;
+  const marge=recette!=null&&tot!=null?recette-tot:null;
+  return {recette,recNote,attente,mo,moL,moManque,veh,vehL,vehSansCout,mat,matNote,matFrais,st,stNote,autres,tot,marge,manque,R}}
+const pctM=x=>x.marge!=null&&x.recette?Math.round(x.marge/x.recette*100)+" %":"";
+function segs(x){const s=(v,c)=>v&&x.recette?`<span style="width:${Math.max(0,Math.min(100,v/x.recette*100))}%;background:${c}"></span>`:"";return s(x.mo,"var(--mo)")+s(x.mat,"var(--mat)")+s(x.veh,"var(--veh)")+s(x.st+x.autres,"var(--stt)")+(x.marge>0?'<span style="flex:1;background:var(--ok)"></span>':"")}
+const LEG=`<div class="leg"><span><span class="sw" style="--cc:var(--mo)"></span>Main-d'œuvre</span><span><span class="sw" style="--cc:var(--mat)"></span>Matériaux</span><span><span class="sw" style="--cc:var(--veh)"></span>Véhicules</span><span><span class="sw" style="--cc:var(--stt)"></span>Sous-traitance et autres</span><span><span class="sw" style="--cc:var(--ok)"></span>Marge</span></div>`;
+function rentaTip(c){const x=renta(c);
+  return `<b>Rentabilité · ${esc(c.code)}</b><div class="kv"><span>Recette HT</span><span>${x.recette==null?PH("recette"):eur(x.recette)}</span></div>
+    ${x.marge==null?`<div class="mbar outline"></div><div class="note">Manque : ${esc(x.manque.join(", "))}. La marge se calcule quand tout est connu, jamais estimée.</div>`:
+    `<div class="mbar">${segs(x)}</div><div class="kv"><span>Coûts</span><span>${eur(x.tot)}</span></div><div class="kv tot"><span>Marge</span><span>${eur(x.marge)} · ${pctM(x)}</span></div>`}${LEG}`}
+
+/* ---------- alertes (bandeau permanent) ---------- */
+function alertes(){const t=today(),L=[];
+  const ech=(r,col,lib,jours)=>{const k=r.d[col];if(!isK(k))return;const n=daysBetween(t,k);if(n<=jours)L.push({lvl:n<0?"bad":"warn",t:`${r.nom} : ${lib} ${n<0?"dépassé(e) depuis le "+fkl(k):n===0?"aujourd'hui":"le "+fkl(k)}`,go:{res:r.id}})};
+  resList(r=>r.actif&&r.t==="personne").forEach(r=>{ech(r,"Titre de séjour : fin de validité","titre de séjour à renouveler",60);ech(r,"Visite médicale : prochaine","visite médicale",30)});
+  resList(r=>r.actif&&r.veh).forEach(r=>{ech(r,"Contrôle technique : prochain","contrôle technique",30);ech(r,"Assurance : échéance","échéance d'assurance",30);ech(r,"Prochaine vidange : date","vidange",30);
+    const km=num(r.d["Kilométrage (dernier relevé)"]),nx=num(r.d["Prochaine vidange : km"]);if(km!=null&&nx!=null&&km>=nx-1000)L.push({lvl:km>=nx?"bad":"warn",t:`${r.nom} : vidange à ${nx.toLocaleString("fr-FR")} km (compteur ${km.toLocaleString("fr-FR")} km)`,go:{res:r.id}})});
+  resList(r=>r.actif&&r.tool).forEach(r=>ech(r,"Vérification périodique : prochaine","vérification périodique",30));
+  CH.filter(x=>x.pbs.length).forEach(x=>L.push({lvl:"bad",t:`${x.nom} : ${plural(x.pbs.length,"problème à traiter","problèmes à traiter")}`,go:{pb:x.id}}));
+  const av=resList(r=>/vérifier/i.test(r.d.Statut||""));if(av.length)L.push({lvl:"warn",t:plural(av.length,"fiche à vérifier","fiches à vérifier")+" (statut « À vérifier »)",go:{res:av[0].id}});
+  const err=Object.values(gt("excel_ecrire")).filter(x=>x.erreur);if(err.length)L.push({lvl:"bad",t:plural(err.length,"modification n'est pas partie","modifications ne sont pas parties")+" dans l'Excel",go:{view:"sync"}});
+  return L.sort((a,b)=>(a.lvl==="bad"?0:1)-(b.lvl==="bad"?0:1))}
+let ALS=[];
+function renderAlerts(){ALS=alertes();const el=$("#alerts");el.hidden=!ALS.length;if(!ALS.length){el.innerHTML="";return}
+  el.innerHTML=`<b>Alertes <span>${ALS.length}</span></b>`+ALS.map((a,i)=>`<button class="al ${a.lvl==="bad"?"bad":""}" data-al="${i}"${a.go.pb?` data-pb="${esc(a.go.pb)}"`:""}>${a.lvl==="bad"?"⚠ ":""}${esc(a.t)}</button>`).join("")}
+
+/* ---------- 1. tableau de bord ---------- */
+function vDash(){
   const L=liste(),now=new Date();
   const enCours=L.filter(x=>x.statut==="cours").length,finis=L.filter(x=>x.statut==="pv"||x.statut==="clos").length;
   const nbPb=L.reduce((a,x)=>a+x.pbs.length,0),auj=L.reduce((a,x)=>a+x.steps.filter(s=>s.at&&sameDay(s.at,now)).length,0);
-  const card=x=>`<button class="card${SEL===x.id?" sel":""}" data-ch="${esc(x.id)}" style="--cc:${x.cli.c}" title="Clic : détail · Clic droit : ouvrir le suivi SDB">
-      <div class="hd"><span class="code">${esc(x.code)}</span>${x.statut==="pv"||x.statut==="clos"?'<span class="pill ok">Terminé</span>':x.statut==="attente"?'<span class="pill neu">Pas démarré</span>':""}</div>
-      <h4>${esc(x.nom)}</h4>
-      <div class="meta">SDB PMR · ${x.variante==="avec"?"avec":"sans"} démolition${x.debut?" · début "+fd(x.debut):""}${x.fin?" → "+fd(x.fin):""}</div>
-      <div class="pct"><span class="v">${fpct(x.pct)} %</span><span class="bar" aria-hidden="true"><i style="width:${x.pct.toFixed(1)}%"></i></span></div>
+  const equipe=c=>{const T=team(c.id).filter(r=>!r.veh&&!r.tool);return T.length?`<span class="avs">${T.slice(0,5).map(r=>avatar(r)).join("")}${T.length>5?`<span class="more">+${T.length-5}</span>`:""}</span>`:"<span></span>"};
+  const pil=c=>c.pilote?`<span class="pilot" title="Pilote bureau">${avatar(rs(c.pilote))}${esc(rs(c.pilote).nom)}</span>`:"";
+  const card=x=>`<button class="card${SEL===x.id?" sel":""}" data-ch="${esc(x.id)}" style="--cc:${x.cli.c}" title="Clic : détail${x.sdb?" · Clic droit : ouvrir le suivi SDB":""}">
+      <div class="hd"><span class="code">${esc(x.code)}</span>${x.statut==="pv"||x.statut==="clos"?'<span class="pill ok">Terminé</span>':x.statut==="attente"?`<span class="pill neu">${x.sdb?"Pas démarré":"À venir"}</span>`:""}</div>
+      <h4>${esc(x.nom)}<span class="eur" data-tip="${esc(x.id)}" aria-hidden="true">€</span></h4>
+      <div class="meta">${x.sdb?`SDB PMR · ${x.variante==="avec"?"avec":"sans"} démolition${x.debut?" · début "+fd(x.debut):""}${x.fin0?" → "+fd(x.fin0):""}`:`${esc(x.cat||"Chantier")}${x.ville?" · "+esc(x.ville):""}${x.sansDates?"":" · "+fk(x.deb)+" → "+fk(x.fin)}`}</div>
+      <div class="pct"><span class="v">${x.sdb||x.avConnu?fpct(x.av)+" %":"—"}</span><span class="bar" aria-hidden="true"><i style="width:${(x.av||0).toFixed(1)}%"></i></span></div>
       <div class="meta">${esc(ligneStatut(x))}</div>
-      <div class="tags">${x.pbs.length?`<span class="pill bad">${plural(x.pbs.length,"problème à traiter","problèmes à traiter")}</span>`:""}${x.derniere&&x.statut==="cours"?`<span class="pill neu">Dernière activité ${ft(x.derniere)}</span>`:""}</div>
+      ${x.pbs.length||(x.derniere&&x.statut==="cours")?`<div class="tags">${x.pbs.length?`<span class="pill bad">${plural(x.pbs.length,"problème à traiter","problèmes à traiter")}</span>`:""}${x.derniere&&x.statut==="cours"?`<span class="pill neu">Dernière activité ${ft(x.derniere)}</span>`:""}</div>`:""}
+      ${team(x.id).length||x.pilote?`<div class="foot">${equipe(x)}${pil(x)}</div>`:""}
     </button>`;
-  const grp=CLIENTS.map(k=>{const M=L.filter(x=>x.cli.id===k.id);if(!M.length)return"";
-    return `<section class="cgroup" style="--cc:${k.c}"><header><span class="dot"></span><h3>${esc(k.nom)}</h3><span class="note">${plural(M.length,"chantier","chantiers")} · ${esc(k.info)}</span></header><div class="cards">${M.map(card).join("")}</div></section>`}).join("");
-  const al=L.filter(x=>x.pbs.length).map(x=>`<button class="al" data-pb="${esc(x.id)}">⚠ ${esc(x.nom)} : ${plural(x.pbs.length,"problème à traiter","problèmes à traiter")}</button>`).join("");
-  $("#dash").innerHTML=`<div class="topline"><h2>Tableau de bord</h2><p>${esc(now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}))} · vue globale de tous les chantiers</p></div>
-    ${al?`<div class="alerts"><b>Alertes</b>${al}</div>`:""}
+  const cls=clientsList(),vis=cls.filter(k=>cliFilter==="all"||k.id===cliFilter);
+  const grp=[...vis,...(cliFilter==="all"&&L.some(x=>x.cli===INCONNU)?[INCONNU]:[])].map(k=>{const M=L.filter(x=>x.cli.id===k.id);if(!M.length)return"";
+    return `<section class="cgroup" style="--cc:${k.c}"><header><span class="dot"></span><h3>${esc(k.nom)}</h3><span class="note">${plural(M.length,"chantier","chantiers")}${k.info?" · "+esc(k.info):""}</span></header><div class="cards">${M.map(card).join("")}</div></section>`}).join("");
+  const opps=Object.entries(gt("opp")).map(([id,o])=>({id,...o})).filter(o=>!/perdu|transform/i.test(o.etat||"")&&(cliFilter==="all"||o.client===cliFilter));
+  const cm=clientsMap();
+  const oppCard=o=>{const k=cm[o.client]||INCONNU;return `<button class="card opp" data-opp="${esc(o.id)}" style="--cc:${k.c}"><div class="hd"><span class="code">${esc(k.nom)}</span><span class="pill neu">${esc(o.etat||"À chiffrer")}</span></div><h4>${esc(o.nom)}</h4><div class="meta">${isK(o.deb)?"Prévu à partir du "+fkl(o.deb):"Dates à fixer"}${num(o.montant)!=null?" · "+eur(num(o.montant))+" HT estimés":""}</div></button>`};
+  return `<div class="topline"><div><h2>Tableau de bord</h2><p>${esc(now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}))} · vue globale de tous les chantiers</p></div>
+      <div class="tools"><button class="btn sm" data-newopp>+ Opportunité</button><button class="btn sm pri" data-newch>+ Nouveau chantier</button></div></div>
     <div class="kpis">
       <div class="kpi"><div class="v">${enCours}</div><div class="l">Chantiers en cours</div></div>
       <div class="kpi"><div class="v">${finis}</div><div class="l">Terminés (PV signé)</div></div>
       <div class="kpi${nbPb?" bad":""}"><div class="v">${nbPb}</div><div class="l">Problèmes à traiter</div></div>
       <div class="kpi"><div class="v">${auj}</div><div class="l">Étapes validées aujourd'hui</div></div>
     </div>
-    ${grp||'<div class="empty">Aucun chantier pour l\'instant. Crée le premier dans l\'onglet Chantiers SDB.</div>'}
-    <p class="hint">Clic sur un chantier : détail. Clic droit : ouvrir directement son suivi SDB. Les chiffres se mettent à jour en direct à chaque photo.</p>`;
-  if(SEL)renderDetail()}
+    ${cls.length>1?`<div class="tools"><span class="note">Clients :</span><button class="chip" data-cf="all" aria-pressed="${cliFilter==="all"}">Tous</button>${cls.map(k=>`<button class="chip" style="--cc:${k.c}" data-cf="${esc(k.id)}" aria-pressed="${cliFilter===k.id}"><span class="dot"></span>${esc(k.nom)}</button>`).join("")}</div>`:""}
+    ${grp||'<div class="empty">Aucun chantier pour l\'instant. Crée le premier dans l\'onglet Chantiers SDB, ou avec « + Nouveau chantier ».</div>'}
+    ${opps.length?`<section class="cgroup" style="--cc:var(--muted)"><header><h3>Opportunités, non signées</h3><span class="note">${plural(opps.length,"opportunité","opportunités")}</span></header><div class="cards">${opps.map(oppCard).join("")}</div></section>`:""}
+    <p class="hint">Clic sur un chantier : détail. Clic droit sur un chantier SDB : son suivi directement. Survol du « € » : rentabilité. Les chiffres se mettent à jour en direct à chaque photo.</p>`}
 
-function renderDetail(){const x=liste().find(y=>y.id===SEL),box=$("#detail");if(!x){SEL=null;box.innerHTML="";return}
-  const st=x.steps.map((s,i)=>`<div class="step${s.done?" done":i===x.cur?" cur":""}"><span class="st" aria-hidden="true">${s.done?"✓":""}</span><span>${i+1}. ${esc(s.t)}</span><span class="when">${s.done?"validée le "+ft(s.at):s.n?plural(s.n,"photo","photos")+" sur 2":i===x.cur?"en cours":"à faire"}</span></div>`).join("");
-  const pb=x.pbs.map(p=>`<div class="pb"><strong>${esc(p.type||"Problème")}</strong>${p.note?`<span>${esc(p.note)}</span>`:""}<span class="note">Signalé le ${ft(p.at)}</span></div>`).join("");
-  box.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="d-t" style="--cc:${x.cli.c}">
-    <button class="btn x" data-close>Fermer</button>
-    <span class="code">${esc(x.code)} · ${esc(x.cli.nom)}</span>
-    <h3 id="d-t">${esc(x.nom)}</h3>
-    <div class="note">Salle de bain PMR · ${x.variante==="avec"?"avec":"sans"} démolition${x.debut?" · début le "+fdl(x.debut):" · pas encore démarré"}</div>
+function renderDetail(){const x=CHI[SEL],box=$("#detail");if(!x){SEL=null;box.innerHTML="";return}
+  const r=renta(x),T=team(x.id);
+  const equipe=`<div class="sec"><b>Équipe, véhicules et pilote</b>${T.length?`<div class="row2">${T.map(m=>`<span class="chip-res">${avatar(m)}${esc(m.nom)}</span>`).join("")}</div>`:'<span class="note">Personne affectée dans le planning.</span>'}
+    <div class="kv"><span>Pilote bureau</span><span>${x.pilote?esc(rs(x.pilote).nom):'<span class="ph dim">à choisir</span>'}</span></div>
+    <div class="kv"><span>Dates</span><span>${x.sansDates?'<span class="ph dim">à fixer</span>':fkl(x.deb)+" → "+fkl(x.fin)}${x.sdb&&!x.datesFixees?" (lues dans le suivi)":""}</span></div>
+    <div class="row2"><button class="btn sm" data-goplan="${esc(x.id)}">Voir dans le planning</button><button class="btn sm" data-editch="${esc(x.id)}">${x.sdb?"Dates et pilote":"Modifier le chantier"}</button></div></div>`;
+  const rent=`<div class="sec"><b>Rentabilité</b><div class="kv"><span>Recette HT</span><span>${r.recette==null?PH("recette"):eur(r.recette)}</span></div>
+    <div class="kv"><span>Coûts connus</span><span>${r.tot==null?'<span class="ph">incomplets</span>':eur(r.tot)}</span></div>
+    <div class="kv tot"><span>Marge</span><span>${r.marge==null?'<span class="ph">'+esc("manque : "+r.manque.join(", "))+'</span>':eur(r.marge)+" · "+pctM(r)}</span></div>
+    <button class="btn sm" data-gorenta="${esc(x.id)}">Détail dans Rentabilité</button></div>`;
+  let corps;
+  if(x.sdb){
+    const st=x.steps.map((s,i)=>`<div class="step${s.done?" done":i===x.cur?" cur":""}"><span class="st" aria-hidden="true">${s.done?"✓":""}</span><span>${i+1}. ${esc(s.t)}</span><span class="when">${s.done?"validée le "+ft(s.at):s.n?plural(s.n,"photo","photos")+" sur 2":i===x.cur?"en cours":"à faire"}</span></div>`).join("");
+    const pb=x.pbs.map(p=>`<div class="pb"><strong>${esc(p.type||"Problème")}</strong>${p.note?`<span>${esc(p.note)}</span>`:""}<span class="note">Signalé le ${ft(p.at)}</span></div>`).join("");
+    corps=`<div class="note">Salle de bain PMR · ${x.variante==="avec"?"avec":"sans"} démolition${x.debut?" · début le "+fdl(x.debut):" · pas encore démarré"}</div>
     <button class="btn pri wide" data-open="${esc(x.id)}">Ouvrir le suivi SDB</button>
     <div class="sec"><b>Avancement</b><div class="pct"><span class="v">${fpct(x.pct)} %</span><span class="bar" aria-hidden="true"><i style="width:${x.pct.toFixed(1)}%"></i></span></div><div>${st}</div></div>
     ${pb?`<div class="sec"><b>Problèmes à traiter</b>${pb}<button class="btn" data-open="${esc(x.id)}">Les traiter dans le suivi</button></div>`:""}
+    ${equipe}${rent}
     <div class="sec"><b>Réception et activité</b>
       <div class="kv"><span>PV de réception</span><span>${x.pv?"signé le "+ft(x.pv.at):"pas encore signé"}</span></div>
       <div class="kv"><span>Chantier</span><span>${x.clos?"clôturé"+(x.clos.at?" le "+fdl(x.clos.at):""):"ouvert"}</span></div>
       <div class="kv"><span>Photos</span><span>${x.photos}</span></div>
       <div class="kv"><span>Dernière activité</span><span>${x.derniere?ft(x.derniere):"aucune"}</span></div>
-    </div></aside>`;
+    </div>`}
+  else{
+    const ph=x.phases.map(p=>`<div class="step${(num(p.av)||0)>=100?" done":""}"><span class="st" aria-hidden="true">${(num(p.av)||0)>=100?"✓":""}</span><span>${esc(p.n)}</span><span class="when">${isK(p.deb)?fk(p.deb)+" → "+fk(p.fin||p.deb):""}${num(p.av)!=null?" · "+fpct(num(p.av))+" %":""}</span></div>`).join("");
+    corps=`<div class="note">${esc(x.cat||"Chantier")}${x.ville?" · "+esc(x.ville):""}</div>
+    <div class="sec"><b>Avancement</b><div class="pct"><span class="v">${x.avConnu?fpct(x.av)+" %":"—"}</span><span class="bar" aria-hidden="true"><i style="width:${(x.av||0).toFixed(1)}%"></i></span></div>${ph||'<span class="note">Pas de phase : ajoute-les avec « Modifier le chantier », elles apparaissent dans le Gantt.</span>'}</div>
+    ${equipe}${rent}${x.note?`<div class="sec"><b>Remarques</b><div>${esc(x.note)}</div></div>`:""}`}
+  box.innerHTML=`<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="d-t" style="--cc:${x.cli.c}">
+    <button class="btn x" data-close>Fermer</button>
+    <span class="code">${esc(x.code)} · ${esc(x.cli.nom)}</span>
+    <h3 id="d-t">${esc(x.nom)}</h3>${corps}</aside>`;
   box.querySelector(".drawer [data-close]").focus({preventScroll:true})}
 
-/* ---------- onglets ---------- */
-function setView(v){VIEW=v;
+/* ---------- 2. planning global ---------- */
+function cols(){
+  if(zoom==="jour")return [new Date(cur.getFullYear(),cur.getMonth(),cur.getDate())];
+  if(zoom==="semaine"){const m=monday(cur);return range(7).map(i=>addD(m,i))}
+  const f=new Date(cur.getFullYear(),cur.getMonth(),1),n=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();return range(n).map(i=>addD(f,i))}
+function periodLabel(){const cs=cols();if(zoom==="jour")return `${DN[cur.getDay()]} ${fk(K(cur))}/${cur.getFullYear()}`;if(zoom==="semaine")return `Semaine ${isoWeek(cs[0])} · ${fk(K(cs[0]))} → ${fk(K(cs[6]))}`;return `${MN[cur.getMonth()]} ${cur.getFullYear()}`}
+function shift(n){if(zoom==="jour"){cur=addD(cur,n);while(isWE(cur))cur=addD(cur,n)}else if(zoom==="semaine")cur=addD(cur,7*n);else cur=new Date(cur.getFullYear(),cur.getMonth()+n,1)}
+const GRPN={chantier:"Équipe AFER",externe:"Sous-traitants et indépendants",bureau:"Bureau",materiel:"Véhicules et matériel"};
+function sansExcel(){return !Object.keys(gt("personne")).length&&!Object.keys(gt("vehicule")).length}
+function vPlan(){
+  if(GOK===false)return baseManquante("Planning global");
+  const cs=cols(),k0=K(cs[0]),k1=K(cs[cs.length-1]);
+  const inRange=r=>ABS.some(a=>a.r===r.id&&a.fin>=k0&&a.deb<=k1);
+  const tray=["chantier","externe","bureau","materiel"].map(g=>{const L=resList(r=>r.actif&&r.grp===g);return L.length?`<div class="tg"><span>${GRPN[g]}</span><div class="row">${L.map(r=>`<button class="res ${active===r.id?"on":""}" draggable="true" data-res="${esc(r.id)}" aria-pressed="${active===r.id}" title="${esc(r.nom+(r.metier?" · "+r.metier:""))}">${avatar(r)}<span class="n">${esc(r.nom)}</span>${inRange(r)?'<span class="cg">absent</span>':""}</button>`).join("")}</div></div>`:""}).join("");
+  const a=active?rs(active):null;
+  return `<div class="topline"><div><h2>Planning global</h2><p>Glisse sur les jours d'un chantier (ou touche un jour), puis coche d'un coup les personnes et véhicules à ajouter. Touche une étiquette : toute la série de jours de cette personne, à retirer, remplacer ou annoter.</p></div>
+    <div class="tools"><div class="seg"><button data-pm="sem" aria-pressed="${planMode==="sem"}">Planning chantiers</button><button data-pm="gantt" aria-pressed="${planMode==="gantt"}">Gantt</button></div>
+     <div class="seg" title="Zoom">${["jour","semaine","mois"].map(z=>`<button data-zoom="${z}" aria-pressed="${(planMode==="sem"?zoom:gZoom)===z}">${{jour:"Jour",semaine:"Semaine",mois:"Mois"}[z]}</button>`).join("")}</div>
+     <button class="btn sm" data-nav="-1" aria-label="Période précédente">‹</button><button class="btn sm" data-nav="0">Aujourd'hui</button><button class="btn sm" data-nav="1" aria-label="Période suivante">›</button>
+     <button class="btn sm" data-conge>+ Absence</button><button class="btn sm" data-newch>+ Chantier</button></div></div>
+  ${planMode==="sem"?`${tray?`<div class="tray">${tray}</div>`:`<div class="box warn"><b>Aucune personne ni aucun véhicule</b><span class="note">${sansExcel()?"La liste vient des 2 fichiers Excel du dossier SharePoint « Gestion AFER » : elle arrive dès que la synchronisation tourne (voir Synchronisation).":"Toutes les fiches sont marquées sorties ou vendues."}</span></div>`}
+  ${a?`<div class="hintbar">${avatar(a)}<b>${esc(a.nom)}</b> sélectionné · clic sur un chantier = tous ses jours ouvrés · double clic sur une case = ce jour seul · cases hachurées = absence · <kbd>Échap</kbd> pour annuler <button class="btn xs" data-unsel>Annuler</button></div>`:`<p class="hint">Personne sélectionnée en haut : clic sur un chantier = tous ses jours ouvrés, double clic sur une case = ce jour seul. <kbd>Maj</kbd> + clic étend une sélection de jours. Glisser une étiquette du haut vers une case marche aussi.</p>`}
+  <div class="scroll"><div class="wk" style="grid-template-columns:${zoom==="mois"?"170px":"200px"} repeat(${cs.length},minmax(${zoom==="mois"?36:zoom==="jour"?420:112}px,1fr));min-width:${zoom==="mois"?170+cs.length*36:zoom==="jour"?620:980}px">${week(cs)}</div></div>
+  <p class="hint">Point turquoise = mission écrite (en entier avec le zoom Jour). Cadre rouge = même ressource sur deux chantiers le même jour. Hachures = absence (onglet Absences de l'Excel du personnel) : la case refuse l'affectation ; demi-hachure = demi-journée.</p>`
+  :`<div class="scroll"><div class="gt">${gantt()}</div></div>
+  <div class="leg"><span><span class="sw" style="--cc:var(--anth)"></span>Chantier</span><span><span class="sw" style="border:1px solid var(--mo);background:transparent"></span>Phase (remplie selon l'avancement)</span><span><span class="sw" style="background:repeating-linear-gradient(45deg,var(--muted) 0 3px,transparent 3px 7px)"></span>Opportunité</span><span><span class="sw" style="background:repeating-linear-gradient(45deg,var(--warn) 0 3px,transparent 3px 7px)"></span>Absence</span><span><span class="sw" style="--cc:var(--bad);width:2px"></span>Aujourd'hui</span></div>`}`}
+function week(cs){
+  const mois=zoom==="mois",jour=zoom==="jour",t=today();
+  let h=`<div class="hd" style="text-align:left">${esc(periodLabel())}</div>`+cs.map(d=>`<div class="hd ${K(d)===t?"today":""} ${isWE(d)?"we":""}">${mois?DN[d.getDay()][0]+"<small>"+d.getDate()+"</small>":DN[d.getDay()]+" "+fk(K(d))}</div>`).join("");
+  const k0=K(cs[0]),k1=K(cs[cs.length-1]);
+  const shown=CH.filter(c=>(c.fin>=k0&&c.deb<=k1)||AFF.some(a=>a.ch===c.id&&a.d>=k0&&a.d<=k1)).sort((a,b)=>a.deb.localeCompare(b.deb)||a.code.localeCompare(b.code));
+  shown.forEach(c=>{const p=c.pilote?rs(c.pilote):null;
+    h+=`<div class="bh" style="--cc:${c.cli.c}" data-chhead="${esc(c.id)}"><span class="dot"></span><span class="code">${esc(c.code)}</span><button class="nm" data-ch="${esc(c.id)}">${esc(c.nom)}</button><span style="font-weight:500;opacity:.75">· ${esc(c.cli.nom)}${c.cat?" · "+esc(c.cat):""} · ${fk(c.deb)} → ${fk(c.fin)}</span>
+     <span class="right"><span class="eur" data-tip="${esc(c.id)}" aria-hidden="true">€</span>${c.sdb?`<button class="btn" data-open="${esc(c.id)}">Appli SDB</button>`:""}<button class="btn" data-editch="${esc(c.id)}">Dates</button><button class="pilot" data-pilot="${esc(c.id)}" title="Changer le pilote">${p?avatar(p)+"Pilote : "+esc(p.nom):"Choisir le pilote"}</button></span></div>`;
+    [["eq","Équipe AFER"],["ext","Sous-traitants"],["veh","Véhicules et matériel"]].forEach(([row,lab])=>{
+      h+=`<div class="lab">${lab}</div>`+cs.map(d=>{const kk=K(d),inCh=kk>=c.deb&&kk<=c.fin;
+        const bl=active&&bloque(active,kk);
+        const items=(AFFI[c.id+"|"+kk]||[]).filter(a=>rowOf(rs(a.r))===row);
+        return `<div class="cell ${mois?"month":""} ${isWE(d)?"we":""} ${bl?"blocked":""} ${inCh?"":"out"}" data-cell="${esc(c.id)}|${kk}" title="${bl?esc(rs(active).nom)+" absent ce jour ("+esc(bl.type)+")":inCh?"":"Hors période du chantier"}">${items.map(a=>{const r=rs(a.r);
+          return `<button class="as ${clash(a.r,kk)?"clash":""} ${mois?"mini":""}" style="--cc:${c.cli.c}" data-aff="${esc(a.id)}" title="${esc(r.nom)}${a.m?" · "+esc(a.m):""}">${avatar(r)}${mois?"":`<span class="n">${esc(r.nom)}</span>`}${a.m&&!mois?'<span class="m"></span>':""}${jour&&a.m?`<span class="mis">${esc(a.m)}</span>`:""}</button>`}).join("")}</div>`}).join("")})});
+  if(!shown.length)h+=`<div class="bh opp">Aucun chantier sur cette période</div>`;
+  const abs=[...new Set(ABS.filter(a=>a.fin>=k0&&a.deb<=k1).map(a=>a.r))].map(rs);
+  h+=`<div class="bh abs">Absences et congés<span class="right"><button class="btn" data-conge>+ Absence</button></span></div>`;
+  if(!abs.length)h+=`<div class="lab" style="grid-column:1/-1">Aucune absence sur cette période</div>`;
+  abs.forEach(r=>{h+=`<div class="lab">${avatar(r)}${esc(r.nom)}</div>`+cs.map(d=>{const a=absOn(r.id,K(d));return a?`<div class="cell off ${bloque(r.id,K(d))?"":"half"}" data-abs="${esc(a.id)}" title="${esc(a.type)} · ${esc(a.duree)}${a.attente?" · envoi vers l'Excel en cours":""}">${mois?"●":esc(a.type)}</div>`:`<div class="${isWE(d)?"we":""}"></div>`}).join("")});
+  const opps=Object.entries(gt("opp")).map(([id,o])=>({id,...o})).filter(o=>!/perdu|transform/i.test(o.etat||""));
+  if(opps.length)h+=`<div class="bh opp">Opportunités, non signées</div>`+opps.map(o=>`<div class="lab"><button class="nm" data-opp="${esc(o.id)}" style="all:unset;cursor:pointer;text-decoration:underline">${esc(o.nom)}</button></div>`+cs.map((d,i)=>`<div class="${isWE(d)?"we":""}">${i===0?(mois?`<span class="pill neu" title="${esc(o.etat||"")}">●</span>`:`<span class="pill neu">${esc(o.etat||"À chiffrer")}${isK(o.deb)?" · dès "+fk(o.deb):""}</span>`):""}</div>`).join("")).join("");
+  return h}
+function gRange(){
+  if(gZoom==="jour"){const s=addD(monday(gCur),-7);return {s,e:addD(s,28),cols:range(28).map(i=>{const d=addD(s,i);return {d,l:DN[d.getDay()][0]+" "+d.getDate(),we:isWE(d)}})}}
+  if(gZoom==="semaine"){const s=addD(monday(gCur),-14);return {s,e:addD(s,84),cols:range(12).map(i=>{const d=addD(s,i*7);return {d,l:"S"+isoWeek(d)}})}}
+  const s=new Date(gCur.getFullYear(),gCur.getMonth()-1,1);return {s,e:new Date(s.getFullYear(),s.getMonth()+8,1),cols:range(8).map(i=>{const d=new Date(s.getFullYear(),s.getMonth()+i,1);return {d,l:MN[d.getMonth()]+" "+String(d.getFullYear()).slice(2)}})}}
+function gShift(n){if(gZoom==="jour")gCur=addD(gCur,7*n);else if(gZoom==="semaine")gCur=addD(gCur,28*n);else gCur=new Date(gCur.getFullYear(),gCur.getMonth()+n,1)}
+function gantt(){
+  const {s,e,cols:gc}=gRange(),x=d=>(d-s)/(e-s)*100,ks=K(s),ke=K(addD(e,-1));
+  const cw=i=>x(gc[i+1]?gc[i+1].d:e)-x(gc[i].d);
+  const grid=gc.map((c,i)=>`${c.we?`<span class="wesh" style="left:${x(c.d)}%;width:${cw(i)}%"></span>`:""}<span class="wkl" style="left:${x(c.d)}%"></span>`).join("")+`<span class="today" style="left:${x(PK(today()))}%"></span>`;
+  const bar=(a,b,cls="",inner="",st="")=>{const A=PK(a),B=addD(PK(b),1);return `<span class="b ${cls}" style="left:${Math.max(0,x(A))}%;width:${Math.max(.4,Math.min(100,x(B))-Math.max(0,x(A)))}%;${st}">${inner}</span>`};
+  let h=`<div class="gh">Plan · ${gZoom==="jour"?"4 semaines":gZoom==="semaine"?"12 semaines":"8 mois"}</div><div class="gh">Dates</div><div class="gh">Av.</div><div class="gh tl"><div class="wkh">${gc.map((c,i)=>`<span style="left:${x(c.d)}%;width:${cw(i)}%">${c.l}</span>`).join("")}</div></div>`;
+  const vis=CH.filter(c=>c.fin>=ks&&c.deb<=ke).sort((a,b)=>a.deb.localeCompare(b.deb));
+  if(!vis.length)h+=`<div style="grid-column:1/-1" class="note">Aucun chantier sur cette période.</div>`;
+  vis.forEach(c=>{const col=c.cli.c,p=c.pilote?rs(c.pilote):null;
+    h+=`<div class="r-ch" data-chhead="${esc(c.id)}"><span class="dot" style="--cc:${col}"></span><button class="nm" data-ch="${esc(c.id)}">${esc(c.code)} · ${esc(c.nom)}</button><span style="margin-left:auto;font-weight:500;font-size:11.5px;opacity:.85;white-space:nowrap">${p?esc(p.nom):""}</span></div><div class="r-ch">${fk(c.deb)} → ${fk(c.fin)}</div><div class="r-ch">${c.sdb||c.avConnu?fpct(c.av)+"%":"—"}</div><div class="r-ch tl" style="--cc:${col}">${grid}${bar(c.deb,c.fin)}</div>`;
+    const ph=c.sdb?[{n:"Travaux ("+c.steps.length+" étapes)",deb:c.deb,fin:c.fin,av:c.av}]:c.phases.filter(p=>isK(p.deb));
+    ph.forEach(p=>{const av=num(p.av);h+=`<div class="r-ph" style="padding-left:24px">${esc(p.n)}</div><div class="r-ph">${fk(p.deb)} → ${fk(p.fin||p.deb)}</div><div class="r-ph">${av==null?"—":fpct(av)+"%"}</div><div class="r-ph tl" style="--cc:${col}">${grid}${bar(p.deb,isK(p.fin)?p.fin:p.deb,"pr",`<i style="width:${Math.min(100,av||0)}%"></i>`)}</div>`});
+    team(c.id).filter(r=>rowOf(r)!=="veh").forEach(r=>{const L=AFF.filter(a=>a.ch===c.id&&a.r===r.id).map(a=>a.d).sort();if(!L.length)return;
+      h+=`<div style="padding-left:24px">${avatar(r)}<span style="margin-left:8px">${esc(r.nom)}</span></div><div class="note">${plural(L.length,"jour","jours")}</div><div></div><div class="tl" style="--cc:${r.ac||"var(--muted)"}">${grid}${L.filter(k=>k>=ks&&k<=ke).map(k=>bar(k,k,"","","height:6px;opacity:.85")).join("")}</div>`})});
+  const abs=ABS.filter(a=>a.fin>=ks&&a.deb<=ke);
+  h+=`<div class="r-ph" style="grid-column:1/-1">Absences et congés</div>`;
+  abs.forEach(a=>{const r=rs(a.r);h+=`<div style="padding-left:24px">${avatar(r)}<span style="margin-left:8px">${esc(r.nom)}</span> <span class="pill warn">${esc(a.type)}</span></div><div class="note">${fk(a.deb)} → ${fk(a.fin)}</div><div></div><div class="tl">${grid}${bar(a.deb,a.fin,"cg")}</div>`});
+  if(!abs.length)h+=`<div style="grid-column:1/-1" class="note">Aucune absence sur cette période.</div>`;
+  const opps=Object.entries(gt("opp")).map(([id,o])=>({id,...o})).filter(o=>!/perdu|transform/i.test(o.etat||"")&&isK(o.deb));
+  h+=`<div class="r-ph" style="grid-column:1/-1">Opportunités</div>`;
+  opps.forEach(o=>{h+=`<div style="font-style:italic"><button data-opp="${esc(o.id)}" style="all:unset;cursor:pointer">${esc(o.nom)}</button> <span class="pill neu">${esc(o.etat||"À chiffrer")}</span></div><div class="note">${fk(o.deb)} → ${fk(o.fin||o.deb)}</div><div></div><div class="tl">${grid}${bar(o.deb,isK(o.fin)?o.fin:o.deb,"op")}</div>`});
+  if(!opps.length)h+=`<div style="grid-column:1/-1" class="note">Aucune opportunité datée.</div>`;
+  return h}
+
+/* affectations */
+function assignRows(r,ch,days,m){const rows=[],skip=[];days.forEach(k=>{if(bloque(r,k)){skip.push(k);return}const id=affId(r,ch,k);if(gid("aff",id))return;rows.push({type:"aff",id,data:{r,ch,d:k,...(m?{m}:{})}})});return {rows,skip}}
+function joursChantier(c){const L=workdays(c.deb,c.fin);return L.length?L:[c.deb]}
+function assignAll(r,chId){const c=CHI[chId];if(!c)return;const {rows,skip}=assignRows(r,chId,joursChantier(c));
+  gputMany(rows);toast(`${rs(r).nom} : ${plural(rows.length,"jour ajouté","jours ajoutés")} sur ${c.nom} (${fk(c.deb)} → ${fk(c.fin)})${skip.length?`, ${plural(skip.length,"jour d'absence évité","jours d'absence évités")}`:""}.`)}
+function toggleDay(r,chId,k){const id=affId(r,chId,k);
+  if(gid("aff",id)){gdelMany("aff",[id]);toast(`${rs(r).nom} retiré du ${fk(k)}.`);return}
+  const b=bloque(r,k);if(b){toast(`${rs(r).nom} est absent le ${fk(k)} (${b.type.toLowerCase()}) : impossible de l'affecter.`);return}
+  gputMany([{type:"aff",id,data:{r,ch:chId,d:k}}]);toast(`${rs(r).nom} ajouté le ${fk(k)} seulement.`)}
+function groupOf(a){const set=new Set(AFF.filter(x=>x.r===a.r&&x.ch===a.ch).map(x=>x.d));const g=[a.d];
+  for(let d=addD(PK(a.d),-1);;d=addD(d,-1)){if(isWE(d))continue;const k=K(d);if(set.has(k))g.unshift(k);else break}
+  for(let d=addD(PK(a.d),1);;d=addD(d,1)){if(isWE(d))continue;const k=K(d);if(set.has(k))g.push(k);else break}
+  return g}
+
+/* ---------- fenêtres flottantes ---------- */
+function closeFloat(){if(popEl){popEl.remove();popEl=null}if(scrimEl){scrimEl.remove();scrimEl=null}hideTip();document.querySelectorAll(".as.grp").forEach(e=>e.classList.remove("grp"));
+  if(needRender){needRender=false;RENDER()}}
+function placePop(anchor){if(!popEl||popEl.classList.contains("modal"))return;const a=anchor.getBoundingClientRect(),w=popEl.offsetWidth||320,h=popEl.offsetHeight||300,W=innerWidth,H=innerHeight;
+  popEl.style.left=Math.max(8,Math.min(a.left,W-w-8))+"px";let top=a.bottom+6;if(top+h>H-8)top=Math.max(8,a.top-h-6);if(top+h>H-8)top=Math.max(8,H-h-8);popEl.style.top=top+"px"}
+function openPop(anchor,html,modal){closeFloat();if(modal){scrimEl=document.createElement("div");scrimEl.className="mscrim";scrimEl.onclick=closeFloat;document.body.appendChild(scrimEl)}
+  popEl=document.createElement("div");popEl.className="pop"+(modal?" modal":"");popEl.setAttribute("role","dialog");popEl.innerHTML=html;document.body.appendChild(popEl);if(anchor)placePop(anchor);
+  popEl.querySelectorAll("[data-x]").forEach(b=>b.onclick=closeFloat);const f=popEl.querySelector("input:not([type=hidden]):not([disabled]),select,textarea");if(f&&modal)f.focus({preventScroll:true});return popEl}
+const openModal=html=>openPop(null,html,true);
+function toast(t){const old=document.querySelector(".toast");if(old)old.remove();const el=document.createElement("div");el.className="toast";el.setAttribute("role","status");el.textContent=t;document.body.appendChild(el);setTimeout(()=>el.remove(),3600)}
+function showTip(anchor,chId){const c=CHI[chId];if(!c)return;hideTip();tipEl=document.createElement("div");tipEl.className="tip";tipEl.innerHTML=rentaTip(c);document.body.appendChild(tipEl);
+  const a=anchor.getBoundingClientRect();tipEl.style.left=Math.max(8,Math.min(a.left,innerWidth-290))+"px";const h=tipEl.offsetHeight;tipEl.style.top=(a.bottom+6+h>innerHeight?Math.max(8,a.top-h-6):a.bottom+6)+"px"}
+function hideTip(){if(tipEl){tipEl.remove();tipEl=null}}
+const opts=(L,v,vide=true)=>(vide?`<option value="">—</option>`:"")+L.map(o=>`<option${String(o)===String(v??"")?" selected":""}>${esc(o)}</option>`).join("");
+const ropts=(L,v)=>`<option value="">—</option>`+L.map(r=>`<option value="${esc(r.id)}"${r.id===v?" selected":""}>${esc(r.nom)}</option>`).join("");
+
+/* série d'une personne sur un chantier */
+function groupPop(aid,anchor){
+  const a=AFF.find(x=>x.id===aid);if(!a)return;const r=rs(a.r),c=CHI[a.ch]||{code:"",nom:"chantier"},g=groupOf(a),multi=g.length>1;
+  const same=resList(x=>x.actif&&x.id!==r.id&&rowOf(x)===rowOf(r));
+  const p=openPop(anchor,`<div style="display:flex;gap:8px;align-items:center">${avatar(r)}<div><b>${esc(r.nom)}</b><div class="note">${esc(c.code)} · ${multi?`${g.length} jours de suite, ${fk(g[0])} → ${fk(g[g.length-1])}`:fk(a.d)}</div></div></div>
+    ${multi?`<div class="scope"><span class="note">Agir sur :</span><label class="chk"><input type="radio" name="sc" value="g" checked> les ${g.length} jours</label><label class="chk"><input type="radio" name="sc" value="d"> ce jour seul (${fk(a.d)})</label></div>`:""}
+    <label>Mission<textarea id="m-txt" rows="2" placeholder="Ex. tirage des câbles, reprise des joints…">${esc(a.m||"")}</textarea></label>
+    <div class="inline"><label>Remplacer par<select id="m-rep">${ropts(same,"")}</select></label><button class="btn sm" data-rep>Remplacer</button></div>
+    <div class="acts"><button class="btn sm dang left" data-del>Retirer</button><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Enregistrer</button></div>`);
+  document.querySelectorAll("[data-aff]").forEach(el=>{const x=AFF.find(y=>y.id===el.dataset.aff);el.classList.toggle("grp",!!x&&x.r===a.r&&x.ch===a.ch&&g.includes(x.d))});
+  const scope=()=>multi&&p.querySelector('input[name="sc"]:checked').value==="d"?[a.d]:g;
+  const lab=()=>scope().length>1?`les ${scope().length} jours`:"ce jour";
+  const cible=()=>AFF.filter(x=>x.r===a.r&&x.ch===a.ch&&scope().includes(x.d));
+  p.querySelector("[data-ok]").onclick=()=>{const m=p.querySelector("#m-txt").value.trim(),L=cible(),l=lab();closeFloat();gputMany(L.map(x=>({type:"aff",id:x.id,data:{r:x.r,ch:x.ch,d:x.d,...(m?{m}:{})}})));toast(`Mission enregistrée sur ${l}.`)};
+  p.querySelector("[data-del]").onclick=()=>{const L=cible(),l=lab();closeFloat();gdelMany("aff",L.map(x=>x.id));toast(`${r.nom} retiré de ${c.nom} sur ${l}.`)};
+  p.querySelector("[data-rep]").onclick=async()=>{const nr=p.querySelector("#m-rep").value;if(!nr){toast("Choisis par qui remplacer.");return}const L=cible();let skip=0;const add=[],del=[];
+    L.forEach(x=>{if(bloque(nr,x.d)){skip++;return}del.push(x.id);const id=affId(nr,x.ch,x.d);if(!gid("aff",id))add.push({type:"aff",id,data:{r:nr,ch:x.ch,d:x.d,...(x.m?{m:x.m}:{})}})});
+    closeFloat();await gputMany(add);await gdelMany("aff",del);toast(`${rs(nr).nom} remplace ${r.nom} sur ${plural(del.length,"jour","jours")}${skip?`, ${plural(skip,"jour gardé","jours gardés")} (absence de ${rs(nr).nom})`:""}.`)}}
+/* sélection de jours d'un chantier, puis ajout en lot */
+function paintSel(){document.querySelectorAll(".cell.sel").forEach(c=>c.classList.remove("sel"));const s=drag||sel;if(!s)return;const [a,b]=[s.k0,s.k1].sort();document.querySelectorAll("[data-cell]").forEach(c=>{const [chId,k]=c.dataset.cell.split("|");if(chId===s.ch&&k>=a&&k<=b)c.classList.add("sel")})}
+function selPop(anchor){
+  const [a,b]=[sel.k0,sel.k1].sort();const days=cols().map(K).filter(k=>k>=a&&k<=b&&(a===b||!isWE(PK(k))));const c=CHI[sel.ch];if(!c)return;
+  const existing=AFF.filter(x=>x.ch===c.id&&days.includes(x.d));
+  const item=r=>{const ab=days.filter(k=>bloque(r.id,k)),dej=days.every(k=>gid("aff",affId(r.id,c.id,k)));
+    return `<label class="chk"><input type="checkbox" value="${esc(r.id)}" ${dej?"disabled":""}>${avatar(r)}<span>${esc(r.nom)}</span><span class="note">${dej?"déjà là":ab.length?"absent "+ab.map(k=>DN[PK(k).getDay()].toLowerCase()).join(", "):""}</span></label>`};
+  const groups=["chantier","externe","materiel","bureau"].map(g=>{const L=resList(r=>r.actif&&r.grp===g);return L.length?`<span class="gh3">${GRPN[g]}</span>`+L.map(item).join(""):""}).join("");
+  const p=openPop(anchor,`<div><b>${esc(c.code)} · ${days.length>1?`${fk(a)} → ${fk(b)} · ${days.length} jours`:DN[PK(a).getDay()]+" "+fk(a)}</b><div class="note">Coche qui ajouter sur ces jours ; les jours d'absence sont sautés.</div></div>
+    ${groups?`<div class="list cols">${groups}</div>`:`<div class="note">Aucune personne ni aucun véhicule : la liste vient des fichiers Excel (voir Synchronisation).</div>`}
+    <label>Mission (facultative)<textarea id="s-txt" rows="2"></textarea></label>
+    <div class="acts">${existing.length?`<button class="btn sm dang left" data-clear>Retirer les ${existing.length} affectations</button>`:""}<button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Ajouter (0)</button></div>`);
+  p.style.width="400px";placePop(anchor);
+  const cnt=()=>p.querySelectorAll(".list input:checked").length;
+  p.addEventListener("change",()=>{p.querySelector("[data-ok]").textContent=`Ajouter (${cnt()})`});
+  p.querySelector("[data-ok]").onclick=()=>{const ids=[...p.querySelectorAll(".list input:checked")].map(i=>i.value);if(!ids.length){toast("Coche au moins une personne ou un véhicule.");return}
+    const m=p.querySelector("#s-txt").value.trim();let rows=[],skip=0;ids.forEach(r=>{const x=assignRows(r,c.id,days,m);rows=rows.concat(x.rows);skip+=x.skip.length});
+    sel=null;closeFloat();gputMany(rows);toast(`${plural(rows.length,"affectation ajoutée","affectations ajoutées")} sur ${c.nom}${skip?`, ${plural(skip,"jour d'absence sauté","jours d'absence sautés")}`:""}.`)};
+  const cl=p.querySelector("[data-clear]");if(cl)cl.onclick=()=>{sel=null;closeFloat();gdelMany("aff",existing.map(x=>x.id));toast(`${plural(existing.length,"affectation retirée","affectations retirées")}.`)}}
+function pilotPop(chId,anchor){const c=CHI[chId];if(!c)return;const L=resList(r=>r.actif&&r.grp==="bureau");
+  const p=openPop(anchor,`<div><b>Pilote bureau</b><div class="note">Responsable du suivi de ${esc(c.nom)}</div></div><div class="list">${L.map(r=>`<button data-who="${esc(r.id)}">${avatar(r)}${esc(r.nom)}<span class="note" style="margin-left:auto">${r.id===c.pilote?"actuel":""}</span></button>`).join("")||'<span class="note">Aucune personne du bureau dans l\'Excel du personnel.</span>'}</div><div class="acts">${c.pilote?'<button class="btn sm left" data-who="">Aucun pilote</button>':""}<button class="btn sm" data-x>Fermer</button></div>`);
+  p.querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>{const g={...(gid("chantier",chId)||{}),...(c.sdb?{sdb:true}:{}),pilote:b.dataset.who||null};closeFloat();gput("chantier",chId,g);toast("Pilote changé : repris sur le tableau de bord et le Gantt.")})}
+/* absence : écrite dans l'onglet « Absences et congés » de l'Excel du personnel */
+function congePop(anchor,preR){const P=resList(r=>r.actif&&r.t==="personne");
+  if(!P.length){toast("Aucune personne : la liste vient de l'Excel du personnel (voir Synchronisation).");return}
+  const cs=planMode==="sem"&&VIEW==="plan"?cols():[new Date()];const d0=K(cs[0]<new Date()&&zoom!=="jour"?new Date():cs[0]);
+  const meta=colsOf("absence"),L=n=>(meta.find(c=>c.nom===n)||{}).liste||[];
+  const p=openPop(anchor,`<div><b>Absence ou congé</b><div class="note">Écrit dans l'Excel du personnel, onglet « Absences et congés ». Les jours posés refusent toute affectation.</div></div>
+    <label>Personne<select id="c-r">${P.map(r=>`<option value="${esc(r.id)}" ${preR===r.id?"selected":""}>${esc(r.nom)}</option>`).join("")}</select></label>
+    <div class="grid2"><label>Type<select id="c-t">${opts(L("Type").length?L("Type"):LISTES.TypeAbs,"Congés payés",false)}</select></label><label>Durée<select id="c-d">${opts(L("Durée").length?L("Durée"):LISTES.Duree,"Journée",false)}</select></label></div>
+    <div class="grid2"><label>Du<input type="date" id="c-a" value="${d0}"></label><label>Au<input type="date" id="c-b" value="${d0}"></label></div>
+    <label>Remarque<input id="c-n" maxlength="200"></label>
+    <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Poser</button></div>`);
+  p.querySelector("[data-ok]").onclick=async()=>{const r=p.querySelector("#c-r").value,t=p.querySelector("#c-t").value,du=p.querySelector("#c-d").value,a=p.querySelector("#c-a").value,b=p.querySelector("#c-b").value||a,n=p.querySelector("#c-n").value.trim();
+    if(!isK(a)){toast("Indique une date.");return}const deb=a<=b?a:b,fin=a<=b?b:a,id=nextId("absence"),R=rs(r);
+    const v={ID:id,"Personne (ID)":R.xid,Type:t,Du:deb,Au:fin,"Durée":du,"Validé":"Oui"};if(n)v.Remarques=n;
+    closeFloat();await excelEcrire("absence",id,v,{nouveau:true});buildAll();
+    const del=/matin|après-midi/i.test(du)?[]:AFF.filter(x=>x.r===r&&x.d>=deb&&x.d<=fin).map(x=>x.id);if(del.length)await gdelMany("aff",del);
+    toast(`${t} posé pour ${R.nom}${del.length?` · ${plural(del.length,"affectation retirée","affectations retirées")} du planning`:""}. Il part dans l'Excel.`)}}
+function absPop(aid,anchor){const a=ABS.find(x=>x.id===aid);if(!a)return;const r=rs(a.r);
+  const p=openPop(anchor,`<div style="display:flex;gap:8px;align-items:center">${avatar(r)}<div><b>${esc(r.nom)} · ${esc(a.type)}</b><div class="note">${fkl(a.deb)}${a.fin!==a.deb?" → "+fkl(a.fin):""} · ${esc(a.duree)}${a.valide?" · validé : "+esc(a.valide):""}</div></div></div>${a.note?`<div class="note">${esc(a.note)}</div>`:""}
+    <div class="note">Ligne ${esc(a.id)} de l'onglet « Absences et congés ».</div>
+    <div class="acts"><button class="btn sm dang left" data-del>Retirer l'absence</button><button class="btn sm" data-x>Fermer</button></div>`);
+  p.querySelector("[data-del]").onclick=()=>{closeFloat();excelEcrire("absence",a.id,{},{supprimer:true});toast("Absence retirée : la ligne est vidée dans l'Excel.")}}
+/* chantier : dates, pilote ; pour un chantier hors SDB : tout */
+function chantierPop(chId){const c=chId?CHI[chId]:null,g=chId?(gid("chantier",chId)||{}):{},cls=clientsList(),B=resList(r=>r.actif&&r.grp==="bureau");
+  const sdb=c&&c.sdb;const phases=(g.phases||[]).slice();
+  const phRow=(p,i)=>`<div class="phase" data-ph="${i}"><label>Phase<input data-k="n" value="${esc(p.n||"")}" maxlength="80"></label><label>Début<input type="date" data-k="deb" value="${esc(p.deb||"")}"></label><label>Fin<input type="date" data-k="fin" value="${esc(p.fin||"")}"></label><label>Av. %<input type="number" min="0" max="100" step="5" data-k="av" value="${esc(p.av??"")}"></label><button class="btn xs dang" data-rmph="${i}" aria-label="Retirer la phase" style="margin-bottom:4px">✕</button></div>`;
+  const p=openModal(`<h3>${c?esc(c.code+" · "+c.nom):"Nouveau chantier"}</h3>
+    ${sdb?`<div class="note">Chantier SDB : l'avancement vient des photos. Ici, les dates prévues et le pilote (sans date, le planning prend la première photo et vise 2 jours).</div>`:`${c?"":`<div class="note">Une salle de bain DOMetVIE se crée dans l'onglet Chantiers SDB (Mission) : elle arrive ici toute seule. <button class="btn xs" data-view="sdb">Ouvrir Chantiers SDB</button></div>`}
+    <div class="grid2"><label>Client<select id="f-cli">${cls.map(k=>`<option value="${esc(k.id)}"${(g.client||cliFilter)===k.id?" selected":""}>${esc(k.nom)} (${esc(k.code)})</option>`).join("")}</select></label><label>Nom du chantier<input id="f-nom" value="${esc(g.nom||"")}" maxlength="80" placeholder="Ex. Rénovation pavillon Morangis"></label></div>
+    <div class="grid2"><label>Type de travaux<input id="f-cat" value="${esc(g.cat||"")}" maxlength="60" placeholder="Ex. Rénovation énergétique"></label><label>Ville<input id="f-ville" value="${esc(g.ville||"")}" maxlength="60"></label></div>`}
+    <div class="grid2"><label>Début prévu<input type="date" id="f-deb" value="${esc(g.deb||(sdb?"":""))}"></label><label>Fin prévue<input type="date" id="f-fin" value="${esc(g.fin||"")}"></label></div>
+    <label>Pilote bureau<select id="f-pil">${ropts(B,g.pilote||(c&&c.pilote))}</select></label>
+    ${sdb?"":`<div class="grid2"><label>Montant HT du chantier (€)<input type="number" step="0.01" min="0" id="f-rec" value="${esc(g.recette??"")}"></label><label>Avancement global (%)<input type="number" min="0" max="100" step="5" id="f-av" value="${esc(g.av??"")}" placeholder="calculé avec les phases"></label></div>
+    <div class="fgrp"><b>Phases (Gantt)</b><div id="f-phs">${phases.map(phRow).join("")}</div><button class="btn xs" data-addph style="justify-self:start">+ Phase</button></div>
+    <label>Remarques<textarea id="f-note" rows="2">${esc(g.note||"")}</textarea></label>
+    ${c?`<label class="chk"><input type="checkbox" id="f-clos" ${g.clos?"checked":""}> Chantier terminé (clôturé)</label>`:""}`}
+    <div class="acts">${c&&!sdb?'<button class="btn sm dang left" data-delch>Supprimer</button>':""}<button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Enregistrer</button></div>`);
+  const lirePh=()=>[...p.querySelectorAll("[data-ph]")].map(el=>{const o={};el.querySelectorAll("[data-k]").forEach(i=>o[i.dataset.k]=i.value.trim());return o});
+  const ap=p.querySelector("[data-addph]");if(ap)ap.onclick=()=>{const L=lirePh();L.push({n:"",deb:p.querySelector("#f-deb").value,fin:p.querySelector("#f-fin").value});p.querySelector("#f-phs").innerHTML=L.map(phRow).join("")};
+  p.addEventListener("click",e=>{const b=e.target.closest("[data-rmph]");if(!b)return;const L=lirePh();L.splice(+b.dataset.rmph,1);p.querySelector("#f-phs").innerHTML=L.map(phRow).join("")});
+  const dc=p.querySelector("[data-delch]");if(dc)dc.onclick=()=>{if(dc.dataset.sure!=="1"){dc.dataset.sure="1";dc.textContent="Confirmer la suppression";return}
+    const ids=AFF.filter(a=>a.ch===chId).map(a=>a.id);closeFloat();SEL=null;$("#detail").innerHTML="";gdelMany("chantier",[chId]);gdelMany("aff",ids);toast("Chantier supprimé, avec ses affectations.")};
+  p.querySelector("[data-ok]").onclick=()=>{const v=s=>{const e=p.querySelector(s);return e?e.value.trim():""};
+    let deb=v("#f-deb"),fin=v("#f-fin");if(deb&&fin&&fin<deb)[deb,fin]=[fin,deb];if(deb&&!fin&&!sdb)fin=deb;
+    let d;
+    if(sdb)d={...g,sdb:true,deb:deb||null,fin:fin||null,pilote:v("#f-pil")||null};
+    else{const nom=v("#f-nom");if(!nom){toast("Donne un nom au chantier.");return}const cli=v("#f-cli")||"dmv";
+      const ph=lirePh().filter(x=>x.n).map(x=>({n:x.n,deb:x.deb||null,fin:x.fin||x.deb||null,av:num(x.av)}));
+      d={...g,nom,client:cli,cat:v("#f-cat"),ville:v("#f-ville"),deb:deb||null,fin:fin||null,pilote:v("#f-pil")||null,recette:num(v("#f-rec")),av:num(v("#f-av")),phases:ph,note:v("#f-note")};
+      const cb=p.querySelector("#f-clos");if(cb){d.clos=cb.checked;if(cb.checked&&!g.clos)d.closLe=new Date().toISOString()}
+      if(!c){d.cree=new Date().toISOString();d.code=codeSuivant(cli)}else if(g.client!==cli)d.code=codeSuivant(cli)}
+    const id=chId||uid("g-");closeFloat();gput("chantier",id,d);toast(c?"Chantier enregistré.":`Chantier ${d.code} créé.`)}}
+function codeSuivant(cli){const k=clientsMap()[cli]||INCONNU;let n=0;CH.forEach(c=>{const m=String(c.code).match(/^(.+)-(\d+)$/);if(m&&m[1]===k.code)n=Math.max(n,+m[2])});
+  if(cli==="dmv")n=Math.max(n,ROWS.length);return k.code+"-"+String(n+1).padStart(3,"0")}
+function oppPop(oid){const o=oid?gid("opp",oid)||{}:{},cls=clientsList(),ETATS=["À chiffrer","Devis envoyé","Relance","Gagnée","Perdue"];
+  const p=openModal(`<h3>${oid?"Opportunité":"Nouvelle opportunité"}</h3>
+    <div class="grid2"><label>Client<select id="o-cli">${cls.map(k=>`<option value="${esc(k.id)}"${o.client===k.id?" selected":""}>${esc(k.nom)}</option>`).join("")}</select></label><label>Nom<input id="o-nom" value="${esc(o.nom||"")}" maxlength="80"></label></div>
+    <div class="grid2"><label>État<select id="o-etat">${opts(ETATS,o.etat||"À chiffrer",false)}</select></label><label>Montant HT estimé (€)<input type="number" step="0.01" min="0" id="o-mt" value="${esc(o.montant??"")}"></label></div>
+    <div class="grid2"><label>Début possible<input type="date" id="o-deb" value="${esc(o.deb||"")}"></label><label>Fin possible<input type="date" id="o-fin" value="${esc(o.fin||"")}"></label></div>
+    <label>Remarques<textarea id="o-note" rows="2">${esc(o.note||"")}</textarea></label>
+    <div class="acts">${oid?'<button class="btn sm dang left" data-del>Supprimer</button><button class="btn sm" data-conv>Transformer en chantier</button>':""}<button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Enregistrer</button></div>`);
+  const lire=()=>{const v=s=>p.querySelector(s).value.trim();return {...o,client:v("#o-cli"),nom:v("#o-nom"),etat:v("#o-etat"),montant:num(v("#o-mt")),deb:v("#o-deb")||null,fin:v("#o-fin")||null,note:v("#o-note")}};
+  p.querySelector("[data-ok]").onclick=()=>{const d=lire();if(!d.nom){toast("Donne un nom à l'opportunité.");return}closeFloat();gput("opp",oid||uid("o-"),d);toast("Opportunité enregistrée.")};
+  const del=p.querySelector("[data-del]");if(del)del.onclick=()=>{if(del.dataset.sure!=="1"){del.dataset.sure="1";del.textContent="Confirmer";return}closeFloat();gdelMany("opp",[oid]);toast("Opportunité supprimée.")};
+  const cv=p.querySelector("[data-conv]");if(cv)cv.onclick=async()=>{const d=lire();if(!d.nom)return;const id=uid("g-");closeFloat();
+    await gputMany([{type:"chantier",id,data:{nom:d.nom,client:d.client,deb:d.deb,fin:d.fin,recette:d.montant,note:d.note,cree:new Date().toISOString(),code:codeSuivant(d.client),phases:[]}},{type:"opp",id:oid,data:{...d,etat:"Transformée en chantier",chantier:id}}]);
+    toast("Chantier créé à partir de l'opportunité.");SEL=id;RENDER()}}
+
+/* ---------- 3. personnel et matériel ---------- */
+const colsOf=t=>{const m=gid("excel_meta",t);return m&&Array.isArray(m.colonnes)&&m.colonnes.length?m.colonnes:COLS_DEF[t]||[]};
+const metaOf=t=>gid("excel_meta",t)||{};
+function val(c,v,d,t){if(v==null||v===""){const ac=A_COMPLETER[t];return ac&&ac.si(d)&&ac.cols.includes(c.nom)?'<span class="ph">à compléter</span>':'<span class="ph dim">—</span>'}
+  if(c.type==="date"&&isK(v))return fkl(v);if((c.type==="euro"||/\(€\)/.test(c.nom))&&num(v)!=null)return eur(num(v));if(c.type==="nombre"&&num(v)!=null)return num(v).toLocaleString("fr-FR");
+  if(/ID personne|Personne \(ID\)/.test(c.nom)&&RES["p:"+v])return esc(RES["p:"+v].nom)+` <span class="note">(${esc(v)})</span>`;
+  const lien=d&&d._liens&&d._liens[c.nom];if(lien&&/^https?:\/\//.test(lien))return `<a href="${esc(lien)}" target="_blank" rel="noopener">${esc(v)}</a>`; // cellule avec lien hypertexte dans l'Excel
+  if(/^https?:\/\//.test(String(v)))return `<a href="${esc(v)}" target="_blank" rel="noopener">ouvrir</a>`;
+  return esc(v)}
+function semaine(r){const m=monday(new Date());return range(5).map(i=>{const d=addD(m,i),k=K(d),a=absOn(r.id,k),L=AFFR[r.id+"|"+k]||[];
+  return `<div class="kv"><span>${DN[d.getDay()]} ${fk(k)}</span><span>${a?'<span class="pill warn">'+esc(a.type)+"</span>":L.length?L.map(x=>esc((CHI[x.ch]||{nom:"chantier retiré"}).nom)).join(", "):"Disponible"}</span></div>`}).join("")}
+function flags(r){const t=today(),d=r.d,L=[];const chk=(c,j)=>{if(isK(d[c])){const n=daysBetween(t,d[c]);if(n<=j)L.push(n<0?"bad":"warn")}};
+  if(r.t==="personne"){chk("Titre de séjour : fin de validité",60);chk("Visite médicale : prochaine",30)}
+  if(r.veh){chk("Contrôle technique : prochain",30);chk("Assurance : échéance",30);chk("Prochaine vidange : date",30);const km=num(d["Kilométrage (dernier relevé)"]),nx=num(d["Prochaine vidange : km"]);if(km!=null&&nx!=null&&km>=nx-1000)L.push(km>=nx?"bad":"warn")}
+  if(r.tool)chk("Vérification périodique : prochaine",30);
+  if(/vérifier/i.test(d.Statut||""))L.push("warn");return L.includes("bad")?"bad":L.length?"warn":""}
+const TABS=[["chantier","Chantier et sous-traitants",r=>r.t==="personne"&&r.grp!=="bureau"],["bureau","Bureau",r=>r.t==="personne"&&r.grp==="bureau"],["vehicule","Véhicules",r=>r.veh],["materiel","Matériel",r=>r.tool]];
+function vRes(){
+  if(GOK===false)return baseManquante("Personnel et matériel");
+  const tab=TABS.find(x=>x[0]===resTab)||TABS[0],L=resList(r=>tab[2](r)&&(voirSortis||r.actif)),typ=tab[0]==="vehicule"?"vehicule":tab[0]==="materiel"?"materiel":"personne";
+  if(!L.find(r=>r.id===selRes))selRes=L.length?L[0].id:null;
+  const r=selRes?RES[selRes]:null,m=metaOf(typ),attente=Object.values(gt("excel_ecrire")).filter(x=>x.table===typ).length;
+  const lien=m.webUrl||((gid("excel_etat","dernier")||{}).fichiers||{})[typ==="personne"?"personnel":"vehicules"]?.webUrl;
+  return `<div class="topline"><div><h2>Personnel et matériel</h2><p>Même contenu que les 2 fichiers Excel du dossier SharePoint « Gestion AFER » : ce que tu changes ici part dans l'Excel, ce qui est changé dans l'Excel revient ici. Informations personnelles : espace AFER seulement.</p></div>
+    <div class="tools">${lien?`<a class="btn sm" href="${esc(lien)}" target="_blank" rel="noopener">Ouvrir dans Excel</a>`:""}<button class="btn sm pri" data-addfiche="${typ}">+ Ajouter</button></div></div>
+  ${sansExcel()?`<div class="box warn"><b>Les fiches arrivent avec la synchronisation</b><span class="note">${(gid("excel_etat","dernier")||{}).at?"La dernière lecture n'a trouvé aucune ligne.":"La fonction qui lit les Excel ne tourne pas encore : voir l'écran Synchronisation."} Tu peux déjà ajouter une fiche, elle partira dans l'Excel dès qu'elle tourne.</span></div>`:""}
+  <div class="tabs" role="tablist">${TABS.map(([k,l,f])=>`<button class="tab" role="tab" data-rt="${k}" aria-selected="${k===tab[0]}">${l} (${resList(x=>f(x)&&(voirSortis||x.actif)).length})</button>`).join("")}<label class="chk right note"><input type="checkbox" data-sortis ${voirSortis?"checked":""}> Voir les sortis, vendus, réformés</label></div>
+  ${attente?`<p class="hint">${plural(attente,"modification en route","modifications en route")} vers l'Excel.</p>`:""}
+  <div class="split"><div style="display:grid;gap:12px;align-content:start;min-width:0">
+    ${L.length?`<div class="trombi">${L.map(x=>{const f=flags(x);return `<button class="tcard ${x.id===selRes?"sel":""} ${x.actif?"":"off"}" data-rs="${esc(x.id)}">${f?`<span class="flag ${f}" title="Échéance ou fiche à vérifier"></span>`:""}${avatar(x,"big")}<b>${esc(x.nom)}</b><small>${esc(x.metier)}${x.d._attente?" · envoi en cours":""}${x.actif?"":" · "+esc(x.d.Statut||"")}</small></button>`}).join("")}</div>`:`<div class="empty">Aucune fiche dans cet onglet.</div>`}
+    <p class="hint">Sur le planning et le tableau de bord : seulement le nom affiché et le métier.</p></div>
+    <aside class="fiche" id="fiche">${r?fiche(r):'<span class="note">Choisis une fiche.</span>'}</aside></div>`}
+function fiche(r){const t=r.t,d=r.d,C2=colsOf(t),byN={};C2.forEach(c=>byN[c.nom]=c);
+  const used=new Set(["ID"]);const sec=(titre,noms,prive)=>{const L=noms.filter(n=>byN[n]);L.forEach(n=>used.add(n));if(!L.length)return"";return `<div class="sec"><b>${esc(titre)}${prive?' <span class="lock">· AFER seul</span>':""}</b>${L.map(n=>`<div class="kv"><span>${esc(n)}</span><span>${val(byN[n],d[n],d,t)}</span></div>`).join("")}</div>`};
+  let h=`<div class="head">${avatar(r,"big")}<div><h3>${esc(r.nom)}</h3><div class="note">${esc(r.metier)} · ${esc(r.xid)}${d.Statut?" · "+esc(d.Statut):""}</div></div></div>
+    ${d._attente?`<div class="note">⟳ Modification en route vers l'Excel${(gid("excel_ecrire",t+":"+r.xid)||{}).erreur?` : <span class="ph">${esc(gid("excel_ecrire",t+":"+r.xid).erreur)}</span>`:"."}</div>`:""}
+    <div class="row2"><button class="btn sm pri" data-editfiche="${esc(r.id)}">Modifier</button>${r.actif?`<button class="btn sm" data-goplanres="${esc(r.id)}">Affecter dans le planning</button>`:""}${t==="personne"?`<button class="btn sm" data-conge="${esc(r.id)}">+ Absence</button>`:""}</div>`;
+  if(r.veh){const km=num(d["Kilométrage (dernier relevé)"]),l=num(d["Dernière vidange : km"]),nx=num(d["Prochaine vidange : km"]);
+    if(km!=null&&nx!=null){const pc=l!=null&&nx>l?Math.max(0,Math.min(100,(km-l)/(nx-l)*100)):km>=nx?100:null;const f=km>=nx?"bad":km>=nx-1000?"":"ok";
+      h+=`<div class="sec gauge ${f}"><b>Vidange</b><div class="kv"><span>Compteur ${km.toLocaleString("fr-FR")} km</span><span>prochaine à ${nx.toLocaleString("fr-FR")} km</span></div>${pc!=null?`<div class="bar"><i style="width:${pc}%"></i></div>`:""}</div>`}}
+  (GROUPES[t]||[]).forEach(([ti,noms,pr])=>h+=sec(ti,noms,pr));
+  const rest=C2.filter(c=>!used.has(c.nom)).map(c=>c.nom);if(rest.length)h+=sec("Autres informations",rest);
+  if(t==="personne"){const A=ABS.filter(a=>a.r===r.id).sort((a,b)=>b.deb.localeCompare(a.deb));
+    h+=`<div class="sec"><b>Absences et congés</b>${A.slice(0,8).map(a=>`<div class="kv"><span>${esc(a.type)}${a.duree&&a.duree!=="Journée"?" · "+esc(a.duree):""}</span><span>${fk(a.deb)}${a.fin!==a.deb?" → "+fk(a.fin):""} <button class="btn xs" data-abs="${esc(a.id)}">voir</button></span></div>`).join("")||'<div class="note">Aucune</div>'}</div>
+      <div class="sec"><b>Jours planifiés</b><div class="kv"><span>Au total</span><span>${AFF.filter(a=>a.r===r.id).length}</span></div><div class="kv"><span>Coût chargé par jour</span><span>${coutJour(r)!=null?eur(coutJour(r)):'<span class="ph">à compléter dans l\'Excel</span>'}</span></div></div>`}
+  if(r.veh){const im=norm(d.Immatriculation),E=Object.values(gt("entretien")).filter(x=>im&&norm(x["Véhicule (immatriculation)"])===im).sort((a,b)=>String(b.Date).localeCompare(String(a.Date)));
+    const mo=today().slice(0,7),P=Object.values(gt("carburant")).filter(x=>im&&norm(x["Véhicule (immatriculation)"])===im&&String(x.Date||"").startsWith(mo));
+    h+=`<div class="sec"><b>Entretiens (onglet Entretiens)</b>${E.slice(0,5).map(x=>`<div class="kv"><span>${fkl(x.Date)} · ${esc(x.Type||"")}</span><span>${num(x["Montant (€)"])!=null?eur(num(x["Montant (€)"])):""}</span></div>`).join("")||'<div class="note">Aucun entretien noté.</div>'}</div>
+      <div class="sec"><b>Carburant ce mois-ci (onglet Carburant)</b><div class="kv"><span>${plural(P.length,"plein","pleins")}</span><span>${P.length?eur(P.reduce((a,x)=>a+(num(x["Montant (€)"])||0),0))+" · "+P.reduce((a,x)=>a+(num(x.Litres)||0),0).toLocaleString("fr-FR")+" L":"—"}</span></div></div>`}
+  h+=`<div class="sec"><b>Cette semaine</b>${semaine(r)}</div>`;
+  return h}
+function fichePop(t,rid){const r=rid?RES[rid]:null,d=r?r.d:{},C2=colsOf(t).filter(c=>c.type!=="formule"&&c.nom!=="ID"),id=r?r.xid:nextId(t);
+  const def={personne:{Statut:"Actif",Catégorie:"Chantier"},vehicule:{Statut:"En service"},materiel:{Statut:"Disponible"}}[t]||{};
+  const champ=c=>{const v=r?d[c.nom]:def[c.nom],nm=`data-col="${esc(c.nom)}"`;
+    if(c.liste&&c.liste.length)return `<label>${esc(c.nom)}<select ${nm}>${opts(c.liste.includes(v)||v==null||v===""?c.liste:[...c.liste,v],v)}</select></label>`;
+    if(c.type==="date")return `<label>${esc(c.nom)}<input type="date" ${nm} value="${esc(isK(v)?v:"")}"></label>`;
+    if(c.type==="nombre"||c.type==="euro")return `<label>${esc(c.nom)}<input type="number" step="any" ${nm} value="${esc(v??"")}"></label>`;
+    if(/remarques|source|habilitations/i.test(c.nom))return `<label style="grid-column:1/-1">${esc(c.nom)}<textarea rows="2" ${nm}>${esc(v??"")}</textarea></label>`;
+    if(/personne\)/i.test(c.nom))return `<label>${esc(c.nom)}<select ${nm}>${`<option value="">—</option>`+resList(x=>x.t==="personne").map(x=>`<option value="${esc(x.xid)}"${x.xid===v?" selected":""}>${esc(x.nom)} (${esc(x.xid)})</option>`).join("")}${v&&!RES["p:"+v]?`<option selected>${esc(v)}</option>`:""}</select></label>`;
+    return `<label>${esc(c.nom)}<input ${nm} value="${esc(v??"")}" maxlength="250"></label>`};
+  const used=new Set();const grps=(GROUPES[t]||[]).map(([ti,noms])=>{const L=C2.filter(c=>noms.includes(c.nom));L.forEach(c=>used.add(c.nom));return L.length?`<div class="fgrp"><b>${esc(ti)}</b><div class="grid2">${L.map(champ).join("")}</div></div>`:""}).join("");
+  const rest=C2.filter(c=>!used.has(c.nom));
+  const p=openModal(`<h3>${r?esc(r.nom):({personne:"Nouvelle personne",vehicule:"Nouveau véhicule",materiel:"Nouveau matériel"}[t])} <span class="note">${esc(id)}</span></h3>
+    <div class="note">Enregistré dans l'Excel « ${esc(metaOf(t).fichier||(t==="personne"?"AFER - Personnel et absences.xlsx":"AFER - Véhicules et matériel.xlsx"))} »${r?"":", sur une nouvelle ligne"}. Les colonnes calculées restent calculées par l'Excel.</div>
+    ${grps}${rest.length?`<div class="fgrp"><b>Autres informations</b><div class="grid2">${rest.map(champ).join("")}</div></div>`:""}
+    <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Enregistrer</button></div>`);
+  p.querySelector("[data-ok]").onclick=async()=>{const v={};p.querySelectorAll("[data-col]").forEach(el=>{const c=C2.find(x=>x.nom===el.dataset.col);let x=el.value.trim();
+      const nv=x===""?null:(c.type==="nombre"||c.type==="euro")?num(x):x;const ov=d[c.nom]??null;if(String(nv??"")!==String(ov??""))v[c.nom]=nv});
+    if(!r){const nomCol=t==="personne"?"Nom":t==="vehicule"?"Immatriculation":"Désignation";if(!v[nomCol]&&!(t==="personne"&&v["Prénom"])){toast(`Indique au moins : ${nomCol}${t==="personne"?" ou Prénom":""}.`);return}v.ID=id}
+    if(!Object.keys(v).length){closeFloat();toast("Rien n'a changé.");return}
+    closeFloat();await excelEcrire(t,id,v,r?{}:{nouveau:true});selRes=(t==="personne"?"p:":t==="vehicule"?"v:":"m:")+id;RENDER();toast(r?"Fiche enregistrée : elle part dans l'Excel.":"Fiche ajoutée : elle part dans l'Excel.")}}
+
+/* ---------- 4. clients ---------- */
+function vCli(){
+  const cls=clientsList();
+  return `<div class="topline"><div><h2>Clients</h2><p>Chaque client a un code et une couleur, repris partout (tableau de bord, planning, codes des chantiers). Clic sur une ligne : le tableau de bord de ce client.</p></div>
+    <div class="tools"><button class="btn sm pri" data-newcli>+ Nouveau client</button></div></div>
+  ${GOK===false?`<div class="box warn"><b>Base de gestion pas encore installée</b><span class="note">DOMetVIE est déjà là ; pour ajouter d'autres clients, colle le fichier SQL de l'étape Synchronisation.</span></div>`:""}
+  <div class="scroll"><table><thead><tr><th>Couleur</th><th>Code</th><th>Client</th><th>Type</th><th>Coordonnées</th><th class="num">Chantiers</th><th class="num">Opportunités</th><th></th></tr></thead><tbody>
+  ${cls.map(k=>{const co=[k.adresse,k.contact,k.tel,k.email,k.siret?"SIRET "+k.siret:""].filter(Boolean);
+    return `<tr class="clk" data-cf2="${esc(k.id)}"><td><span class="swatch" style="--cc:${k.c}"></span></td><td><b>${esc(k.code)}</b></td><td class="wrap"><b>${esc(k.nom)}</b>${k.info?`<div class="note">${esc(k.info)}</div>`:""}</td><td class="wrap">${k.type?esc(k.type):'<span class="ph dim">—</span>'}</td><td class="wrap">${co.length?co.map(esc).join("<br>"):PH("adresse, contact, SIRET")}</td><td class="num">${CH.filter(c=>c.cli.id===k.id).length}</td><td class="num">${Object.values(gt("opp")).filter(o=>o.client===k.id).length}</td><td><button class="btn xs" data-editcli="${esc(k.id)}">Modifier</button></td></tr>`}).join("")}
+  </tbody></table></div>`}
+function cliPop(id){const k=id?clientsMap()[id]:null,usedC=new Set(clientsList().map(c=>c.c));
+  const libre=PALETTE.find(c=>!usedC.has(c))||PALETTE[clientsList().length%PALETTE.length];let couleur=k?k.c:libre;
+  const p=openModal(`<h3>${k?esc(k.nom):"Nouveau client"}</h3>
+    <div class="grid2"><label>Nom<input id="k-nom" value="${esc(k?k.nom:"")}" maxlength="80"></label><label>Code (3 lettres)<input id="k-code" value="${esc(k?k.code:"")}" maxlength="6" style="text-transform:uppercase" placeholder="auto"></label></div>
+    <div class="grid2"><label>Type<input id="k-type" value="${esc(k?k.type||"":"")}" maxlength="60" placeholder="Particulier, MOA, entreprise…"></label><label>Contact<input id="k-contact" value="${esc(k?k.contact||"":"")}" maxlength="80"></label></div>
+    <label>Adresse<input id="k-adr" value="${esc(k?k.adresse||"":"")}" maxlength="160"></label>
+    <div class="grid2"><label>Téléphone<input id="k-tel" value="${esc(k?k.tel||"":"")}" maxlength="30"></label><label>E-mail<input type="email" id="k-mail" value="${esc(k?k.email||"":"")}" maxlength="120"></label></div>
+    <div class="grid2"><label>SIRET<input id="k-siret" value="${esc(k?k.siret||"":"")}" maxlength="20"></label><label>Note<input id="k-info" value="${esc(k?k.info||"":"")}" maxlength="120"></label></div>
+    <div class="fgrp"><b>Couleur</b><div class="swatches">${PALETTE.map(c=>`<button style="--cc:${c}" data-col="${c}" aria-pressed="${c===couleur}" aria-label="Couleur ${c}"></button>`).join("")}</div></div>
+    <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Enregistrer</button></div>`);
+  p.querySelectorAll("[data-col]").forEach(b=>b.onclick=()=>{couleur=b.dataset.col;p.querySelectorAll("[data-col]").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+  p.querySelector("[data-ok]").onclick=()=>{const v=s=>p.querySelector(s).value.trim(),nom=v("#k-nom");if(!nom){toast("Donne un nom au client.");return}
+    let code=v("#k-code").toUpperCase().replace(/[^A-Z0-9]/g,"");const pris=new Set(clientsList().filter(c=>c.id!==id).map(c=>c.code));
+    if(!code){const b=norm(nom).replace(/[^a-z]/g,"").toUpperCase().slice(0,3)||"CLI";code=b;let i=2;while(pris.has(code))code=b.slice(0,2)+i++}
+    else if(pris.has(code)){toast("Ce code est déjà pris par un autre client.");return}
+    const d={...(gid("client",id)||{}),nom,code,c:couleur,type:v("#k-type"),contact:v("#k-contact"),adresse:v("#k-adr"),tel:v("#k-tel"),email:v("#k-mail"),siret:v("#k-siret"),info:v("#k-info")};
+    if(!k)d.cree=new Date().toISOString();closeFloat();gput("client",id||uid("c-"),d);toast(k?"Client enregistré.":`Client ${code} créé.`)}}
+
+/* ---------- 5. rentabilité ---------- */
+function vRenta(){
+  const L=liste().filter(c=>c.statut!=="attente"||AFF.some(a=>a.ch===c.id)),R=L.map(c=>({c,x:renta(c)}));
+  const max=Math.max(1,...R.map(r=>r.x.recette||0));
+  const chart=R.map(({c,x})=>`<div class="rrow" data-renta="${esc(c.id)}"><span><span class="dot" style="--cc:${c.cli.c}"></span> <b>${esc(c.code)}</b> ${esc(c.nom)}</span>
+    <div style="width:${x.recette?Math.max(8,x.recette/max*100):8}%"><div class="rb ${x.marge==null?"outline":""}">${x.marge==null?"":segs(x)}</div></div>
+    <span class="v">${x.marge==null?'<span class="note">à compléter</span>':pctM(x)}</span></div>`).join("");
+  const cell=(v,m)=>v==null?`<span class="ph">${m||"à compléter"}</span>`:eur(v);
+  const table=R.map(({c,x})=>`<tr class="clk ${selRenta===c.id?"sel":""}" data-renta="${esc(c.id)}"><td><span class="dot" style="--cc:${c.cli.c}"></span> <b>${esc(c.code)}</b> ${esc(c.nom)}</td><td class="num">${cell(x.recette)}</td><td class="num">${cell(x.mo)}</td><td class="num">${cell(x.mat)}</td><td class="num">${eur(x.veh)}</td><td class="num">${cell(x.st)}</td><td class="num"><b>${x.marge==null?'<span class="ph dim">—</span>':eur(x.marge)}</b></td><td class="num">${pctM(x)}</td></tr>`).join("");
+  const sc=selRenta&&CHI[selRenta];
+  return `<div class="topline"><div><h2>Rentabilité par chantier</h2><p>Ce que rapporte chaque chantier, moins ce qu'il a réellement coûté. Un poste manquant = marge non calculée, jamais estimée. Clic sur une ligne pour le détail et les saisies.</p></div></div>
+  ${R.length?`<div class="rchart"><div class="note">Largeur de la barre = recette · couleurs = coûts · vert = marge · pointillé = coûts pas encore connus</div>${chart}${LEG}</div>
+  <div class="scroll"><table><thead><tr><th>Chantier</th><th class="num">Recette HT</th><th class="num">Main-d'œuvre</th><th class="num">Matériaux</th><th class="num">Véhicules</th><th class="num">Sous-traitance</th><th class="num">Marge</th><th class="num">%</th></tr></thead><tbody>${table}</tbody></table></div>`:'<div class="empty">Aucun chantier démarré pour l\'instant.</div>'}
+  ${sc?rentaDetail(sc):""}
+  <div class="why"><b>D'où viennent les chiffres</b>Recette : devis de l'appli SDB (forfait + lignes validées par DOMetVIE) ou montant saisi. Main-d'œuvre : jours du planning × coût chargé par jour de l'Excel du personnel. Véhicules : coût fixe mensuel au prorata des jours, pleins et entretiens imputés au chantier dans l'Excel (colonne « Chantier imputé » = code du chantier), dépenses carburant et péage de l'appli SDB. Matériaux et sous-traitance : montants saisis ici (pour une SDB, le matériel est fourni par DOMetVIE).</div>`}
+function rentaDetail(c){const x=renta(c),R=x.R,inp=(k,v)=>`<span class="minput"><input type="number" step="0.01" min="0" data-rk="${k}" data-rch="${esc(c.id)}" value="${esc(v??"")}" placeholder="—" aria-label="${k}"> €</span>`;
+  const kv=(a,b)=>`<div class="kv"><span>${a}</span><span>${b}</span></div>`;
+  return `<div class="detail" style="--cc:${c.cli.c}"><div class="topline"><h3>${esc(c.code)} · ${esc(c.nom)}</h3><button class="btn xs" data-ch="${esc(c.id)}">Voir le chantier</button></div>
+   <div class="dgrid">
+    <div class="sec"><b>Recette HT</b>${kv(esc(x.recNote||"à saisir"),x.recette==null?PH("recette"):eur(x.recette))}${kv("Saisie à la main (remplace le calcul)",inp("recette",R.recette))}</div>
+    <div class="sec"><b>Main-d'œuvre (planning × coût chargé)</b>${x.moL.map(m=>kv(`${esc(m.r.nom)} · ${plural(m.j,"jour","jours")}`,m.cj==null?'<span class="ph">coût chargé à compléter dans l\'Excel</span>':eur(m.j*m.cj))).join("")||'<div class="note">Personne affectée dans le planning.</div>'}${kv("<b>Total</b>",x.mo==null?'<span class="ph">incomplet</span>':"<b>"+eur(x.mo)+"</b>")}</div>
+    <div class="sec"><b>Véhicules</b>${x.vehL.map(v=>kv(esc(v.l),eur(v.v))).join("")||'<div class="note">Aucun coût de véhicule imputé.</div>'}${x.vehSansCout.length?`<div class="note">Sans coût fixe mensuel dans l'Excel : ${esc(x.vehSansCout.join(", "))}.</div>`:""}${kv("<b>Total</b>","<b>"+eur(x.veh)+"</b>")}</div>
+    <div class="sec"><b>Matériaux</b>${x.matFrais.map(f=>kv(esc((f.cat||"Dépense")+" du "+fdl(f.at)+" (TTC)"),eur(num(f.amt)))).join("")}${kv(esc(num(R.mat)!=null?"saisi":x.matNote||"à saisir"),x.mat==null?PH("matériaux"):eur(x.mat))}${kv("Montant saisi",inp("mat",R.mat))}</div>
+    <div class="sec"><b>Sous-traitance et autres</b>${kv(esc(num(R.st)!=null?"sous-traitance saisie":x.stNote||"à saisir"),x.st==null?PH("sous-traitance"):eur(x.st))}${kv("Sous-traitance",inp("st",R.st))}${kv("Autres frais",inp("autres",R.autres))}</div>
+    <div class="sec"><b>Résultat</b>${kv("Recette",x.recette==null?PH():eur(x.recette))}${kv("Coûts",x.tot==null?'<span class="ph">incomplets</span>':eur(x.tot))}<div class="kv tot"><span>Marge</span><span>${x.marge==null?'<span class="ph">'+esc("manque : "+x.manque.join(", "))+"</span>":eur(x.marge)+" · "+pctM(x)}</span></div></div>
+   </div><p class="hint">Les montants saisis sont enregistrés dès que tu quittes la case.</p></div>`}
+
+/* ---------- 6. synchronisation ---------- */
+function baseManquante(titre){return `<div class="topline"><div><h2>${esc(titre)}</h2></div></div><div class="box warn"><h3>Il reste une installation à faire dans Supabase</h3><span>Cette fenêtre lit la table « gestion », pas encore créée. Le tableau de bord et les chantiers SDB marchent déjà. Les étapes sont dans l'écran <button class="btn xs" data-view="sync">Synchronisation</button>.</span></div>`}
+function vSync(){const e=gid("excel_etat","dernier")||null,Q=Object.entries(gt("excel_ecrire")).map(([id,x])=>({id,...x})),now=Date.now();
+  const age=e&&e.at?Math.round((now-new Date(e.at))/60000):null,frais=age!=null&&age<=10;
+  const st=GOK===false?"bad":!e?"warn":e.ok===false?"bad":frais?"ok":"warn";
+  const fic=e&&e.fichiers?Object.entries(e.fichiers):[];
+  return `<div class="topline"><div><h2>Synchronisation</h2><p>Les 2 fichiers Excel du dossier SharePoint « Gestion AFER » restent la référence : l'appli en garde une copie pour les écrans et y renvoie tes modifications.</p></div>
+    <div class="tools">${GOK?'<button class="btn sm pri" data-syncnow>Synchroniser maintenant</button>':""}</div></div>
+  <div class="flow">
+    <div class="fbox ${st}"><h3>Excel ⇄ appli</h3>
+      ${GOK===false?`<div>La table « gestion » n'existe pas encore dans Supabase.</div><div class="note">À faire une fois : coller le fichier complement-v12-gestion.sql dans Supabase › SQL Editor, puis installer la fonction synchro-excel (guide MISE-EN-PLACE-V12).</div>`
+      :!e?`<div>La fonction synchro-excel n'a pas encore tourné.</div><div class="note">Une fois installée (guide MISE-EN-PLACE-V12), elle lit les Excel toutes les 3 minutes et à chaque modification faite ici.</div>`
+      :`<div class="kv"><span>Dernier passage</span><span>${ft(e.at)}${age!=null?` (il y a ${age<1?"moins d'une minute":plural(age,"minute","minutes")})`:""}</span></div>
+        <div class="kv"><span>État</span><span>${e.ok===false?'<span class="pill bad">Erreur</span>':'<span class="pill ok">OK</span>'}</span></div>${e.message?`<div class="note">${esc(e.message)}</div>`:""}
+        ${fic.map(([k,f])=>`<div class="kv"><span>${esc(f.nom||k)}</span><span>${f.modifie_le?"modifié le "+ft(f.modifie_le):""}${f.webUrl?` · <a href="${esc(f.webUrl)}" target="_blank" rel="noopener">ouvrir</a>`:""}</span></div>`).join("")}
+        <div class="kv"><span>Fiches lues</span><span>${Object.keys(gt("personne")).length} personnes · ${Object.keys(gt("vehicule")).length} véhicules · ${Object.keys(gt("materiel")).length} matériels · ${Object.keys(gt("absence")).length} absences</span></div>`}
+      ${Q.length?`<div class="sec"><b>${plural(Q.length,"modification en route","modifications en route")} vers l'Excel</b>${Q.map(q=>`<div class="kv"><span>${esc(q.table)} ${esc(q.id)}${q.supprimer?" (retrait)":q.nouveau?" (nouvelle ligne)":""}</span><span>${q.erreur?`<span class="ph">${esc(q.erreur)}</span>${q.essais?" · "+q.essais+" essai(s)":""}`:"en attente"}</span></div>`).join("")}</div>`:""}
+    </div>
+    <div class="fbox ok"><h3>Photos et documents SDB → SharePoint</h3><div>Copie automatique toutes les 3 minutes vers « Suivi Chantier SDB » (un dossier par chantier : fiche, réception du matériel, étapes, documents). En service depuis le 19/10/2026.</div></div>
+  </div>
+  <div class="scroll"><table><thead><tr><th>Information</th><th>Où elle vit</th><th>Sens</th></tr></thead><tbody>
+    <tr><td>Personnel, absences et congés</td><td>AFER - Personnel et absences.xlsx</td><td>Excel ⇄ appli</td></tr>
+    <tr><td>Véhicules, matériel</td><td>AFER - Véhicules et matériel.xlsx</td><td>Excel ⇄ appli</td></tr>
+    <tr><td>Entretiens, carburant</td><td>AFER - Véhicules et matériel.xlsx</td><td>Excel → appli (saisie dans l'Excel)</td></tr>
+    <tr><td>Planning, missions, pilotes</td><td>Base de l'appli (Supabase)</td><td>Appli seulement pour l'instant</td></tr>
+    <tr><td>Clients, chantiers hors SDB, opportunités, saisies de rentabilité</td><td>Base de l'appli (Supabase)</td><td>Appli seulement pour l'instant</td></tr>
+    <tr><td>Chantiers SDB : photos, PV, documents</td><td>Base de l'appli + SharePoint « Suivi Chantier SDB »</td><td>Appli → SharePoint</td></tr>
+  </tbody></table></div>
+  <div class="why"><b>Règles des Excel</b>Ne renomme ni les onglets, ni les tableaux, ni les titres de colonnes. Une ligne = une fiche, avec son ID (P-001, V-01…) : une ligne ajoutée dans l'Excel sans ID en reçoit un automatiquement. Une modification faite dans l'Excel arrive ici en 3 minutes au plus.</div>`}
+
+/* ---------- moteur ---------- */
+const VIEWS={dash:vDash,plan:vPlan,renta:vRenta,res:vRes,cli:vCli,sync:vSync};
+const TITRES={dash:"Tableau de bord",plan:"Planning global",renta:"Rentabilité",res:"Personnel et matériel",cli:"Clients",sync:"Synchronisation"};
+function RENDER(){if(!C)return;buildAll();renderAlerts();
+  if(VIEW==="sdb")return;
+  if(popEl){needRender=true;return} // une fenêtre est ouverte : on redessine en la fermant
+  if(document.activeElement&&document.activeElement.matches&&document.activeElement.matches("[data-rk]")){needRender=true;return}
+  const v=$("#v-main"),y=v.scrollTop,sx=[...document.querySelectorAll("#page .scroll")].map(s=>s.scrollLeft);
+  sel=null;drag=null;hideTip();
+  $("#page").innerHTML=VIEWS[VIEW]();
+  v.scrollTop=y;document.querySelectorAll("#page .scroll").forEach((s,i)=>{if(sx[i])s.scrollLeft=sx[i]});
+  document.body.classList.toggle("picking",!!active&&VIEW==="plan");
+  if(SEL)renderDetail()}
+function setView(v){VIEW=v;closeFloat();
   document.querySelectorAll(".nav[data-view]").forEach(b=>{if(b.dataset.view===v)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
-  $("#v-dash").hidden=v!=="dash";$("#v-sdb").hidden=v!=="sdb";if(v==="dash")render()}
+  $("#v-main").hidden=v==="sdb";$("#v-sdb").hidden=v!=="sdb";document.title=(v==="sdb"?"Chantiers SDB":TITRES[v])+" · Gestion AFER";
+  if(v!=="sdb"){$("#v-main").scrollTop=0;RENDER()}else renderAlerts()}
+function go(v){if(v==="sdb")return openSdb(null);SEL=null;$("#detail").innerHTML="";active=v==="plan"?active:null;history.replaceState(null,"",v==="dash"?location.pathname:"#"+v);setView(v)}
+function route(h){if(h==="sdb"||h.startsWith("sdb="))return openSdb(decodeURIComponent(h.slice(4))||null);setView(VIEWS[h]?h:"dash")}
 // L'appli SDB est chargée une fois dans le cadre, puis gardée : on repasse d'un onglet à l'autre sans recharger.
 let frame=null,frameReady=false,pending=null;
 function openSdb(ch){SEL=null;$("#detail").innerHTML="";
@@ -326,14 +1166,68 @@ function openSdb(ch){SEL=null;$("#detail").innerHTML="";
   history.replaceState(null,"","#sdb"+(ch?"="+encodeURIComponent(ch):""));setView("sdb")}
 addEventListener("message",e=>{if(e.origin!==location.origin||!e.data||e.data.gestion!=="pret")return;frameReady=true;
   if(pending){frame.contentWindow.postMessage({gestion:"ouvrir",ch:pending,tab:"suivi"},location.origin);pending=null}});
-document.addEventListener("click",e=>{const t=e.target.closest("[data-view],[data-ch],[data-open],[data-pb],[data-close]");if(!t)return;
-  if(t.dataset.view){if(t.dataset.view==="sdb")openSdb(null);else{history.replaceState(null,"",location.pathname);setView("dash")}}
-  else if(t.dataset.ch){SEL=t.dataset.ch;render()}
-  else if(t.dataset.open)openSdb(t.dataset.open);
-  else if(t.dataset.pb)openSdb(t.dataset.pb);
-  else if(t.hasAttribute("data-close")){const id=SEL;SEL=null;$("#detail").innerHTML="";render();const c=document.querySelector(`.card[data-ch="${CSS.escape(id||"")}"]`);c&&c.focus()}});
-document.addEventListener("contextmenu",e=>{const t=e.target.closest(".card[data-ch]");if(!t)return;e.preventDefault();openSdb(t.dataset.ch)});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&SEL){const c=$("#detail [data-close]");c&&c.click()}});
+function goPlanChantier(id){const c=CHI[id];if(!c)return;planMode="sem";zoom="semaine";const t=today();cur=t>=c.deb&&t<=c.fin?new Date():PK(c.deb);SEL=null;$("#detail").innerHTML="";go("plan")}
+function closeDetail(){const id=SEL;SEL=null;$("#detail").innerHTML="";RENDER();const c=document.querySelector(`.card[data-ch="${CSS.escape(id||"")}"]`);c&&c.focus()}
+
+document.addEventListener("click",e=>{const t=e.target;
+  if(justSel)return;
+  if(popEl&&!popEl.contains(t)&&!t.closest("[data-aff],[data-pilot],[data-conge],[data-cell],[data-abs]"))closeFloat();
+  if(popEl&&popEl.contains(t)&&!t.closest("[data-view]"))return;
+  const q=s=>t.closest(s);let el;
+  if(el=q("[data-al]")){const a=ALS[+el.dataset.al];if(!a)return;if(a.go.pb)openSdb(a.go.pb);else if(a.go.res){const r=RES[a.go.res];if(r){resTab=r.veh?"vehicule":r.tool?"materiel":r.grp==="bureau"?"bureau":"chantier";selRes=r.id;if(!r.actif)voirSortis=true}go("res")}else if(a.go.view)go(a.go.view);return}
+  if(el=q("[data-view]")){closeFloat();go(el.dataset.view);return}
+  if(el=q("[data-open]")){openSdb(el.dataset.open);return}
+  if(el=q("[data-pb]")){openSdb(el.dataset.pb);return}
+  if(q("#detail [data-close]")){closeDetail();return}
+  if(el=q("[data-goplan]")){goPlanChantier(el.dataset.goplan);return}
+  if(el=q("[data-gorenta]")){selRenta=el.dataset.gorenta;SEL=null;$("#detail").innerHTML="";go("renta");return}
+  if(el=q("[data-editch]")){chantierPop(el.dataset.editch);return}
+  if(q("[data-newch]")){chantierPop(null);return}
+  if(q("[data-newopp]")){oppPop(null);return}
+  if(el=q("[data-opp]")){oppPop(el.dataset.opp);return}
+  if(el=q("[data-pilot]")){pilotPop(el.dataset.pilot,el);return}
+  if(el=q("[data-conge]")){congePop(el,el.dataset.conge||null);return}
+  if(el=q("[data-abs]")){absPop(el.dataset.abs,el);return}
+  if(el=q("[data-goplanres]")){planMode="sem";active=el.dataset.goplanres;go("plan");toast(rs(active).nom+" sélectionné : clique un chantier (tous ses jours) ou double-clique une case (un jour).");return}
+  if(el=q("[data-cf]")){cliFilter=el.dataset.cf;RENDER();return}
+  if(el=q("[data-cf2]")){if(q("[data-editcli]"))return cliPop(q("[data-editcli]").dataset.editcli);cliFilter=el.dataset.cf2;go("dash");return}
+  if(el=q("[data-editcli]")){cliPop(el.dataset.editcli);return}
+  if(q("[data-newcli]")){if(!needBase())cliPop(null);return}
+  if(el=q("[data-pm]")){planMode=el.dataset.pm;RENDER();return}
+  if(el=q("[data-zoom]")){if(planMode==="sem")zoom=el.dataset.zoom;else gZoom=el.dataset.zoom;if(zoom==="jour")while(isWE(cur))cur=addD(cur,1);RENDER();return}
+  if(el=q("[data-nav]")){const n=+el.dataset.nav;if(planMode==="sem"){if(n===0)cur=new Date();else shift(n)}else{if(n===0)gCur=new Date();else gShift(n)}RENDER();return}
+  if(el=q("[data-rt]")){resTab=el.dataset.rt;selRes=null;RENDER();return}
+  if(el=q("[data-sortis]")){voirSortis=el.checked;RENDER();return}
+  if(el=q("[data-rs]")){selRes=el.dataset.rs;RENDER();if(innerWidth<1100){const f=$("#fiche");f&&f.scrollIntoView({behavior:"smooth",block:"start"})}return}
+  if(el=q("[data-editfiche]")){const r=RES[el.dataset.editfiche];if(r)fichePop(r.t,r.id);return}
+  if(el=q("[data-addfiche]")){fichePop(el.dataset.addfiche,null);return}
+  if(el=q("[data-renta]")){selRenta=selRenta===el.dataset.renta?null:el.dataset.renta;RENDER();return}
+  if(q("[data-syncnow]")){gput("excel_demande","maintenant",{at:new Date().toISOString()}).then(ok=>ok&&toast("Demande envoyée : les Excel sont relus dans quelques secondes."));return}
+  if(q("[data-unsel]")){active=null;RENDER();return}
+  if(el=q("[data-res]")){active=active===el.dataset.res?null:el.dataset.res;RENDER();return}
+  if(el=q("[data-aff]")){groupPop(el.dataset.aff,el);return}
+  if((el=q("[data-chhead]"))&&active&&!q(".eur,[data-pilot],[data-open],[data-editch],.nm")){assignAll(active,el.dataset.chhead);return}
+  if((el=q("[data-cell]"))&&active){const [chId]=el.dataset.cell.split("|");if(clickTimer)return;clickTimer=setTimeout(()=>{clickTimer=null;assignAll(active,chId)},280);return}
+  if(el=q("[data-ch]")){SEL=el.dataset.ch;RENDER();return}
+});
+document.addEventListener("change",e=>{const i=e.target.closest("[data-rk]");if(!i)return;const id=i.dataset.rch,R={...(gid("renta",id)||{})};const v=num(i.value);if(v==null)delete R[i.dataset.rk];else R[i.dataset.rk]=v;needRender=false;gput("renta",id,R)});
+document.addEventListener("focusout",e=>{if(e.target.closest&&e.target.closest("[data-rk]")&&needRender){needRender=false;setTimeout(RENDER,0)}});
+document.addEventListener("mousedown",e=>{if(e.button!==0||active||VIEW!=="plan")return;const cell=e.target.closest("[data-cell]");if(!cell||e.target.closest("[data-aff]"))return;const [chId,k]=cell.dataset.cell.split("|");closeFloat();drag=(e.shiftKey&&sel&&sel.ch===chId)?{ch:chId,k0:sel.k0,k1:k}:{ch:chId,k0:k,k1:k};sel=null;paintSel();e.preventDefault()});
+document.addEventListener("mouseover",e=>{if(drag){const cell=e.target.closest("[data-cell]");if(cell){const [chId,k]=cell.dataset.cell.split("|");if(chId===drag.ch&&drag.k1!==k){drag.k1=k;paintSel()}}}
+  const t=e.target.closest("[data-tip]");if(t)showTip(t,t.dataset.tip)});
+document.addEventListener("mouseout",e=>{if(e.target.closest("[data-tip]"))hideTip()});
+document.addEventListener("mouseup",()=>{if(!drag)return;const d=drag;drag=null;const [a,b]=[d.k0,d.k1].sort();sel={ch:d.ch,k0:a,k1:b};paintSel();const anchor=document.querySelector(`[data-cell="${CSS.escape(d.ch+"|"+b)}"]`);if(anchor)selPop(anchor);justSel=true;setTimeout(()=>{justSel=false},0)});
+document.addEventListener("dblclick",e=>{const cell=e.target.closest("[data-cell]");if(cell&&active){clearTimeout(clickTimer);clickTimer=null;const [chId,k]=cell.dataset.cell.split("|");toggleDay(active,chId,k)}});
+document.addEventListener("dragstart",e=>{const b=e.target.closest&&e.target.closest("[data-res]");if(!b)return;e.dataTransfer.setData("text/plain",b.dataset.res);e.dataTransfer.effectAllowed="copy"});
+document.addEventListener("dragover",e=>{const c=e.target.closest&&e.target.closest("[data-cell]");if(!c)return;e.preventDefault();document.querySelectorAll(".cell.drop").forEach(x=>x!==c&&x.classList.remove("drop"));c.classList.add("drop")});
+document.addEventListener("dragleave",e=>{const c=e.target.closest&&e.target.closest("[data-cell]");if(c)c.classList.remove("drop")});
+document.addEventListener("drop",e=>{const c=e.target.closest&&e.target.closest("[data-cell]");if(!c)return;e.preventDefault();c.classList.remove("drop");const rid=e.dataTransfer.getData("text/plain"),[chId,k]=c.dataset.cell.split("|");
+  if(!RES[rid])return;const b=bloque(rid,k);if(b){toast(`${rs(rid).nom} est absent le ${fk(k)} (${b.type.toLowerCase()}).`);return}const id=affId(rid,chId,k);if(gid("aff",id))return;
+  gputMany([{type:"aff",id,data:{r:rid,ch:chId,d:k}}]);toast(`${rs(rid).nom} affecté à ${(CHI[chId]||{}).nom} le ${fk(k)}. Touche l'étiquette pour écrire sa mission.`)});
+document.addEventListener("contextmenu",e=>{const t=e.target.closest(".card[data-ch],[data-chhead]");if(!t)return;const id=t.dataset.ch||t.dataset.chhead,c=CHI[id];if(!c||!c.sdb)return;e.preventDefault();openSdb(id)});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(popEl){closeFloat();return}if(active){active=null;RENDER();return}if(SEL)closeDetail()});
+addEventListener("resize",()=>{hideTip()});
+addEventListener("hashchange",()=>{if(C&&gate.hidden)route(location.hash.slice(1))}); // lien collé ou favori #plan, #res…
 $("#out").onclick=async()=>{await C.auth.signOut().catch(()=>{});location.replace(location.pathname)};
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 start();
