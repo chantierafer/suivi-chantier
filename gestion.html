@@ -73,7 +73,7 @@ a{color:var(--turq-ink)}
 .view{min-height:0;overflow-y:auto}
 #v-sdb{overflow:hidden}
 #v-sdb iframe{display:block;width:100%;height:100%;border:0;background:var(--bg)}
-.page{max-width:1280px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:grid;gap:16px;align-content:start;min-width:0}
+.page{max-width:1280px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-content:start;min-width:0}
 
 /* bandeau d'alertes, visible partout */
 .alerts{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:8px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);background:var(--surface-2);font-size:12.5px}
@@ -110,7 +110,7 @@ a{color:var(--turq-ink)}
 .empty{border:1px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--muted);background:var(--surface)}
 .why{border-left:3px solid var(--turq);padding:9px 12px;background:var(--surface);border-radius:0 6px 6px 0;font-size:13px;display:grid;gap:3px}
 .why b{font-family:var(--display);font-size:17px;font-weight:600}
-.box{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--surface);display:grid;gap:8px}
+.box{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--surface);display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
 .box.warn{border-color:var(--warn);background:var(--warn-bg)}
 .box h3{font-size:20px}
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
@@ -141,8 +141,8 @@ tr.clk{cursor:pointer} tr.clk:hover td{background:var(--turq-soft)} tr.sel td{ba
 
 /* tableau de bord */
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.kpi{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--surface)}
-.kpi .v{font-family:var(--display);font-size:34px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--surface);min-width:0}
+.kpi .v{font-family:var(--display);font-size:clamp(22px,1.6vw + 10px,34px);font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;overflow-wrap:anywhere} /* taille adaptée à la tuile : pas de débordement à 390 ni 1024 px */
 .kpi .l{font-size:12.5px;color:var(--muted);margin-top:4px}
 .kpi.bad .v{color:var(--bad)}
 .cgroup{display:grid;gap:10px}
@@ -216,6 +216,7 @@ tr.clk{cursor:pointer} tr.clk:hover td{background:var(--turq-soft)} tr.sel td{ba
 .pop .chk{display:flex;flex-direction:row;align-items:center;gap:6px;color:var(--fg);font-weight:500;font-size:12.5px;padding:3px 4px;border-radius:5px;cursor:pointer}
 .pop .chk:hover{background:var(--turq-soft)}
 .pop .chk>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pop>*{min-width:0}.pop .chk{min-width:0}.pop.modal .chk>span{white-space:normal;overflow:visible} /* la grille de la fenêtre ne s'élargit pas sur un libellé long */
 .pop .chk .note{font-size:10.5px;flex:none;margin-left:auto}
 .pop .scope{display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px}
 .pop .inline{display:flex;gap:6px;align-items:end}
@@ -365,6 +366,7 @@ kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--l
   .alerts{flex-wrap:nowrap;overflow-x:auto}
   .al{white-space:nowrap}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpi .v{font-size:24px}
   .topline h2{font-size:26px}
   .drawer{top:auto;max-height:88dvh;width:100%;border-left:0;border-top:1px solid var(--line);border-radius:14px 14px 0 0}
   .flow{grid-template-columns:1fr}
@@ -377,11 +379,12 @@ kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--l
 @media (prefers-reduced-motion:no-preference){.card,.tcard,.chip,.res{transition:border-color .15s,box-shadow .15s}}
 /* devis et factures (V13) */
 .dvbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.dvbar select,.dvbar input[type=search]{font:13px var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px;min-width:0}
+.dvbar select,.dvbar input[type=search]{font:13px var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 10px;min-width:0;max-width:100%}
+#page select{max-width:100%}
 .dvbar input[type=search]{margin-left:auto;min-width:200px;border-radius:6px}
 .dvsplit{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
-.dvlist{flex:1 1 640px;min-width:0}
-.dvside{flex:1 1 320px;max-width:420px;min-width:280px;position:sticky;top:0}
+.dvlist{flex:1 1 640px;min-width:0;max-width:100%}.dvlist th,.dvlist td{padding:8px 6px}.dvlist td.wrap{min-width:120px} /* 7 colonnes lisibles à 1366 px avec le panneau ouvert */
+.dvside{flex:0 0 320px;max-width:420px;min-width:280px;position:sticky;top:0}
 tr.clk.sel td{background:var(--turq-soft)}
 .dvpanel{display:grid;gap:9px}
 .dvprev{border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:6px;max-height:430px;overflow-y:auto}
@@ -414,7 +417,7 @@ tr.clk.sel td{background:var(--turq-soft)}
 .dvbighd{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
 .dvbigbody{flex:1;overflow-y:auto;padding:14px;max-width:860px;width:100%;margin:0 auto}
 .dvissues{margin:0;padding-left:18px;display:grid;gap:4px}.dvissues li.bad{color:var(--bad);font-weight:600}
-@media (max-width:900px){.dvbody{flex-direction:column;overflow-y:auto}.dvleft,.dvright{max-height:none;overflow:visible;flex:none;width:100%}.dvedit .grid3{grid-template-columns:1fr 1fr}.dvside{position:static;max-width:none}}
+@media (max-width:900px){.dvbody{flex-direction:column;overflow-y:auto}.dvleft,.dvright{max-height:none;overflow:visible;flex:none;width:100%}.dvedit .grid3{grid-template-columns:1fr 1fr}.dvside{position:static;max-width:none;min-width:0;flex:1 1 100%}.dvlist{flex-basis:auto}}
 /* comptabilité (V14, 27/10/2026) */
 :root{--cp2:#8FA3AD}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--cp2:#5E6E77}}
@@ -423,6 +426,7 @@ tr.clk.sel td{background:var(--turq-soft)}
 .seg.yr button small{font-size:10.5px;font-weight:500;color:var(--muted)}
 .seg.yr button[aria-pressed="true"] small{color:#0E2A2A}
 .cptabs{flex-wrap:nowrap;overflow-x:auto}.cptabs .tab{white-space:nowrap}
+.topline p.cph{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
 .cpk{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .cpk .kpi .v{font-size:26px}.cpk .kpi .s{font-size:11.5px;color:var(--muted);margin-top:2px}
 .kpi.warn .v{color:var(--warn)}
@@ -448,6 +452,7 @@ tr.ne td{border-top:1px solid var(--line)}
 .empty b{display:block;font-family:var(--display);font-size:20px;font-weight:600;color:var(--fg)}
 .empty p{max-width:70ch;margin:8px auto 12px}
 @media (max-width:860px){.cpg,.cpg.w{grid-template-columns:minmax(0,1fr)}.cpk{grid-template-columns:repeat(2,minmax(0,1fr))}.cpbar input[type=search]{min-width:0;flex:1 1 100%}}
+@media (max-width:900px){.cpbar select,.cpbar input[type=search]{flex:1 1 160px;min-width:0;max-width:100%!important}.cptabs{flex-wrap:wrap;overflow-x:visible}} /* téléphone : barres d'outils et onglets sur plusieurs lignes */
 </style>
 </head>
 <body>
@@ -771,7 +776,7 @@ function alertes(){const t=today(),L=[];
   CH.filter(x=>x.pbs.length).forEach(x=>L.push({lvl:"bad",t:`${x.nom} : ${plural(x.pbs.length,"problème à traiter","problèmes à traiter")}`,go:{pb:x.id}}));
   const av=resList(r=>/vérifier/i.test(r.d.Statut||""));if(av.length)L.push({lvl:"warn",t:plural(av.length,"fiche à vérifier","fiches à vérifier")+" (statut « À vérifier »)",go:{res:av[0].id}});
   if(GOK){const all=docsAll(),ech=all.filter(d=>d.kind==="facture"&&d.numero&&dInfo(d,all).cls==="bad");if(ech.length)L.push({lvl:"bad",t:plural(ech.length,"facture échue à relancer","factures échues à relancer"),go:{view:"devis"}})}
-  if(GOK){const xs=Object.entries(gt("cpt_ex")).sort((a,b)=>b[0].localeCompare(a[0]));if(xs.length&&xs[0][1].resume&&xs[0][1].resume.moitieCapital)L.push({lvl:"bad",t:`Capitaux propres sous la moitié du capital (comptes ${xs[0][0]})`,go:{view:"compta"}})}
+  if(GOK){const xs=Object.entries(gt("cpt_ex")).sort((a,b)=>b[0].localeCompare(a[0]));if(xs.length&&xs[0][1].resume&&xs[0][1].resume.moitieCapital)L.push({lvl:"bad",t:`Capitaux propres sous la moitié du capital (comptes ${xs[0][0]})`,go:{view:"compta",cpy:+xs[0][0]}})}
   const err=Object.values(gt("excel_ecrire")).filter(x=>x.erreur);if(err.length)L.push({lvl:"bad",t:plural(err.length,"modification n'est pas partie","modifications ne sont pas parties")+" dans l'Excel",go:{view:"sync"}});
   return L.sort((a,b)=>(a.lvl==="bad"?0:1)-(b.lvl==="bad"?0:1))}
 let ALS=[];
@@ -1205,7 +1210,7 @@ function vSync(){const e=gid("excel_etat","dernier")||null,Q=Object.entries(gt("
       :!e?`<div>La fonction synchro-excel n'a pas encore tourné.</div><div class="note">Une fois installée (guide MISE-EN-PLACE-V12), elle lit les Excel toutes les 3 minutes et à chaque modification faite ici.</div>`
       :`<div class="kv"><span>Dernier passage</span><span>${ft(e.at)}${age!=null?` (il y a ${age<1?"moins d'une minute":plural(age,"minute","minutes")})`:""}</span></div>
         <div class="kv"><span>État</span><span>${e.ok===false?'<span class="pill bad">Erreur</span>':'<span class="pill ok">OK</span>'}</span></div>${e.message?`<div class="note">${esc(e.message)}</div>`:""}
-        ${fic.map(([k,f])=>`<div class="kv"><span>${esc(f.nom||k)}</span><span>${f.modifie_le?"modifié le "+ft(f.modifie_le):""}${f.webUrl?` · <a href="${esc(f.webUrl)}" target="_blank" rel="noopener">ouvrir</a>`:""}</span></div>`).join("")}
+        ${fic.map(([k,f])=>`<div class="kv"><span>${esc(f.nom||k)}</span><span>${f.modifie_le?"modifié le "+ft(f.modifie_le):""}${f.webUrl?`${f.modifie_le?" · ":""}<a href="${esc(f.webUrl)}" target="_blank" rel="noopener">ouvrir</a>`:""}</span></div>`).join("")}
         <div class="kv"><span>Fiches lues</span><span>${Object.keys(gt("personne")).length} personnes · ${Object.keys(gt("vehicule")).length} véhicules · ${Object.keys(gt("materiel")).length} matériels · ${Object.keys(gt("absence")).length} absences</span></div>`}
       ${Q.length?`<div class="sec"><b>${plural(Q.length,"modification en route","modifications en route")} vers l'Excel</b>${Q.map(q=>`<div class="kv"><span>${esc(q.table)} ${esc(q.id)}${q.supprimer?" (retrait)":q.nouveau?" (nouvelle ligne)":""}</span><span>${q.erreur?`<span class="ph">${esc(q.erreur)}</span>${q.essais?" · "+q.essais+" essai(s)":""}`:"en attente"}</span></div>`).join("")}</div>`:""}
     </div>
@@ -1438,7 +1443,8 @@ function dvSettings(){const all=docsAll(),R=mentionsReg(),cf=(gid("reglage","doc
     const v=s=>p.querySelector(s).value.trim();closeFloat();await gput("reglage","docs",{penalites:v("#mn-pen"),indemnite:v("#mn-ind"),escompte:v("#mn-esc"),confirme:p.querySelector("#mn-ok").checked});toast("Réglages enregistrés.")}}
 // ---- grand aperçu ----
 async function bigPrev(id){const d=docById(id);if(!d)return;const w=document.createElement("div");w.className="dvbig";w.innerHTML=`<div class="dvbighd"><b>${esc(dNum(d))}</b><span><button class="btn sm" data-dvpdf="${esc(id)}">PDF</button> <button class="btn sm" data-dvbigx>Fermer</button></span></div><div class="dvbigbody"><p class="note">Chargement…</p></div>`;
-  document.body.appendChild(w);w.querySelector("[data-dvbigx]").onclick=()=>w.remove();w.addEventListener("keydown",e=>{if(e.key==="Escape")w.remove()});
+  document.body.appendChild(w);const fermer=()=>{w.remove();document.removeEventListener("keydown",surEchap,true)},surEchap=e=>{if(e.key==="Escape"&&w.isConnected){e.stopImmediatePropagation();e.preventDefault();fermer()}};
+  w.tabIndex=-1;w.focus({preventScroll:true});w.querySelector("[data-dvbigx]").onclick=fermer;document.addEventListener("keydown",surEchap,true); // Échap ferme l'aperçu même sans le focus dedans
   try{w.querySelector(".dvbigbody").innerHTML=pagesHtml(await rendreDoc(d,false))}catch(e){w.querySelector(".dvbigbody").innerHTML=miniPrev(d)}}
 // ---- éditeur ----
 function edOpen(id){const d=docById(id);if(!d||d.sdb)return;ED={id,d:clone(d),ro:!!d.numero,tab:"prev",lq:"",lot:"",sel:new Set(),T:null,PT:null};edRender()}
@@ -1509,7 +1515,7 @@ document.addEventListener("input",e=>{if(!ED||!e.target.closest("#dved"))return;
   if(e.target.dataset.ef&&e.target.type!=="checkbox"&&e.target.tagName!=="SELECT")edField(e);else if(e.target.dataset.lf&&e.target.tagName==="INPUT")edLine(e)});
 document.addEventListener("change",e=>{if(!ED||!e.target.closest("#dved"))return;const t=e.target;
   if(t.dataset.ef&&(t.type==="checkbox"||t.tagName==="SELECT"))edField(e);else if(t.dataset.lf&&t.tagName==="SELECT")edLine(e);else if(t.dataset.lsel!==undefined){const id=ED.d.lines[+t.closest("[data-li]").dataset.li].id;t.checked?ED.sel.add(id):ED.sel.delete(id)}else if(t.dataset.edlot!==undefined){ED.lot=t.value;$("#edlib").innerHTML=libHtml()}});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ED&&!popEl){e.stopPropagation();edClose()}},true);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&ED&&!popEl&&!document.querySelector(".dvbig")){e.stopPropagation();edClose()}},true);
 document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);let el;
   if(el=q("#dved [data-edx]")){edClose();return}
   if(el=q("[data-edtab]")){ED.tab=el.dataset.edtab;edRender(true);return}
@@ -1915,7 +1921,7 @@ function vCompta(){if(GOK===false)return baseManquante("Comptabilité");
   else if(d.err)body=`<div class="box warn"><h3>Écritures ${y} illisibles</h3><span>${esc(d.err)}</span><div><button class="btn sm" data-cpretry>Réessayer</button></div></div>`;
   else if(!d.L)body=`<div class="empty">Chargement des ${plural(ex.nl,"ligne","lignes")} d'écritures ${y}…</div>`;
   else body=({synth:cpSynth,jour:cpJour,gl:cpGl,bal:cpBal,bq:cpBanque,tva:cpTva,etats:cpEtats})[t](y,d,cpCalc(y,d.L));
-  return `<div class="topline"><div><h2>Comptabilité</h2><p>Exercice du ${cpd(ex?ex.debut:y+"0101")} au ${cpd(ex?ex.fin:y+"1231")} · ${stat}</p></div>
+  return `<div class="topline"><div><h2>Comptabilité</h2><p class="cph"><span>Exercice du ${cpd(ex?ex.debut:y+"0101")} au ${cpd(ex?ex.fin:y+"1231")}</span>${stat}</p></div>
     <div class="tools"><div class="seg yr" role="group" aria-label="Exercice">${Y.map(v=>`<button type="button" data-cpy="${v}" aria-pressed="${v===y}">${v}<small>${cpEx(v)?"FEC importé":v===cur?"en cours":"pas de FEC"}</small></button>`).join("")}</div>
       <button class="btn sm" data-cpimp>Importer un FEC</button><button class="btn sm pri" data-cpexp${d.L?"":" disabled"}>Exporter le FEC</button></div></div>
   <div class="tabs cptabs" role="tablist" aria-label="Rubriques">${CP_TABS.map(([k,l])=>`<button class="tab" role="tab" data-cptab="${k}" aria-selected="${k===t}">${l}</button>`).join("")}</div>${body}`}
@@ -1931,7 +1937,8 @@ function cpTodo(y,d,K){const {E,B,pb,T}=K,ex=d.ex,L=[],fin=cpd(ex.fin),bad=pb.fi
   if(dus.length)L.push(["warn","Clients",`${plural(dus.length,"client doit","clients doivent")} ${cp0(dus.reduce((s,a)=>s+a.s,0))} au ${fin}${nl&&!nlet?". Aucun règlement client n'est lettré : le FEC ne dit pas quelles factures ont été payées depuis":""}.`]);
   const cred=cpSum(B,["44567"]),col=T.reduce((s,x)=>s+x.collectee,0);
   if(cred>0.005)L.push(["warn","TVA",`Crédit de TVA de ${cp0(cred)} au ${fin} : à reporter ou à faire rembourser (formulaire 3519 : au moins 760 € en demande mensuelle ou trimestrielle, 150 € en demande annuelle).${E.ca>0&&col<E.ca*0.01?" Presque pas de TVA collectée sur le chiffre d'affaires : ventes en autoliquidation (sous-traitance BTP) probables, d'où un crédit qui revient.":""}`]);
-  const c=gid("cpt_reg","clo:"+y)||{};if(ex.fin<today().replace(/-/g,"")&&!c.appro){const f=PK(cpk(ex.fin)),lim=new Date(f.getFullYear(),f.getMonth()+7,0);L.push(["neu","Clôture",`Approbation des comptes ${y} au plus tard le ${lim.toLocaleDateString("fr-FR")} (6 mois après la clôture), puis dépôt au greffe.`])}
+  const c=gid("cpt_reg","clo:"+y)||{};if(ex.fin<today().replace(/-/g,"")&&!c.appro){const f=PK(cpk(ex.fin)),lim=new Date(f.getFullYear(),f.getMonth()+7,0),ls=lim.toLocaleDateString("fr-FR");
+    if(PK(today())>lim)L.push(["bad","Clôture",`Approbation des comptes ${y} : date limite du ${ls} dépassée. Si elle a eu lieu, coche-la dans Clôture.`]);else L.push(["neu","Clôture",`Approbation des comptes ${y} au plus tard le ${ls} (6 mois après la clôture), puis dépôt au greffe.`])}
   return L}
 function cpChart(ex,L){const M=cpMonths(ex.debut,ex.fin);if(!M.length)return "";const idx=new Map(M.map((m,i)=>[m,i])),ca=M.map(()=>0),ch=M.map(()=>0),mv=M.map(()=>0);
   for(const l of L){const ym=l.dt.slice(0,6);let i=idx.get(ym);if(i==null)i=ym<M[0]?0:M.length-1;
@@ -1979,12 +1986,12 @@ function cpJour(y,d,K){const L=d.L,J=K.J;if(!CPT.jr||!J.some(j=>j.j===CPT.jr))CP
     ${ls.slice(0,max).map(l=>{const s=l.n!==last;last=l.n;return `<tr${s?' class="ne"':""}><td>${s?cpd(l.dt):""}</td><td class="mono">${s?esc(l.n):""}</td><td class="mono">${s?esc(l.pr):""}</td><td class="mono">${esc(l.c)}</td><td>${esc(l.axl||"")}</td><td class="wrap">${esc(l.lib)}</td><td class="num">${cpn(l.d)}</td><td class="num">${cpn(l.k)}</td><td>${l.let?`<span class="pill ok">${esc(l.let)}</span>`:""}</td></tr>`}).join("")||'<tr><td colspan="9" class="empty">Aucune ligne pour ces filtres.</td></tr>'}
     </tbody></table></div>${ls.length>max?`<div><button class="btn sm" data-cpall>Afficher les ${ls.length} lignes</button></div>`:""}<p class="src">FEC ${y}, ${plural(ls.length,"ligne","lignes")}</p></div>`}
 function cpGlOpts(K,L){const g=K.B.map(a=>[`c:${a.c}`,`${a.c} · ${a.l}`]),aux=r=>CM.balanceAux(L,r).map(a=>[`x:${r}:${a.c}`,`${a.c} · ${a.l}`]);return {g,cli:aux("411"),fou:aux("401")}}
-function cpGl(y,d,K){const L=d.L,O=cpGlOpts(K,L),all=[...O.cli,...O.fou,...O.g];if(!all.some(o=>o[0]===CPT.gl))CPT.gl=(O.cli[0]||O.g[0]||[""])[0];
+function cpGl(y,d,K){const L=d.L,O=cpGlOpts(K,L),all=[...O.cli,...O.fou,...O.g];if(!all.some(o=>o[0]===CPT.gl))CPT.gl=(O.g.find(o=>o[0].startsWith("c:512"))||O.g.find(o=>o[0].startsWith("c:53"))||O.cli[0]||O.g[0]||[""])[0]; // par défaut : la banque, sinon la caisse
   const [ty,a,b]=CPT.gl.split(":"),f=ty==="x"?(l=>l.c.startsWith(a)&&(l.ax||l.c)===b):(l=>l.c===a),q=norm(CPT.glq);
   const G=CM.grandLivre(L,f),ls=q?G.filter(l=>norm([l.lib,l.pr,l.n,l.j].join(" ")).includes(q)):G,td=G.reduce((s,l)=>s+l.d,0),tk=G.reduce((s,l)=>s+l.k,0),nlet=G.filter(l=>l.let).length;
   const og=(t,L2)=>L2.length?`<optgroup label="${t}">${L2.map(([v,l])=>`<option value="${esc(v)}"${v===CPT.gl?" selected":""}>${esc(l)}</option>`).join("")}</optgroup>`:"";
   return `<div class="box"><div class="cpbar"><h3>Grand livre ${y}</h3><span class="sp"></span>
-      <select data-cpf="gl" aria-label="Compte" style="max-width:420px">${og("Clients (comptes auxiliaires)",O.cli)}${og("Fournisseurs (comptes auxiliaires)",O.fou)}${og("Comptes généraux",O.g)}</select>
+      <select data-cpf="gl" aria-label="Compte" style="max-width:min(420px,100%)">${og("Clients (comptes auxiliaires)",O.cli)}${og("Fournisseurs (comptes auxiliaires)",O.fou)}${og("Comptes généraux",O.g)}</select>
       <input type="search" data-cpq="glq" placeholder="Libellé, pièce…" value="${esc(CPT.glq)}" aria-label="Rechercher dans le compte"><button class="btn sm" data-cpcsv="gl">Exporter (Excel)</button></div>
     <div class="scroll cpscroll"><table><thead><tr><th>Date</th><th>Jnl</th><th>N°</th><th>Pièce</th><th>Libellé</th><th class="num">Débit</th><th class="num">Crédit</th><th class="num">Solde</th><th>Lettrage</th></tr></thead><tbody>
     ${ls.map(l=>`<tr><td>${cpd(l.dt)}</td><td class="mono">${esc(l.j)}</td><td class="mono">${esc(l.n)}</td><td class="mono">${esc(l.pr)}</td><td class="wrap">${esc(l.lib)}</td><td class="num">${cpn(l.d)}</td><td class="num">${cpn(l.k)}</td><td class="num">${cpSd(l.solde)}</td><td>${l.let?`<span class="pill ok">${esc(l.let)}</span>`:'<span class="pill neu">non lettré</span>'}</td></tr>`).join("")||'<tr><td colspan="9" class="empty">Aucune ligne.</td></tr>'}
@@ -2016,12 +2023,12 @@ function cpBanque(y,d,K){const ex=d.ex,L=d.L,M=cpMonths(ex.debut,ex.fin),A=K.B.f
     ${M.map((m,i)=>`<tr><td>${cpMl(m,true)}</td>${fin[i].map(v=>`<td class="num">${cps(v)}</td>`).join("")}${A.length>1?`<td class="num"><b>${cps(fin[i].reduce((s,v)=>s+v,0))}</b></td>`:""}</tr>`).join("")}</tbody></table></div><p class="src">FEC ${y}, comptes 51 et 53</p></div>`:""}
   <div class="why"><b>Relevés et rapprochement : prochaine étape</b>Les relevés Shine et BNP de SharePoint (02_COMPTABILITE › ${y} › 03_Banque) seront lus pour pointer chaque opération avec son écriture et sa pièce, et signaler les mois de relevés manquants.</div>`}
 function cpTva(y,d,K){const T=K.T,B=K.B,r=cpReg(),cred=cpSum(B,["44567"]),due=-cpSum(B,["44551"]),S=k=>T.reduce((s,x)=>s+x[k],0),E=K.E;
-  return `<div class="cpg w"><div class="box"><h3>TVA ${y} par mois</h3><div class="scroll"><table><thead><tr><th>Mois</th><th class="num">Collectée (4457)</th><th class="num">Autoliquidée (4452)</th><th class="num">Déductible (44566, 44562)</th><th class="num">Solde du mois</th></tr></thead><tbody>
+  return `<div class="cpg w"><div class="box"><h3>TVA ${y} par mois</h3><div class="scroll"><table><thead><tr><th>Mois</th><th class="num">Collectée</th><th class="num">Autoliquidée</th><th class="num">Déductible</th><th class="num">Solde</th></tr></thead><tbody>
     ${T.map(x=>`<tr><td>${cpMl(x.mois,true)}</td><td class="num">${cpn(x.collectee)}</td><td class="num">${cpn(x.autoliq)}</td><td class="num">${cpn(x.deductible)}</td><td class="num">${x.net>0.005?cps(x.net)+" à payer":x.net<-0.005?cps(-x.net)+" crédit":"0,00"}</td></tr>`).join("")}
     <tr class="tot"><td>Total</td><td class="num">${cps(S("collectee"))}</td><td class="num">${cps(S("autoliq"))}</td><td class="num">${cps(S("deductible"))}</td><td class="num">${S("net")>0?cps(S("net"))+" à payer":cps(-S("net"))+" crédit"}</td></tr></tbody></table></div>
-    <p class="note">Calcul à partir des écritures (date d'écriture), tous journaux. Les montants déclarés sur chaque CA3 font foi : comparer avec les déclarations déposées.</p><p class="src">FEC ${y}</p></div>
+    <p class="note">Collectée : compte 4457 · autoliquidée : 4452 · déductible : 44566 et 44562 · solde : TVA du mois à payer ou crédit. Calcul à partir des écritures (date d'écriture), tous journaux. Les montants déclarés sur chaque CA3 font foi : comparer avec les déclarations déposées.</p><p class="src">FEC ${y}</p></div>
   <div class="box"><h3>TVA d'AFER</h3><ul class="cplist">
-    <li><span class="pill neu">Régime</span><span>${r.regime?esc(r.regime):PH("régime de TVA")} · déclarations ${r.periodicite?esc(r.periodicite.toLowerCase()):PH("périodicité")} <button class="btn xs" data-cpparam>Modifier</button></span></li>
+    <li><span class="pill neu">Régime</span><span>${r.regime?esc(r.regime):PH("régime de TVA")} · déclarations ${r.periodicite?esc(r.periodicite):PH("périodicité")} <button class="btn xs" data-cpparam>Modifier</button></span></li>
     ${cred>0.005?`<li><span class="pill warn">Crédit</span><span>Crédit de TVA au ${cpd(d.ex.fin)} : <b>${cps(cred)} €</b> (compte 44567).</span></li><li><span class="pill ok">Action</span><span>Remboursement par le formulaire 3519 : au moins 760 € en demande mensuelle ou trimestrielle, 150 € en demande annuelle. À défaut, le crédit s'impute sur les déclarations suivantes.</span></li>`
       :`<li><span class="pill neu">Solde</span><span>TVA à payer au ${cpd(d.ex.fin)} : ${cps(due)} € (compte 44551).</span></li>`}
     ${E.ca>0&&S("collectee")<E.ca*0.01?`<li><span class="pill neu">Pourquoi</span><span>TVA collectée ${cp0(S("collectee"))} pour ${cp0(E.ca)} de chiffre d'affaires : ventes en autoliquidation (sous-traitance BTP) probables. AFER paie la TVA sur ses achats sans en collecter sur ces ventes, d'où un crédit qui revient.</span></li>`:""}
@@ -2068,16 +2075,16 @@ function cpClo(y,d){const ex=d.ex,r=cpReg(),c=gid("cpt_reg","clo:"+y)||{},sir=cp
       [E.equilibre&&!E.nonClasses.length?"ok":"bad",E.equilibre?(E.nonClasses.length?plural(E.nonClasses.length,"compte non classé","comptes non classés")+" dans le bilan":"Bilan recalculé équilibré, tous les comptes classés"):"Bilan recalculé déséquilibré"],
       [nl&&!nlet?"warn":"ok",`Lettrage des clients : ${nlet}/${nl} lignes lettrées`],
       [E.moitieCapital?"bad":"ok",E.moitieCapital?`Capitaux propres ${cp0(E.CP)} sous la moitié du capital : décision des associés dans les 4 mois qui suivent l'approbation, puis publicité`:"Capitaux propres au moins égaux à la moitié du capital"]]}
-  const f=ex?PK(cpk(ex.fin)):new Date(y,11,31),lim=new Date(f.getFullYear(),f.getMonth()+7,0).toLocaleDateString("fr-FR");
-  const man=CP_COCHES.map(([k,l])=>`<li><button class="pill ${c[k]?"ok":"warn"}" data-cpcoche="${k}" aria-pressed="${!!c[k]}" title="Cliquer pour changer">${c[k]?"Fait":"À faire"}</button><span>${esc(l)}${k==="appro"?" (au plus tard le "+lim+")":""}${c[k]?` <span class="note">· coché le ${fkl(c[k])}</span>`:""}</span></li>`).join("");
+  const f=ex?PK(cpk(ex.fin)):new Date(y,11,31),limD=new Date(f.getFullYear(),f.getMonth()+7,0),lim=limD.toLocaleDateString("fr-FR"),tard=!c.appro&&PK(today())>limD; // approbation : 6 mois après la clôture
+  const man=CP_COCHES.map(([k,l])=>{const urg=k==="appro"&&tard;return `<li><button class="pill ${c[k]?"ok":urg?"bad":"warn"}" data-cpcoche="${k}" aria-pressed="${!!c[k]}" title="Cliquer pour changer">${c[k]?"Fait":urg?"Urgent":"À faire"}</button><span>${esc(l)}${k==="appro"?(urg?" (date limite du "+lim+" dépassée)":" (au plus tard le "+lim+")"):""}${c[k]?` <span class="note">· coché le ${fkl(c[k])}</span>`:""}</span></li>`}).join("");
   let det="";if(ex&&d.L){const g=new Map();cpCalc(y,d.L).pb.forEach(p=>{const m=p.t.match(/^Ligne (\d+) : (.*)$/),k=p.niv+"|"+(m?m[2].replace(/date \d{4}-\d{2}-\d{2} /,"date "):p.t),x=g.get(k)||{niv:p.niv,t:m?m[2].replace(/date \d{4}-\d{2}-\d{2} /,"date "):p.t,n:0,l:[]};x.n++;if(m&&x.l.length<6)x.l.push(m[1]);g.set(k,x)});
     det=g.size?`<div class="box"><h3>Contrôles du FEC</h3><ul class="cplist">${[...g.values()].sort((a,b)=>(a.niv==="bad"?0:1)-(b.niv==="bad"?0:1)||b.n-a.n).map(x=>`<li><span class="pill ${x.niv==="bad"?"bad":"neu"}">${x.n}</span><span>${esc(x.t)}${x.l.length?` <span class="note">(lignes ${x.l.join(", ")}${x.n>x.l.length?"…":""})</span>`:""}</span></li>`).join("")}</ul><p class="note">Remarques grises : sans effet sur les totaux. Numéros de ligne = lignes du fichier FEC.</p></div>`:""}
   const pv=(v,lab)=>v?esc(v):PH(lab);
   return `<div class="cpg"><div class="box"><h3>Clôture ${y} : contrôles automatiques</h3><ul class="cplist">${auto.map(([s,t])=>`<li>${S[s]}<span>${t}</span></li>`).join("")}</ul></div>
-    <div class="box"><h3>Clôture ${y} : à cocher</h3><ul class="cplist">${man}</ul><p class="note">Clic sur « À faire » ou « Fait » pour changer.</p></div></div>${det}
+    <div class="box"><h3>Clôture ${y} : à cocher</h3><ul class="cplist">${man}</ul><p class="note">Clic sur « À faire », « Urgent » ou « Fait » pour changer.</p></div></div>${det}
   <div class="box"><div class="cpbar"><h3>Paramètres de la société</h3><span class="sp"></span><button class="btn sm" data-cpparam>Modifier</button>${ex?`<button class="btn sm dang" data-cpdel>Retirer le FEC ${y}</button>`:""}</div>
     <div class="kv"><span>SIREN</span><span>${sir?esc(sir)+(r.siren?"":" (repris des réglages des devis)"):PH("SIREN")}</span></div>
-    <div class="kv"><span>Exercice ${y}</span><span>${ex?`du ${cpd(ex.debut)} au ${cpd(ex.fin)}`:PH("dates, d'après le FEC")}</span></div>
+    <div class="kv"><span>Exercice ${y}</span><span>${ex?`du ${cpd(ex.debut)} au ${cpd(ex.fin)}`:`du 01/01/${y} au 31/12/${y} (exercice civil par défaut, confirmé à l'import du FEC)`}</span></div>
     <div class="kv"><span>Régime de TVA</span><span>${pv(r.regime,"régime de TVA")}</span></div>
     <div class="kv"><span>Déclarations de TVA</span><span>${pv(r.periodicite,"périodicité")}</span></div>
     <div class="kv"><span>Cabinet comptable</span><span>${pv(r.cabinet,"cabinet")}</span></div>
@@ -2147,7 +2154,7 @@ document.addEventListener("click",e=>{const t=e.target;
   if(popEl&&!popEl.contains(t)&&performance.now()-popEl._born>80&&!t.closest("[data-aff],[data-pilot],[data-conge],[data-cell],[data-abs]"))closeFloat(); // une fenêtre ouverte par ce même clic (Devis et factures) reste ouverte
   if(popEl&&popEl.contains(t)&&!t.closest("[data-view]"))return;
   const q=s=>t.closest(s);let el;
-  if(el=q("[data-al]")){const a=ALS[+el.dataset.al];if(!a)return;if(a.go.pb)openSdb(a.go.pb);else if(a.go.res){const r=RES[a.go.res];if(r){resTab=r.veh?"vehicule":r.tool?"materiel":r.grp==="bureau"?"bureau":"chantier";selRes=r.id;if(!r.actif)voirSortis=true}go("res")}else if(a.go.view)go(a.go.view);return}
+  if(el=q("[data-al]")){const a=ALS[+el.dataset.al];if(!a)return;if(a.go.pb)openSdb(a.go.pb);else if(a.go.res){const r=RES[a.go.res];if(r){resTab=r.veh?"vehicule":r.tool?"materiel":r.grp==="bureau"?"bureau":"chantier";selRes=r.id;if(!r.actif)voirSortis=true}go("res")}else if(a.go.view){if(a.go.cpy){CPT.y=a.go.cpy;CPT.t="synth"}go(a.go.view)}return}
   if(el=q("[data-view]")){closeFloat();go(el.dataset.view);return}
   if(el=q("[data-open]")){openSdb(el.dataset.open);return}
   if(el=q("[data-pb]")){openSdb(el.dataset.pb);return}
