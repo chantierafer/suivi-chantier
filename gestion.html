@@ -1194,7 +1194,7 @@ const DUNITS=["u","ml","m²","m³","forfait","h","jour","semaine","kWc"];
 const CTX=[["logement","Logement de plus de 2 ans",0],["pro","Locaux pro ou logement neuf",1],["st","Sous-traitance (autoliquidation)",2]];
 const TXS=[[0,"0 %"],[0.055,"5,5 %"],[0.1,"10 %"],[0.2,"20 %"]];
 const MODES=["Virement","Chèque","Espèces","Carte bancaire","Autre"];
-const MENT_DEF={penalites:"Pénalités de retard : en cas de paiement après la date d'échéance, des pénalités sont exigibles de plein droit, au taux de trois fois le taux d'intérêt légal.",
+const MENT_DEF={penalites:"Pénalités de retard : en cas de paiement après la date d'échéance, des pénalités sont exigibles de plein droit, au taux d'intérêt légal.",
   indemnite:"Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement (professionnels) : 40 € (article D.441-5 du Code de commerce).",escompte:"Aucun escompte pour paiement anticipé."};
 let PAR={},LIBC=null,DVF={t:"all",st:"",cli:"",ch:"",an:"",q:""},DSEL=null,ED=null;
 const cts=v=>Math.round((Number(v)||0)*100);
@@ -1225,13 +1225,15 @@ function dInfo(d,all){const t=totDoc(d.lines);let lab="Brouillon",cls="neu",rest
   return{t,lab,cls,reste}}
 const dNum=d=>d.numero||(d.sdb?"Devis SDB (sans n°)":"Brouillon");
 // ---- numérotation : un compteur par type, sans trou, attribué à l'émission ----
-function fmtNum(k,n,date){const d=date&&isK(date)?PK(date):new Date();return `${DT[k].pre}-${d.getFullYear()}/${pad(d.getMonth()+1)}-${String(n).padStart(4,"0")}`}
-function maxUsed(k,all){let n=0;all.filter(d=>d.kind===k&&d.numero).forEach(d=>{const m=String(d.numero).match(/-(\d+)$/);if(m)n=Math.max(n,+m[1])});return n}
-async function lireCompteur(k,all){const mx=maxUsed(k,all)+1;
+// factures et avoirs : une seule série FAC-AAAA-NNNN (reprise de la série existante, dernier numéro vu 0023) ; devis : DEV-AAAA/MM-NNNN
+const serie=k=>k==="avoir"?"facture":k,SERIE_DEPART={facture:24};
+function fmtNum(k,n,date){const d=date&&isK(date)?PK(date):new Date();return serie(k)==="facture"?`FAC-${d.getFullYear()}-${String(n).padStart(4,"0")}`:`${DT[k].pre}-${d.getFullYear()}/${pad(d.getMonth()+1)}-${String(n).padStart(4,"0")}`}
+function maxUsed(k,all){let n=0;all.filter(d=>serie(d.kind)===serie(k)&&d.numero).forEach(d=>{const m=String(d.numero).match(/-(\d+)$/);if(m)n=Math.max(n,+m[1])});return n}
+async function lireCompteur(k,all){k=serie(k);const mx=Math.max(maxUsed(k,all)+1,SERIE_DEPART[k]||1);
   if(k==="devis"){const {data}=await C.from("parametres").select("cle,valeur").in("cle",["devis_compteur","devis_reglages"]);const m={};(data||[]).forEach(p=>m[p.cle]=p.valeur);
     return Math.max(Number(m.devis_compteur)||0,Number((m.devis_reglages||{}).numeroDepart)||1,mx)}
   const {data}=await C.from("gestion").select("data").eq("type","compteur").eq("id",k).maybeSingle();return Math.max(Number(data&&data.data&&data.data.n)||1,mx)}
-async function ecrireCompteur(k,n){if(k==="devis"){const {error}=await C.from("parametres").upsert({cle:"devis_compteur",valeur:n,maj_le:new Date().toISOString()});return !error}
+async function ecrireCompteur(k,n){k=serie(k);if(k==="devis"){const {error}=await C.from("parametres").upsert({cle:"devis_compteur",valeur:n,maj_le:new Date().toISOString()});return !error}
   const {error}=await C.from("gestion").upsert({type:"compteur",id:k,data:{n}});return !error}
 // ---- rendu (appli SDB dans le cadre caché) ----
 let RQ=[],RW={},RID=0,RC={};
@@ -1280,7 +1282,7 @@ function vDevis(){if(GOK===false)return baseManquante("Devis et factures");
     ${rows.length?rows.map(d=>{const i=I.get(d.id),c=CHI[d.chId];return `<tr class="clk${d.id===DSEL?" sel":""}" data-dvsel="${esc(d.id)}" tabindex="0"><td><b>${d.numero?esc(d.numero):`<span class="ph dim">${d.sdb?"devis SDB sans n°":"n° à l'émission"}</span>`}</b>${d.sdb?' <span class="pill neu">SDB</span>':""}</td>
       <td class="wrap">${esc((d.client||{}).nom||"")||'<span class="ph dim">client à choisir</span>'}</td><td>${c?esc(c.code):"—"}</td><td>${fkl(d.date)}</td><td><span class="pill ${i.cls}">${esc(i.lab)}</span></td><td class="num">${m2(i.t.ht)}</td><td class="num">${i.reste==null?"—":m2(i.reste)}</td></tr>`}).join(""):`<tr><td colspan="7" class="empty">Aucun document pour ces filtres.</td></tr>`}
     </tbody></table></div></div>
-    <aside class="dvside" id="dvside">${sel?dvPanel(sel,all,I.get(sel.id)):`<div class="box"><b>Numérotation</b><div class="note">${["devis","facture","avoir"].map(k=>`${DT[k].pl} ${DT[k].pre}-AAAA/MM-NNNN : ${maxUsed(k,all)?"dernier "+maxUsed(k,all):"aucun"}`).join("<br>")}</div><p class="note">Le numéro est donné à l'émission, dans l'ordre. Un document numéroté n'est plus modifiable : on duplique, ou on émet un avoir.</p></div>`}</aside></div>`}
+    <aside class="dvside" id="dvside">${sel?dvPanel(sel,all,I.get(sel.id)):`<div class="box"><b>Numérotation</b><div class="note">Devis DEV-AAAA/MM-NNNN : ${maxUsed("devis",all)?"dernier "+maxUsed("devis",all):"aucun"}<br>Factures et avoirs FAC-AAAA-NNNN : ${maxUsed("facture",all)?"dernier "+maxUsed("facture",all):"aucun"}</div><p class="note">Le numéro est donné à l'émission, dans l'ordre. Un document numéroté n'est plus modifiable : on duplique, ou on émet un avoir.</p></div>`}</aside></div>`}
 function dvPanel(d,all,i){const kids=all.filter(x=>x.parent===d.id),par=d.parent&&docById(d.parent,all),fr=d.kind==="facture"&&d.numero,lock=!!d.numero||d.sdb;
   return `<div class="box dvpanel"><div class="row2" style="justify-content:space-between"><b>${esc(dNum(d))}</b><span class="pill ${i.cls}">${esc(i.lab)}</span></div>
     <div class="note">${esc((d.client||{}).nom||"Client à choisir")}${CHI[d.chId]?" · "+esc(CHI[d.chId].code):""} · ${fkl(d.date)}</div>
@@ -1380,20 +1382,20 @@ async function dvEmettre2(id,d0){if(emitting)return;emitting=true;try{
     if(k==="facture"&&!d.echeance)d.echeance=addK(d.date,0);
     let pdfOk=false;try{const r=await rendreDoc(d,true),path=`gestion/doc/${d.date.slice(0,4)}/${slug(numero)}.pdf`;const {error}=await C.storage.from("fichiers").upload(path,r.pdf,{upsert:true,contentType:"application/pdf"});if(error)throw error;d.pdf=path;pdfOk=true}catch(e){console.warn("PDF non enregistré",e)}
     const frais=await lireCompteur(k,all);if(frais!==n){toast("Un autre document vient d'être numéroté : réessaie.");return}
-    if(k==="devis"){if(!await gput("doc",id,d))return;await ecrireCompteur("devis",n+1)}else if(!await gputMany([{type:"compteur",id:k,data:{n:n+1}},{type:"doc",id,data:d}]))return;
+    if(k==="devis"){if(!await gput("doc",id,d))return;await ecrireCompteur("devis",n+1)}else if(!await gputMany([{type:"compteur",id:serie(k),data:{n:n+1}},{type:"doc",id,data:d}]))return;
     if(ED&&ED.id===id){ED.d=d;ED.ro=true;edRender()}toast(`${numero} émis.`+(pdfOk?"":" Le PDF n'a pas pu être enregistré : bouton « Enregistrer le PDF ».")); DSEL=id;RENDER()}
   finally{emitting=false}}
 async function dvRegen(id){const d=gid("doc",id);if(!d||!d.numero)return;try{const r=await rendreDoc({...d,id},true),path=`gestion/doc/${String(d.date).slice(0,4)}/${slug(d.numero)}.pdf`;const {error}=await C.storage.from("fichiers").upload(path,r.pdf,{upsert:true,contentType:"application/pdf"});if(error)throw error;await gput("doc",id,{...d,pdf:path});toast("PDF enregistré.")}catch(e){toast("PDF impossible : "+e.message)}}
 // ---- réglages : numérotation et mentions ----
 function dvSettings(){const all=docsAll(),R=mentionsReg(),cf=(gid("reglage","docs")||{}).confirme;
   const p=openModal(`<h3>Numérotation et mentions</h3><div class="fgrp"><b>Prochain numéro</b>
-    ${["devis","facture","avoir"].map(k=>`<label>${DT[k].pl} · ${DT[k].pre}-AAAA/MM-NNNN (dernier utilisé : ${maxUsed(k,all)||"aucun"})<input type="number" min="${maxUsed(k,all)+1}" step="1" data-dvn="${k}" placeholder="chargement…"></label>`).join("")}
-    <span class="note">Un compteur par type, tous chantiers confondus, sans trou. On peut seulement avancer le compteur (pour reprendre une série existante), jamais reculer sous le dernier numéro utilisé. Format FAC et AV calqué sur DEV : ${PH("à confirmer")}</span></div>
+    ${["devis","facture"].map(k=>`<label>${k==="devis"?"Devis · DEV-AAAA/MM-NNNN":"Factures et avoirs (même série) · FAC-AAAA-NNNN"} (dernier utilisé : ${maxUsed(k,all)||"aucun"})<input type="number" min="${maxUsed(k,all)+1}" step="1" data-dvn="${k}" placeholder="chargement…"></label>`).join("")}
+    <span class="note">Un compteur par type, tous chantiers confondus, sans trou. On peut seulement avancer le compteur (pour reprendre une série existante), jamais reculer sous le dernier numéro utilisé. Série FAC reprise de la comptabilité existante (dernier numéro vu : FAC-2026-0023).</span></div>
   <div class="fgrp"><b>Mentions ajoutées aux factures</b><label>Pénalités de retard<textarea id="mn-pen" rows="2">${esc(R.penalites)}</textarea></label><label>Indemnité de recouvrement (clients professionnels)<textarea id="mn-ind" rows="2">${esc(R.indemnite)}</textarea></label><label>Escompte<textarea id="mn-esc" rows="1">${esc(R.escompte)}</textarea></label>
     <label class="chk"><input type="checkbox" id="mn-ok"${cf?" checked":""}> <span>J'ai vérifié ces mentions (obligatoire avant d'émettre une facture)<small class="note">Textes proposés d'après les règles courantes ; à valider avec ton comptable.</small></span></label></div>
   <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="mn-save">Enregistrer</button></div>`);
-  Promise.all(["devis","facture","avoir"].map(k=>lireCompteur(k,all))).then(v=>["devis","facture","avoir"].forEach((k,i)=>{const e=p.querySelector(`[data-dvn="${k}"]`);if(e){e.value=v[i];e.dataset.cur=v[i]}}));
-  p.querySelector("#mn-save").onclick=async()=>{for(const k of ["devis","facture","avoir"]){const e=p.querySelector(`[data-dvn="${k}"]`),v=Math.floor(num(e.value)),cur=+e.dataset.cur;
+  Promise.all(["devis","facture"].map(k=>lireCompteur(k,all))).then(v=>["devis","facture"].forEach((k,i)=>{const e=p.querySelector(`[data-dvn="${k}"]`);if(e){e.value=v[i];e.dataset.cur=v[i]}}));
+  p.querySelector("#mn-save").onclick=async()=>{for(const k of ["devis","facture"]){const e=p.querySelector(`[data-dvn="${k}"]`),v=Math.floor(num(e.value)),cur=+e.dataset.cur;
       if(!e.dataset.cur||v===cur)continue;if(!(v>=maxUsed(k,all)+1)){toast(`${DT[k].pl} : le prochain numéro doit dépasser ${maxUsed(k,all)}.`);return}if(!await ecrireCompteur(k,v)){toast("Compteur pas enregistré.");return}}
     const v=s=>p.querySelector(s).value.trim();closeFloat();await gput("reglage","docs",{penalites:v("#mn-pen"),indemnite:v("#mn-ind"),escompte:v("#mn-esc"),confirme:p.querySelector("#mn-ok").checked});toast("Réglages enregistrés.")}}
 // ---- grand aperçu ----
