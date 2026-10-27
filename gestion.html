@@ -16,7 +16,8 @@
 <style>
 /* Gestion AFER : espace AFER (maquette V4 validée le 21/10/2026).
    Menu à gauche (en haut sur téléphone), bandeau d'alertes permanent ; « Chantiers SDB » affiche l'appli SDB (index.html?sdb=1) dans un cadre.
-   V12 (26/10/2026) : planning, rentabilité, personnel et matériel (copie des 2 Excel SharePoint), clients, synchronisation. */
+   V12 (26/10/2026) : planning, rentabilité, personnel et matériel (copie des 2 Excel SharePoint), clients, synchronisation.
+   V14 (27/10/2026) : comptabilité (import et export du FEC, journaux, grand livre, balance, TVA, bilan et résultat, clôture). */
 :root{
   --turq:#2FBFBF; --turq-ink:#178C8C; --turq-soft:#E3F6F6; --anth:#2E3238;
   --bg:#F3F6F6; --surface:#FFFFFF; --surface-2:#F7FAFA; --line:#D3DEDE; --line-soft:#E6EEEE;
@@ -414,6 +415,39 @@ tr.clk.sel td{background:var(--turq-soft)}
 .dvbigbody{flex:1;overflow-y:auto;padding:14px;max-width:860px;width:100%;margin:0 auto}
 .dvissues{margin:0;padding-left:18px;display:grid;gap:4px}.dvissues li.bad{color:var(--bad);font-weight:600}
 @media (max-width:900px){.dvbody{flex-direction:column;overflow-y:auto}.dvleft,.dvright{max-height:none;overflow:visible;flex:none;width:100%}.dvedit .grid3{grid-template-columns:1fr 1fr}.dvside{position:static;max-width:none}}
+/* comptabilité (V14, 27/10/2026) */
+:root{--cp2:#8FA3AD}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--cp2:#5E6E77}}
+:root[data-theme="dark"]{--cp2:#5E6E77}
+.seg.yr button{display:flex;flex-direction:column;line-height:1.15;padding:5px 12px}
+.seg.yr button small{font-size:10.5px;font-weight:500;color:var(--muted)}
+.seg.yr button[aria-pressed="true"] small{color:#0E2A2A}
+.cptabs{flex-wrap:nowrap;overflow-x:auto}.cptabs .tab{white-space:nowrap}
+.cpk{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.cpk .kpi .v{font-size:26px}.cpk .kpi .s{font-size:11.5px;color:var(--muted);margin-top:2px}
+.kpi.warn .v{color:var(--warn)}
+.cpg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.cpg.w{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+.cpg>.box{min-width:0}
+.cplist{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.cplist li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;font-size:13px}
+.cplist li>.pill{margin-top:2px}
+.cplist button.pill{cursor:pointer;border:0;font-family:var(--body);min-width:58px}
+tr.cls td{background:var(--surface-2);font-weight:700}
+tr.tot td{font-weight:700;border-top:2px solid var(--line)}
+tr.ne td{border-top:1px solid var(--line)}
+.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:12px}
+.src{font-size:11.5px;color:var(--muted);margin:0}.src::before{content:"Source : ";font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.cpbar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.cpbar h3{margin-right:4px}.cpbar .sp{flex:1}
+.cpbar select,.cpbar input[type=search]{font:13px var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-width:0;max-width:100%}
+.cpbar input[type=search]{min-width:200px}
+.cpscroll{max-height:620px;overflow:auto}.cpscroll thead th{position:sticky;top:0;z-index:1}
+.empty b{display:block;font-family:var(--display);font-size:20px;font-weight:600;color:var(--fg)}
+.empty p{max-width:70ch;margin:8px auto 12px}
+@media (max-width:860px){.cpg,.cpg.w{grid-template-columns:minmax(0,1fr)}.cpk{grid-template-columns:repeat(2,minmax(0,1fr))}.cpbar input[type=search]{min-width:0;flex:1 1 100%}}
 </style>
 </head>
 <body>
@@ -429,6 +463,8 @@ tr.clk.sel td{background:var(--turq-soft)}
     <button class="nav" data-view="renta">Rentabilité</button>
     <div class="grp">Documents</div>
     <button class="nav" data-view="devis">Devis et factures</button>
+    <div class="grp">Finance</div>
+    <button class="nav" data-view="compta">Comptabilité</button>
     <div class="grp">Bases</div>
     <button class="nav" data-view="res">Personnel et matériel</button>
     <button class="nav" data-view="cli">Clients</button>
@@ -570,7 +606,8 @@ async function pull(){
     ROWS=chs;EL={};els.forEach(e=>{const c=EL[e.chantier_id]=EL[e.chantier_id]||{};(c[e.type]=c[e.type]||{})[e.id]=e.data});online=true}
   catch(e){console.warn("Lecture impossible",e);online=false}
   // gestion : table créée par supabase/complement-v12-gestion.sql ; sans elle, les nouvelles fenêtres l'expliquent et le tableau de bord marche comme avant
-  if(online)try{const rows=await fetchAll(()=>C.from("gestion").select("type,id,data,maj_le").order("type").order("id"));
+  // les écritures comptables (cpt_fec) sont lues à l'ouverture de la fenêtre Comptabilité, pas à chaque passage
+  if(online)try{const rows=await fetchAll(()=>C.from("gestion").select("type,id,data,maj_le").neq("type","cpt_fec").order("type").order("id"));
       const g={};rows.forEach(r=>{(g[r.type]=g[r.type]||{})[r.id]=r.type==="excel_ecrire"?{...r.data,_maj:r.maj_le}:r.data});G=g;GOK=true;GERR=""}
     catch(e){if(/fetch|network/i.test(e.message||""))online=false;else{GOK=false;GERR=e.message||String(e);G={}}}
   // bibliothèque d'ouvrages (BPU SDB + catalogue) et compteur de devis, pour la fenêtre Devis et factures
@@ -734,6 +771,7 @@ function alertes(){const t=today(),L=[];
   CH.filter(x=>x.pbs.length).forEach(x=>L.push({lvl:"bad",t:`${x.nom} : ${plural(x.pbs.length,"problème à traiter","problèmes à traiter")}`,go:{pb:x.id}}));
   const av=resList(r=>/vérifier/i.test(r.d.Statut||""));if(av.length)L.push({lvl:"warn",t:plural(av.length,"fiche à vérifier","fiches à vérifier")+" (statut « À vérifier »)",go:{res:av[0].id}});
   if(GOK){const all=docsAll(),ech=all.filter(d=>d.kind==="facture"&&d.numero&&dInfo(d,all).cls==="bad");if(ech.length)L.push({lvl:"bad",t:plural(ech.length,"facture échue à relancer","factures échues à relancer"),go:{view:"devis"}})}
+  if(GOK){const xs=Object.entries(gt("cpt_ex")).sort((a,b)=>b[0].localeCompare(a[0]));if(xs.length&&xs[0][1].resume&&xs[0][1].resume.moitieCapital)L.push({lvl:"bad",t:`Capitaux propres sous la moitié du capital (comptes ${xs[0][0]})`,go:{view:"compta"}})}
   const err=Object.values(gt("excel_ecrire")).filter(x=>x.erreur);if(err.length)L.push({lvl:"bad",t:plural(err.length,"modification n'est pas partie","modifications ne sont pas parties")+" dans l'Excel",go:{view:"sync"}});
   return L.sort((a,b)=>(a.lvl==="bad"?0:1)-(b.lvl==="bad"?0:1))}
 let ALS=[];
@@ -1506,8 +1544,576 @@ document.addEventListener("input",e=>{if(e.target.dataset&&e.target.dataset.dvq!
 document.addEventListener("dblclick",e=>{const r=e.target.closest("[data-dvsel]");if(r&&r.tagName==="TR"){const d=docById(r.dataset.dvsel);if(d&&d.sdb)openSdb(d.chId);else if(d)edOpen(d.id)}});
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches&&e.target.matches("tr[data-dvsel]"))e.target.click()});
 
-const VIEWS={dash:vDash,plan:vPlan,renta:vRenta,devis:vDevis,res:vRes,cli:vCli,sync:vSync};
-const TITRES={dash:"Tableau de bord",plan:"Planning global",renta:"Rentabilité",devis:"Devis et factures",res:"Personnel et matériel",cli:"Clients",sync:"Synchronisation"};
+/* ---------- 7. Comptabilité (V14, 27/10/2026) ----------
+   Format pivot : le FEC (art. A47 A-1 du LPF). Un exercice importé = une ligne gestion « cpt_ex » (id = année de clôture : dates, fichier, version, résumé)
+   et ses écritures en paquets « cpt_fec » (id « année:version:NNN », 500 lignes chacun), lus seulement quand la fenêtre en a besoin.
+   Paramètres de la société : « cpt_reg/param » ; cases de clôture cochées : « cpt_reg/clo:AAAA ». Aucune donnée comptable dans ce fichier (dépôt public).
+   Moteur entre CM-DEBUT et CM-FIN : copie exacte de comptabilite/compta-moteur.js (vérifié sur la liasse 2025, tests/test_compta_moteur.js). */
+/*CM-DEBUT*/
+/* Moteur comptable AFER (fenêtre Comptabilité de gestion.html), commun aux maquettes A, B et C (27/10/2026).
+   Format pivot : le FEC (art. A47 A-1 du LPF). Import des FEC du cabinet, calcul de la balance, du grand livre,
+   du bilan (2050-2051), du compte de résultat (2052-2053), des soldes de gestion et de la TVA, export du FEC.
+   Plan comptable 2025 : les produits de cession (757) restent en « autres produits », comme dans la liasse AFER 2025.
+   Aucun chiffre n'est estimé : un poste sans compte vaut 0, un contrôle qui échoue est signalé, jamais corrigé. */
+(function(root){
+"use strict";
+const COLS=["JournalCode","JournalLib","EcritureNum","EcritureDate","CompteNum","CompteLib","CompAuxNum","CompAuxLib","PieceRef","PieceDate","EcritureLib","Debit","Credit","EcritureLet","DateLet","ValidDate","Montantdevise","Idevise"];
+const r2=v=>Math.round(v*100)/100;
+const num=v=>{if(v==null||v==="")return 0;const n=Number(String(v).replace(/\s/g,"").replace(",","."));return isFinite(n)?n:NaN};
+const isD=s=>/^\d{8}$/.test(s||"");
+const toK=s=>isD(s)?s.slice(0,4)+"-"+s.slice(4,6)+"-"+s.slice(6):"";
+
+/* ---------- import ---------- */
+// texte : contenu du fichier déjà décodé (le FEC du cabinet est en ISO-8859-1 : TextDecoder("latin1")).
+function parseFEC(texte){
+  const lignes=String(texte).replace(/^﻿/,"").split(/\r?\n/).filter(l=>l.trim()!=="");
+  if(!lignes.length)return {cols:[],lignes:[],erreurs:["Fichier vide"]};
+  const sep=lignes[0].includes("\t")?"\t":"|";
+  const cols=lignes[0].split(sep).map(c=>c.trim());
+  const manque=COLS.filter(c=>!cols.some(x=>x.toLowerCase()===c.toLowerCase()));
+  const idx=Object.fromEntries(cols.map((c,i)=>[c.toLowerCase(),i]));
+  const get=(v,c)=>(v[idx[c.toLowerCase()]]??"").trim();
+  const out=[],err=[];
+  if(manque.length)err.push("Colonnes obligatoires absentes : "+manque.join(", "));
+  lignes.slice(1).forEach((l,i)=>{const v=l.split(sep);
+    const d=num(get(v,"Debit")),c=num(get(v,"Credit"));
+    if(isNaN(d)||isNaN(c))err.push(`Ligne ${i+2} : montant illisible`);
+    out.push({j:get(v,"JournalCode"),jl:get(v,"JournalLib"),n:get(v,"EcritureNum"),dt:get(v,"EcritureDate"),
+      c:get(v,"CompteNum"),cl:get(v,"CompteLib"),ax:get(v,"CompAuxNum"),axl:get(v,"CompAuxLib"),
+      pr:get(v,"PieceRef"),pd:get(v,"PieceDate"),lib:get(v,"EcritureLib"),d:r2(d||0),k:r2(c||0),
+      let:get(v,"EcritureLet"),dlet:get(v,"DateLet"),val:get(v,"ValidDate"),md:get(v,"Montantdevise"),dev:get(v,"Idevise")});
+  });
+  return {cols,lignes:out,erreurs:err};
+}
+
+/* ---------- contrôles (sur un FEC importé ou sur les écritures de l'appli) ---------- */
+function controler(L,ex){ // ex = {debut:"AAAAMMJJ", fin:"AAAAMMJJ"} facultatif
+  const pb=[],par=new Map();
+  L.forEach(l=>{if(!par.has(l.n))par.set(l.n,[]);par.get(l.n).push(l)});
+  let td=0,tk=0;L.forEach(l=>{td+=l.d;tk+=l.k});
+  if(Math.abs(td-tk)>0.005)pb.push({niv:"bad",t:`Total débit ${r2(td)} ≠ total crédit ${r2(tk)}`});
+  for(const [n,ls] of par){
+    const s=ls.reduce((t,l)=>t+l.d-l.k,0);
+    if(Math.abs(s)>0.005)pb.push({niv:"bad",t:`Écriture ${n} déséquilibrée (${r2(s)})`});
+    if(new Set(ls.map(l=>l.dt)).size>1)pb.push({niv:"warn",t:`Écriture ${n} sur plusieurs dates`});
+    if(new Set(ls.map(l=>l.j)).size>1)pb.push({niv:"warn",t:`Écriture ${n} sur plusieurs journaux`});
+  }
+  L.forEach((l,i)=>{
+    if(!isD(l.dt))pb.push({niv:"bad",t:`Ligne ${i+2} : date d'écriture invalide`});
+    else if(ex&&(l.dt<ex.debut||l.dt>ex.fin))pb.push({niv:"warn",t:`Ligne ${i+2} : date ${toK(l.dt)} hors exercice`});
+    if(!/^\d{3,}/.test(l.c))pb.push({niv:"bad",t:`Ligne ${i+2} : numéro de compte invalide`});
+    if(l.d&&l.k)pb.push({niv:"warn",t:`Ligne ${i+2} : débit et crédit sur la même ligne`});
+    if(!l.pr)pb.push({niv:"warn",t:`Ligne ${i+2} : référence de pièce vide`});
+    if(/^4(01|11)/.test(l.c)&&!l.ax)pb.push({niv:"warn",t:`Ligne ${i+2} : compte de tiers sans compte auxiliaire`});
+  });
+  return pb;
+}
+
+/* ---------- balance, grand livre ---------- */
+function balance(L,au){ // au = "AAAAMMJJ" facultatif (balance à une date)
+  const m=new Map();
+  for(const l of L){if(au&&l.dt>au)continue;
+    const a=m.get(l.c)||{c:l.c,l:l.cl,d:0,k:0};a.d+=l.d;a.k+=l.k;if(!a.l)a.l=l.cl;m.set(l.c,a)}
+  return [...m.values()].map(a=>({...a,d:r2(a.d),k:r2(a.k),s:r2(a.d-a.k)})).sort((a,b)=>a.c.localeCompare(b.c));
+}
+function balanceAux(L,racine){ // racine "411" ou "401"
+  const m=new Map();
+  for(const l of L){if(!l.c.startsWith(racine))continue;const k=l.ax||l.c;
+    const a=m.get(k)||{c:k,l:l.axl||l.cl,d:0,k:0,nl:0,nlet:0};a.d+=l.d;a.k+=l.k;a.nl++;if(l.let)a.nlet++;m.set(k,a)}
+  return [...m.values()].map(a=>({...a,d:r2(a.d),k:r2(a.k),s:r2(a.d-a.k)})).sort((a,b)=>a.c.localeCompare(b.c));
+}
+function grandLivre(L,f){ // f(ligne) → booléen, ex. l=>l.c==="6132000" ou l=>l.ax==="4110003"
+  let s=0;return L.filter(f).sort((a,b)=>a.dt.localeCompare(b.dt)||a.n.localeCompare(b.n)).map(l=>({...l,solde:r2(s+=l.d-l.k)}));
+}
+function journaux(L){
+  const m=new Map();
+  for(const l of L){const j=m.get(l.j)||{j:l.j,l:l.jl,ecr:new Set(),nl:0,d:0,k:0};j.ecr.add(l.n);j.nl++;j.d+=l.d;j.k+=l.k;m.set(l.j,j)}
+  return [...m.values()].map(j=>({j:j.j,l:j.l,ne:j.ecr.size,nl:j.nl,d:r2(j.d),k:r2(j.k),eq:Math.abs(j.d-j.k)<0.005}));
+}
+
+/* ---------- états de synthèse ---------- */
+// Une règle = liste de racines de comptes ; "-" devant exclut. sens : "D" solde débiteur, "C" solde créditeur.
+const has=(c,r)=>r.some(x=>x[0]!=="-"&&c.startsWith(x))&&!r.some(x=>x[0]==="-"&&c.startsWith(x.slice(1)));
+const BILAN_ACTIF=[ // [code liasse, libellé, racines brut, racines amortissements/dépréciations]
+  ["AB","Frais d'établissement",["201"],["2801"]],
+  ["CX","Frais de développement",["203"],["2803"]],
+  ["AF","Concessions, brevets et droits similaires",["205"],["2805","2905"]],
+  ["AH","Fonds commercial",["206","207"],["2807","2906","2907"]],
+  ["AJ","Autres immobilisations incorporelles",["208"],["2808","2908"]],
+  ["AL","Avances et acomptes sur immobilisations incorporelles",["237"],[]],
+  ["AN","Terrains",["211","212"],["2811","2812","2911"]],
+  ["AP","Constructions",["213","214"],["2813","2814"]],
+  ["AR","Installations techniques, matériel et outillage industriels",["215"],["2815"]],
+  ["AT","Autres immobilisations corporelles",["218"],["2818"]],
+  ["AV","Immobilisations en cours",["231"],["2931"]],
+  ["AX","Avances et acomptes",["238"],[]],
+  ["CU","Autres participations",["261","266"],["2961","2966"]],
+  ["BB","Créances rattachées à des participations",["267","268"],["2967","2968"]],
+  ["BD","Autres titres immobilisés",["271","272","273"],["2971","2972"]],
+  ["BF","Prêts",["274"],["2974"]],
+  ["BH","Autres immobilisations financières",["275","276"],["2975","2976"]],
+  ["BL","Matières premières, approvisionnements",["31","32"],["391","392"]],
+  ["BN","En cours de production de biens",["33"],["393"]],
+  ["BP","En cours de production de services",["34"],["394"]],
+  ["BR","Produits intermédiaires et finis",["35"],["395"]],
+  ["BT","Marchandises",["37"],["397"]],
+  ["BV","Avances et acomptes versés sur commandes",["4091"],[]],
+  ["BX","Clients et comptes rattachés",["411","413","416","418"],["491"]],
+  ["BZ","Autres créances",["40","42","43","44","45","46","47","-4091","-476","-477"],["495","496"]],
+  ["CB","Capital souscrit et appelé, non versé",["4562"],[]],
+  ["CD","Valeurs mobilières de placement",["50"],["59"]],
+  ["CF","Disponibilités",["51","53","54"],[]],
+  ["CH","Charges constatées d'avance",["486"],[]],
+  ["CW","Frais d'émission d'emprunt à étaler",["4816"],[]],
+  ["CM","Primes de remboursement des obligations",["169"],[]],
+  ["CN","Écarts de conversion actif",["476"],[]]];
+const BILAN_PASSIF=[
+  ["DA","Capital social ou individuel",["101","108"]],
+  ["DB","Primes d'émission, de fusion, d'apport",["104"]],
+  ["DC","Écarts de réévaluation",["105"]],
+  ["DD","Réserve légale",["1061"]],
+  ["DE","Réserves statutaires ou contractuelles",["1063"]],
+  ["DF","Réserves réglementées",["1062","1064"]],
+  ["DG","Autres réserves",["1068"]],
+  ["DH","Report à nouveau",["11"]],
+  ["DI","Résultat de l'exercice",["12"]],
+  ["DJ","Subventions d'investissement",["13"]],
+  ["DK","Provisions réglementées",["14"]],
+  ["DP","Provisions pour risques",["151"]],
+  ["DQ","Provisions pour charges",["15","-151"]],
+  ["DS","Emprunts obligataires convertibles",["161"]],
+  ["DT","Autres emprunts obligataires",["163"]],
+  ["DU","Emprunts et dettes auprès des établissements de crédit",["164","51","519"]],
+  ["DV","Emprunts et dettes financières divers",["165","166","1675","168","17","426","45","-4562"]],
+  ["DW","Avances et acomptes reçus sur commandes en cours",["4191","411","413","416","418"]],
+  ["DX","Dettes fournisseurs et comptes rattachés",["401","403","4081","4088"]],
+  ["DY","Dettes fiscales et sociales",["42","43","44","-426"]],
+  ["DZ","Dettes sur immobilisations et comptes rattachés",["404","405","4084"]],
+  ["EA","Autres dettes",["419","46","509","-4191"]],
+  ["EB","Produits constatés d'avance",["487"]],
+  ["ED","Écarts de conversion passif",["477"]]];
+const CPTE_RESULTAT=[ // [code, libellé, racines, sens : P produit, C charge, groupe]
+  ["FC","Ventes de marchandises",["707","7097"],"P","expl"],
+  ["FF","Production vendue (biens)",["701","702","703","7091","7092","7093"],"P","expl"],
+  ["FI","Production vendue (services)",["704","705","706","708","7094","7095","7096","7098"],"P","expl"],
+  ["FM","Production stockée",["713"],"P","expl"],
+  ["FN","Production immobilisée",["72"],"P","expl"],
+  ["FO","Subventions d'exploitation",["74"],"P","expl"],
+  ["FP","Reprises sur amortissements et provisions, transferts de charges",["781","791"],"P","expl"],
+  ["FQ","Autres produits",["75"],"P","expl"],
+  ["FS","Achats de marchandises",["607","6097"],"C","expl"],
+  ["FT","Variation de stock (marchandises)",["6037"],"C","expl"],
+  ["FU","Achats de matières premières et autres approvisionnements",["601","602","6091","6092"],"C","expl"],
+  ["FV","Variation de stock (matières premières et approvisionnements)",["6031","6032"],"C","expl"],
+  ["FW","Autres achats et charges externes",["604","605","606","6094","6095","6096","6098","61","62"],"C","expl"],
+  ["FX","Impôts, taxes et versements assimilés",["63"],"C","expl"],
+  ["FY","Salaires et traitements",["641","644","648"],"C","expl"],
+  ["FZ","Charges sociales",["645","646","647"],"C","expl"],
+  ["GA","Dotations aux amortissements sur immobilisations",["6811","6812"],"C","expl"],
+  ["GB","Dotations aux provisions sur immobilisations",["6816"],"C","expl"],
+  ["GC","Dotations aux provisions sur actif circulant",["6817"],"C","expl"],
+  ["GD","Dotations aux provisions pour risques et charges",["6815"],"C","expl"],
+  ["GE","Autres charges",["65"],"C","expl"],
+  ["GP","Produits financiers",["76","786","796"],"P","fin"],
+  ["GU","Charges financières",["66","686"],"C","fin"],
+  ["HD","Produits exceptionnels",["77","787","797"],"P","exc"],
+  ["HH","Charges exceptionnelles",["67","687"],"C","exc"],
+  ["HJ","Participation des salariés",["691"],"C","is"],
+  ["HK","Impôts sur les bénéfices",["695","696","697","698","699"],"C","is"]];
+const ACTIF_PAR_TIERS=new Set(["BX","BZ"]),PASSIF_PAR_TIERS=new Set(["DW","DX","EA"]);
+
+function etats(L,au){
+  const B=balance(L,au);
+  // Les comptes de tiers se classent compte auxiliaire par compte auxiliaire (un client créditeur va au passif, en DW).
+  const soldes=[];
+  const tiers=new Map();
+  for(const l of L){if(au&&l.dt>au)continue;if(/^4(01|11)/.test(l.c)&&l.ax){const k=l.c+"|"+l.ax;tiers.set(k,(tiers.get(k)||0)+l.d-l.k)}}
+  const avecAux=new Set([...tiers.keys()].map(k=>k.split("|")[0]));
+  for(const a of B){if(a.c[0]>="6")continue;
+    if(avecAux.has(a.c)){for(const [k,s] of tiers)if(k.startsWith(a.c+"|"))soldes.push({c:a.c,s:r2(s)})}
+    else soldes.push({c:a.c,s:a.s})}
+  const res=r2(-B.filter(a=>a.c[0]==="6"||a.c[0]==="7").reduce((t,a)=>t+a.s,0));
+  const pris=new Set();
+  const actif=BILAN_ACTIF.map(([code,lib,rb,ra])=>{
+    let brut=0,amo=0;
+    soldes.forEach((x,i)=>{
+      if(has(x.c,rb)&&x.s>0&&!x.c.startsWith("28")&&!x.c.startsWith("29")&&!x.c.startsWith("39")&&!x.c.startsWith("49")&&!x.c.startsWith("59")){brut+=x.s;pris.add(i)}
+      if(ra.length&&has(x.c,ra)){amo+=-x.s;pris.add(i)}});
+    return {code,lib,brut:r2(brut),amo:r2(amo),net:r2(brut-amo)}}).filter(x=>x.brut||x.amo);
+  const passif=BILAN_PASSIF.map(([code,lib,rc])=>{
+    let v=0;
+    soldes.forEach((x,i)=>{if(pris.has(i))return;
+      if(!has(x.c,rc))return;
+      const capitaux=/^(10|11|12|13|14|15|16|17)/.test(x.c);
+      if(capitaux||x.s<0){v+=-x.s;pris.add(i)}});
+    if(code==="DI")v+=res; // exercice non soldé : le résultat vient des classes 6 et 7
+    return {code,lib,v:r2(v)}}).filter(x=>x.v);
+  const nonClasses=soldes.filter((x,i)=>!pris.has(i)&&Math.abs(x.s)>0.005);
+  const cr=CPTE_RESULTAT.map(([code,lib,rc,sens,grp])=>{
+    const v=B.filter(a=>has(a.c,rc)).reduce((t,a)=>t+a.s,0);
+    return {code,lib,sens,grp,v:r2(sens==="P"?-v:v)}}).filter(x=>x.v);
+  const tot=g=>cr.filter(x=>x.grp===g).reduce((t,x)=>t+(x.sens==="P"?x.v:-x.v),0);
+  const TA=r2(actif.reduce((t,x)=>t+x.net,0)),TP=r2(passif.reduce((t,x)=>t+x.v,0));
+  const CP=r2(passif.filter(x=>/^D[A-K]$/.test(x.code)).reduce((t,x)=>t+x.v,0));
+  const capital=(passif.find(x=>x.code==="DA")||{v:0}).v;
+  const resultat=(passif.find(x=>x.code==="DI")||{v:0}).v; // = classes 6 et 7, ou compte 12 une fois l'exercice soldé
+  return {actif,passif,cr,res:resultat,TA,TP,CP,capital,
+    resExpl:r2(tot("expl")),resFin:r2(tot("fin")),resExc:r2(tot("exc")),
+    ca:r2(cr.filter(x=>["FC","FF","FI"].includes(x.code)).reduce((t,x)=>t+x.v,0)),
+    equilibre:Math.abs(TA-TP)<0.01,nonClasses,
+    moitieCapital:capital>0&&CP<capital/2};
+}
+function sig(E){ // soldes intermédiaires de gestion, depuis etats()
+  const g=c=>(E.cr.find(x=>x.code===c)||{v:0}).v;
+  const marge=g("FC")-g("FS")-g("FT");
+  const prod=g("FF")+g("FI")+g("FM")+g("FN");
+  const va=marge+prod-g("FU")-g("FV")-g("FW");
+  const ebe=va+g("FO")-g("FX")-g("FY")-g("FZ");
+  return [["Chiffre d'affaires",E.ca],["Marge commerciale",marge],["Production de l'exercice",prod],["Valeur ajoutée",va],["Excédent brut d'exploitation",ebe],
+    ["Résultat d'exploitation",E.resExpl],["Résultat courant avant impôts",E.resExpl+E.resFin],["Résultat exceptionnel",E.resExc],["Résultat de l'exercice",E.res]].map(([l,v])=>({l,v:r2(v)}));
+}
+
+/* ---------- TVA ---------- */
+function tvaParMois(L){
+  const m={};
+  for(const l of L){const k=l.dt.slice(0,6);const x=m[k]||(m[k]={mois:k,collectee:0,deductible:0,autoliq:0});
+    if(l.c.startsWith("4457"))x.collectee+=l.k-l.d;
+    else if(l.c.startsWith("4452"))x.autoliq+=l.k-l.d;
+    else if(l.c.startsWith("44566")||l.c.startsWith("44562"))x.deductible+=l.d-l.k;}
+  return Object.values(m).sort((a,b)=>a.mois.localeCompare(b.mois)).map(x=>({...x,collectee:r2(x.collectee),deductible:r2(x.deductible),autoliq:r2(x.autoliq),net:r2(x.collectee+x.autoliq-x.deductible)}));
+}
+
+/* ---------- export ---------- */
+// Nom légal du fichier : SIREN + "FEC" + date de clôture AAAAMMJJ. Séparateur tabulation, montants à virgule.
+function exportFEC(L,siren,cloture){
+  const f=v=>(Math.round(v*100)/100).toFixed(2).replace(".",",");
+  const clean=s=>String(s??"").replace(/[\t\r\n|]/g," ");
+  const rows=[COLS.join("\t")].concat(L.map(l=>[l.j,l.jl,l.n,l.dt,l.c,l.cl,l.ax,l.axl,l.pr,l.pd,l.lib,f(l.d),f(l.k),l.let,l.dlet,l.val,l.md,l.dev].map(clean).join("\t")));
+  return {nom:`${String(siren).replace(/\s/g,"")}FEC${cloture}.txt`,texte:rows.join("\r\n")+"\r\n"};
+}
+
+const api={COLS,parseFEC,controler,balance,balanceAux,grandLivre,journaux,etats,sig,tvaParMois,exportFEC,BILAN_ACTIF,BILAN_PASSIF,CPTE_RESULTAT};
+if(typeof module!=="undefined"&&module.exports)module.exports=api;else root.CM=api;
+})(typeof window!=="undefined"?window:globalThis);
+/*CM-FIN*/
+// ---- état de la fenêtre et données ----
+const CPT={y:null,t:"synth",gl:"",glq:"",bal:"gen",au:"",jr:"",jm:"",jq:"",jall:false,L:{},load:{},calc:{}};
+const CP_TABS=[["synth","Synthèse"],["pieces","Pièces"],["jour","Journaux"],["gl","Grand livre"],["bal","Balance"],["bq","Banque"],["tva","TVA"],["etats","Bilan et résultat"],["clo","Clôture"]];
+const CP_CHUNK=500; // lignes d'écritures par ligne « cpt_fec »
+const cpEx=y=>gid("cpt_ex",String(y));
+const cpReg=()=>gid("cpt_reg","param")||{};
+const cpChunkId=(y,v,i)=>y+":"+v+":"+String(i).padStart(3,"0");
+const cpToArr=l=>[l.j,l.jl,l.n,l.dt,l.c,l.cl,l.ax,l.axl,l.pr,l.pd,l.lib,l.d,l.k,l.let,l.dlet,l.val,l.md,l.dev];
+const cpFromArr=a=>({j:a[0],jl:a[1],n:a[2],dt:a[3],c:a[4],cl:a[5],ax:a[6],axl:a[7],pr:a[8],pd:a[9],lib:a[10],d:a[11],k:a[12],let:a[13],dlet:a[14],val:a[15],md:a[16],dev:a[17]});
+const cpn=v=>v?v.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}):"";
+const cps=v=>((Math.round((v||0)*100)/100)||0).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const cp0=v=>((Math.round(v||0))||0).toLocaleString("fr-FR")+" €";
+const cpSd=s=>Math.abs(s)<0.005?"0,00":cpn(Math.abs(s))+(s>0?" D":" C"); // solde débiteur / créditeur
+const cpd=s=>/^\d{8}$/.test(s||"")?s.slice(6)+"/"+s.slice(4,6)+"/"+s.slice(0,4):esc(s||"");
+const cpk=s=>s.slice(0,4)+"-"+s.slice(4,6)+"-"+s.slice(6);
+const cpFin=ym=>ym+String(new Date(+ym.slice(0,4),+ym.slice(4,6),0).getDate()); // dernier jour du mois AAAAMM
+function cpMonths(a,b){const out=[];let y=+a.slice(0,4),m=+a.slice(4,6);const e=+b.slice(0,4)*12+ +b.slice(4,6);while(y*12+m<=e){out.push(y+String(m).padStart(2,"0"));if(++m>12){m=1;y++}}return out}
+const cpMl=(ym,an)=>MN[+ym.slice(4)-1]+(an?" "+ym.slice(0,4):"");
+const cpA=(E,c)=>(E.actif.find(x=>x.code===c)||{net:0}).net,cpP=(E,c)=>(E.passif.find(x=>x.code===c)||{v:0}).v,cpC=(E,c)=>(E.cr.find(x=>x.code===c)||{v:0}).v;
+const cpSum=(B,racines)=>B.filter(a=>racines.some(r=>a.c.startsWith(r))).reduce((s,a)=>s+a.s,0);
+function cpYears(){const s=new Set(Object.keys(gt("cpt_ex")).map(Number).filter(n=>n>2000)),y=new Date().getFullYear();s.add(y);s.add(y-1);return [...s].sort((a,b)=>a-b)}
+function cpDefaultYear(){const ys=Object.keys(gt("cpt_ex")).map(Number).filter(n=>n>2000);return ys.length?Math.max(...ys):new Date().getFullYear()}
+// Les écritures d'un exercice sont lues à la demande (une fois par version importée), jamais dans pull()
+function cpData(y){const ex=cpEx(y);if(!ex)return {ex:null};const c=CPT.L[y];
+  if(c&&c.ver===ex.ver)return c.err?{ex,err:c.err}:{ex,L:c.L};
+  const k=y+":"+ex.ver;if(!CPT.load[k])CPT.load[k]=cpLoad(y,ex).finally(()=>{delete CPT.load[k];if(VIEW==="compta")RENDER()});return {ex,loading:true}}
+async function cpLoad(y,ex){try{const ids=range(ex.nchunks||0).map(i=>cpChunkId(y,ex.ver,i)),rows=[];
+    for(let i=0;i<ids.length;i+=10){const {data,error}=await C.from("gestion").select("id,data").eq("type","cpt_fec").in("id",ids.slice(i,i+10));if(error)throw error;rows.push(...data)}
+    if(rows.length!==ids.length)throw new Error(`${plural(ids.length-rows.length,"paquet d'écritures manque","paquets d'écritures manquent")} dans la base : réimporte le FEC ${y}.`);
+    rows.sort((a,b)=>a.id.localeCompare(b.id));const L=[];rows.forEach(r=>(r.data.l||[]).forEach(a=>L.push(cpFromArr(a))));
+    if(L.length!==ex.nl)throw new Error(`${L.length} lignes lues sur ${ex.nl} : réimporte le FEC ${y}.`);
+    CPT.L[y]={ver:ex.ver,L};delete CPT.calc[y]}
+  catch(e){CPT.L[y]={ver:ex.ver,err:/fetch|network/i.test(e.message||"")?"Pas de connexion internet.":e.message||String(e)}}}
+function cpCalc(y,L){const ex=cpEx(y),c=CPT.calc[y];if(c&&c.ver===ex.ver&&c.L===L)return c;
+  const E=CM.etats(L);return CPT.calc[y]={ver:ex.ver,L,E,B:CM.balance(L),J:CM.journaux(L),T:CM.tvaParMois(L),S:CM.sig(E),pb:CM.controler(L,{debut:ex.debut,fin:ex.fin})}}
+
+// ---- import du FEC (fichier du cabinet ou d'un autre logiciel) ----
+function cpPick(){if(needBase())return;let i=$("#cp-file");if(!i){i=document.createElement("input");i.type="file";i.id="cp-file";i.accept=".txt,.csv,.tsv,text/plain";i.hidden=true;
+    i.onchange=()=>{const f=i.files[0];i.value="";if(f)cpRead(f)};document.body.appendChild(i)}i.click()}
+async function cpRead(f){if(f.size>80e6){toast("Fichier trop gros pour un FEC (plus de 80 Mo).");return}
+  const buf=await f.arrayBuffer();let txt;try{txt=new TextDecoder("utf-8",{fatal:true}).decode(buf)}catch(e){txt=new TextDecoder("windows-1252").decode(buf)} // FEC du cabinet : ISO-8859-1
+  const F=CM.parseFEC(txt),L=F.lignes;
+  if(F.erreurs.some(e=>/Colonnes|vide/.test(e))||!L.length){openModal(`<h3>Ce fichier n'est pas un FEC lisible</h3><div>${esc(F.erreurs[0]||"Aucune ligne d'écriture.")}</div><div class="note">Un FEC est un fichier texte (tabulation ou barre verticale) avec les 18 colonnes de l'article A47 A-1 du LPF : JournalCode, JournalLib, EcritureNum, EcritureDate, CompteNum… Le cabinet le fournit avec la liasse.</div><div class="acts"><button class="btn sm" data-x>Fermer</button></div>`);return}
+  const ds=L.map(l=>l.dt).filter(s=>/^\d{8}$/.test(s)).sort(),m=f.name.match(/(\d{9})FEC(\d{8})/i);
+  const fin=m?m[2]:ds.length?ds[ds.length-1].slice(0,4)+"1231":"",debut=ds.length&&ds[0].slice(0,4)===fin.slice(0,4)?fin.slice(0,4)+"0101":ds[0]||"";
+  const pb=CM.controler(L,{debut,fin}),bad=pb.filter(p=>p.niv==="bad"),warn=pb.length-bad.length,E=CM.etats(L),J=CM.journaux(L),td=L.reduce((s,l)=>s+l.d,0),tk=L.reduce((s,l)=>s+l.k,0);
+  const p=openModal(`<h3>Importer le FEC</h3><div class="note">${esc(f.name)} · ${plural(L.length,"ligne","lignes")} · ${plural(J.reduce((s,j)=>s+j.ne,0),"écriture","écritures")} · ${plural(J.length,"journal","journaux")} (${esc(J.map(j=>j.j).join(", "))})</div>
+    <div class="grid2"><label>Début de l'exercice<input type="date" id="cp-deb" value="${debut?cpk(debut):""}"></label><label>Clôture de l'exercice<input type="date" id="cp-fin" value="${fin?cpk(fin):""}"></label></div>
+    <div class="note" id="cp-rep"></div>
+    <div class="fgrp"><b>Totaux recalculés</b>
+      <div class="kv"><span>Total débit · total crédit</span><span>${cps(td)} · ${cps(tk)}</span></div>
+      <div class="kv"><span>Chiffre d'affaires (70)</span><span>${cps(E.ca)}</span></div>
+      <div class="kv"><span>Résultat</span><span>${cps(E.res)}</span></div>
+      <div class="kv"><span>Total du bilan (actif · passif)</span><span>${cps(E.TA)} · ${cps(E.TP)}</span></div></div>
+    <div class="fgrp"><b>Contrôles</b>${bad.length?`<div style="color:var(--bad);font-weight:600">${plural(bad.length,"anomalie bloquante","anomalies bloquantes")}</div><ul class="dvissues">${bad.slice(0,8).map(x=>`<li class="bad">${esc(x.t)}</li>`).join("")}${bad.length>8?`<li>… et ${bad.length-8} autres</li>`:""}</ul>`:'<div><span class="pill ok">Débit = crédit, chaque écriture équilibrée</span></div>'}
+      ${warn?`<div class="note">${plural(warn,"remarque","remarques")} sans effet sur les totaux (pièce vide, tiers sans compte auxiliaire…) : détail dans l'onglet Clôture.</div>`:""}</div>
+    <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm ${bad.length?"dang":"pri"}" id="cp-go">${bad.length?"Importer quand même":"Importer"}</button></div>`);
+  const rep=()=>{const y=(p.querySelector("#cp-fin").value||"").slice(0,4),o=y&&cpEx(y);p.querySelector("#cp-rep").innerHTML=!y?'<span class="ph">[À COMPLÉTER : date de clôture]</span>':o?`<span style="color:var(--warn);font-weight:600">Remplace le FEC ${esc(y)} importé le ${fdl(o.importeLe)} (${esc(o.fichier||"")}).</span>`:`Exercice ${esc(y)}.`};
+  rep();p.querySelector("#cp-fin").oninput=rep;
+  p.querySelector("#cp-go").onclick=async e=>{const deb=p.querySelector("#cp-deb").value.replace(/-/g,""),fn=p.querySelector("#cp-fin").value.replace(/-/g,"");
+    if(!/^\d{8}$/.test(deb)||!/^\d{8}$/.test(fn)||deb>fn){toast("Indique le début et la clôture de l'exercice.");return}
+    e.target.disabled=true;e.target.textContent="Enregistrement…";if(await cpSave(L,{debut:deb,fin:fn,fichier:f.name,siren:m?m[1]:""}))closeFloat();else{e.target.disabled=false;e.target.textContent="Réessayer"}}}
+async function cpSave(L,meta){const y=meta.fin.slice(0,4),old=cpEx(y),ver=Date.now().toString(36),n=Math.ceil(L.length/CP_CHUNK);
+  const rows=range(n).map(i=>({type:"cpt_fec",id:cpChunkId(y,ver,i),data:{l:L.slice(i*CP_CHUNK,(i+1)*CP_CHUNK).map(cpToArr)}}));
+  for(let i=0;i<rows.length;i+=2){const {error}=await C.from("gestion").upsert(rows.slice(i,i+2));if(error){toast("Import interrompu : "+(/fetch|network/i.test(error.message||"")?"pas de connexion internet.":error.message));return false}}
+  const E=CM.etats(L),J=CM.journaux(L);
+  const ex={debut:meta.debut,fin:meta.fin,source:"fec",fichier:meta.fichier,importeLe:new Date().toISOString(),ver,nchunks:n,nl:L.length,ne:J.reduce((s,j)=>s+j.ne,0),
+    resume:{ca:E.ca,res:E.res,TA:E.TA,TP:E.TP,CP:E.CP,capital:E.capital,moitieCapital:E.moitieCapital,equilibre:E.equilibre}};
+  CPT.L[y]={ver,L};delete CPT.calc[y];CPT.y=+y;
+  if(!await gput("cpt_ex",y,ex))return false;
+  if(old&&old.ver&&old.ver!==ver&&old.nchunks)await C.from("gestion").delete().eq("type","cpt_fec").in("id",range(old.nchunks).map(i=>cpChunkId(y,old.ver,i)));
+  if(meta.siren&&!cpReg().siren)await gput("cpt_reg","param",{...cpReg(),siren:meta.siren});
+  toast(`FEC ${y} importé : ${plural(L.length,"ligne","lignes")}.`);return true}
+async function cpDelete(y){const ex=cpEx(y);if(!ex||!confirm(`Retirer le FEC ${y} de l'appli ? Le fichier dans SharePoint n'est pas touché, tu pourras le réimporter.`))return;
+  if(!await gdelMany("cpt_ex",[String(y)]))return;
+  if(ex.nchunks)await C.from("gestion").delete().eq("type","cpt_fec").in("id",range(ex.nchunks).map(i=>cpChunkId(y,ex.ver,i)));
+  delete CPT.L[y];delete CPT.calc[y];toast(`FEC ${y} retiré de l'appli.`)}
+
+// ---- export : FEC légal (SIREN + FEC + date de clôture), ISO-8859-15, et CSV pour Excel ----
+function cpSiren(){const r=cpReg();if(r.siren)return String(r.siren).replace(/\s/g,"");
+  for(const l of (((PAR.devis_reglages||{}).company||{}).legal||[])){const m=String(l).replace(/\s/g,"").match(/SIRE[NT][^0-9]*(\d{9})/i);if(m)return m[1]}return ""}
+function cpLatin9(s){const M={0x20AC:0xA4,0x160:0xA6,0x161:0xA8,0x17D:0xB4,0x17E:0xB8,0x152:0xBC,0x153:0xBD,0x178:0xBE,0x2018:0x27,0x2019:0x27,0x201C:0x22,0x201D:0x22,0x2013:0x2D,0x2014:0x2D,0x202F:0x20,0x2026:0x2E},X=new Set([0xA4,0xA6,0xA8,0xB4,0xB8,0xBC,0xBD,0xBE]);
+  const out=new Uint8Array(s.length);for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);out[i]=M[c]??(c<256&&!X.has(c)?c:0x3F)}return out}
+function cpExport(y){const d=cpData(y);if(!d.L){toast("Rien à exporter pour "+y+".");return}const s=cpSiren();
+  if(!/^\d{9}$/.test(s)){cpParam("Le SIREN sert à nommer le fichier FEC (SIREN + FEC + date de clôture).");return}
+  const X=CM.exportFEC(d.L,s,d.ex.fin);dlBlob(new Blob([cpLatin9(X.texte)],{type:"text/plain;charset=iso-8859-15"}),X.nom);toast(`${X.nom} téléchargé (${plural(d.L.length,"ligne","lignes")}).`)}
+function cpCsv(nom,tete,lignes){const f=v=>typeof v==="number"?(Math.round(v*100)/100).toFixed(2).replace(".",","):'"'+String(v??"").replace(/"/g,'""')+'"';
+  dlBlob(new Blob(["﻿"+[tete,...lignes].map(r=>r.map(f).join(";")).join("\r\n")],{type:"text/csv;charset=utf-8"}),nom)}
+
+// ---- paramètres de la société et cases de clôture ----
+function cpParam(msg){const r=cpReg(),sir=cpSiren();
+  const p=openModal(`<h3>Paramètres comptables</h3>${msg?`<div class="note" style="color:var(--warn)">${esc(msg)}</div>`:""}
+    <div class="grid2"><label>SIREN<input id="cp-siren" inputmode="numeric" maxlength="11" value="${esc(r.siren||sir)}" placeholder="9 chiffres"></label>
+      <label>Régime de TVA<select id="cp-reg">${opts(["Réel normal","Réel simplifié","Franchise en base"],r.regime)}</select></label></div>
+    <div class="grid2"><label>Déclarations de TVA<select id="cp-per">${opts(["Mensuelles (CA3)","Trimestrielles (CA3)","Annuelle (CA12)"],r.periodicite)}</select></label>
+      <label>Cabinet comptable<input id="cp-cab" value="${esc(r.cabinet||"")}"></label></div>
+    <label>Envoi des pièces au cabinet (comment, à quel rythme)<input id="cp-can" value="${esc(r.canal||"")}"></label>
+    <label>Plateforme agréée (facture électronique)<input id="cp-pla" value="${esc(r.plateforme||"")}"></label>
+    <div class="note">Laisse vide ce que tu ne sais pas : l'appli affiche alors « à compléter », sans rien supposer.</div>
+    <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="cp-ok">Enregistrer</button></div>`);
+  p.querySelector("#cp-ok").onclick=()=>{const v=s=>p.querySelector(s).value.trim(),sn=v("#cp-siren").replace(/\s/g,"");
+    if(sn&&!/^\d{9}$/.test(sn)){toast("Le SIREN a 9 chiffres.");return}
+    gput("cpt_reg","param",{...r,siren:sn,regime:v("#cp-reg"),periodicite:v("#cp-per"),cabinet:v("#cp-cab"),canal:v("#cp-can"),plateforme:v("#cp-pla")}).then(ok=>{if(ok){closeFloat();toast("Paramètres enregistrés.")}})}}
+const CP_COCHES=[["tva","Toutes les déclarations de TVA de l'exercice déposées"],["inv","Travaux d'inventaire faits (factures non parvenues, charges constatées d'avance, amortissements)"],
+  ["liasse","Liasse fiscale définitive reçue du cabinet"],["appro","Comptes approuvés par les associés"],["greffe","Comptes déposés au greffe (dans le mois qui suit l'approbation, 2 mois en ligne)"],["an","À-nouveaux repris dans l'exercice suivant"]];
+function cpCoche(y,k){const id="clo:"+y,o={...(gid("cpt_reg",id)||{})};if(o[k])delete o[k];else o[k]=today();gput("cpt_reg",id,o)}
+
+// ---- la fenêtre ----
+function vCompta(){if(GOK===false)return baseManquante("Comptabilité");
+  const Y=cpYears();if(!CPT.y||!Y.includes(CPT.y))CPT.y=cpDefaultYear();
+  const y=CPT.y,cur=new Date().getFullYear(),d=cpData(y),ex=d.ex,t=CPT.t;
+  const stat=ex?`<span class="pill ok">FEC importé le ${fdl(ex.importeLe)} · ${plural(ex.ne,"écriture","écritures")}</span>${ex.resume&&ex.resume.equilibre===false?' <span class="pill bad">Bilan déséquilibré</span>':""}`:'<span class="pill neu">Pas de FEC importé</span>';
+  let body;
+  if(t==="pieces")body=cpPieces(y,d);
+  else if(t==="clo")body=cpClo(y,d);
+  else if(!ex)body=cpVide(y);
+  else if(d.err)body=`<div class="box warn"><h3>Écritures ${y} illisibles</h3><span>${esc(d.err)}</span><div><button class="btn sm" data-cpretry>Réessayer</button></div></div>`;
+  else if(!d.L)body=`<div class="empty">Chargement des ${plural(ex.nl,"ligne","lignes")} d'écritures ${y}…</div>`;
+  else body=({synth:cpSynth,jour:cpJour,gl:cpGl,bal:cpBal,bq:cpBanque,tva:cpTva,etats:cpEtats})[t](y,d,cpCalc(y,d.L));
+  return `<div class="topline"><div><h2>Comptabilité</h2><p>Exercice du ${cpd(ex?ex.debut:y+"0101")} au ${cpd(ex?ex.fin:y+"1231")} · ${stat}</p></div>
+    <div class="tools"><div class="seg yr" role="group" aria-label="Exercice">${Y.map(v=>`<button type="button" data-cpy="${v}" aria-pressed="${v===y}">${v}<small>${cpEx(v)?"FEC importé":v===cur?"en cours":"pas de FEC"}</small></button>`).join("")}</div>
+      <button class="btn sm" data-cpimp>Importer un FEC</button><button class="btn sm pri" data-cpexp${d.L?"":" disabled"}>Exporter le FEC</button></div></div>
+  <div class="tabs cptabs" role="tablist" aria-label="Rubriques">${CP_TABS.map(([k,l])=>`<button class="tab" role="tab" data-cptab="${k}" aria-selected="${k===t}">${l}</button>`).join("")}</div>${body}`}
+function cpVide(y){const cur=new Date().getFullYear();
+  return `<div class="empty"><b>Pas d'écriture pour ${y}</b><p class="note">${y>=cur?"Les écritures viendront des pièces (prochaine étape : Claude lit les factures et les relevés de SharePoint et propose l'écriture, tu valides) ou du FEC du cabinet.":`Importe le FEC de l'exercice (SharePoint › administration afer › 02_COMPTABILITE › ${y} › 05_Cloture). S'il n'y est pas, il se demande au cabinet.`} Journaux, grand livre, balance, TVA, bilan et résultat se remplissent alors tout seuls.</p><button class="btn pri sm" data-cpimp>Importer le FEC ${y}</button></div>`}
+const cpKpi=(cls,v,l,s)=>`<div class="kpi${cls?" "+cls:""}"><div class="v">${v}</div><div class="l">${l}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
+function cpTodo(y,d,K){const {E,B,pb,T}=K,ex=d.ex,L=[],fin=cpd(ex.fin),bad=pb.filter(p=>p.niv==="bad").length;
+  if(bad)L.push(["bad","FEC",`${plural(bad,"anomalie bloquante","anomalies bloquantes")} dans le fichier importé (détail dans Clôture).`]);
+  if(!E.equilibre)L.push(["bad","Bilan",`Actif ${cp0(E.TA)} ≠ passif ${cp0(E.TP)} : le bilan recalculé ne tombe pas juste.`]);
+  if(E.nonClasses.length)L.push(["warn","Bilan",`${plural(E.nonClasses.length,"compte n'est pas classé","comptes ne sont pas classés")} dans le bilan : ${esc(E.nonClasses.slice(0,6).map(x=>x.c).join(", "))}.`]);
+  if(E.moitieCapital)L.push(["bad","Juridique",`Capitaux propres ${cp0(E.CP)} inférieurs à la moitié du capital (${cp0(E.capital/2)}). Décision des associés à prendre dans les 4 mois qui suivent l'approbation des comptes, puis publicité (Code de commerce L225-248, applicable aux SAS par L227-1). À vérifier avec le cabinet.`]);
+  const AX=CM.balanceAux(d.L,"411"),nl=AX.reduce((s,a)=>s+a.nl,0),nlet=AX.reduce((s,a)=>s+a.nlet,0),dus=AX.filter(a=>a.s>0.005);
+  if(dus.length)L.push(["warn","Clients",`${plural(dus.length,"client doit","clients doivent")} ${cp0(dus.reduce((s,a)=>s+a.s,0))} au ${fin}${nl&&!nlet?". Aucun règlement client n'est lettré : le FEC ne dit pas quelles factures ont été payées depuis":""}.`]);
+  const cred=cpSum(B,["44567"]),col=T.reduce((s,x)=>s+x.collectee,0);
+  if(cred>0.005)L.push(["warn","TVA",`Crédit de TVA de ${cp0(cred)} au ${fin} : à reporter ou à faire rembourser (formulaire 3519 : au moins 760 € en demande mensuelle ou trimestrielle, 150 € en demande annuelle).${E.ca>0&&col<E.ca*0.01?" Presque pas de TVA collectée sur le chiffre d'affaires : ventes en autoliquidation (sous-traitance BTP) probables, d'où un crédit qui revient.":""}`]);
+  const c=gid("cpt_reg","clo:"+y)||{};if(ex.fin<today().replace(/-/g,"")&&!c.appro){const f=PK(cpk(ex.fin)),lim=new Date(f.getFullYear(),f.getMonth()+7,0);L.push(["neu","Clôture",`Approbation des comptes ${y} au plus tard le ${lim.toLocaleDateString("fr-FR")} (6 mois après la clôture), puis dépôt au greffe.`])}
+  return L}
+function cpChart(ex,L){const M=cpMonths(ex.debut,ex.fin);if(!M.length)return "";const idx=new Map(M.map((m,i)=>[m,i])),ca=M.map(()=>0),ch=M.map(()=>0),mv=M.map(()=>0);
+  for(const l of L){const ym=l.dt.slice(0,6);let i=idx.get(ym);if(i==null)i=ym<M[0]?0:M.length-1;
+    if(l.c.startsWith("70"))ca[i]+=l.k-l.d;else if(l.c[0]==="6")ch[i]+=l.d-l.k;if(/^5[13]/.test(l.c))mv[i]+=l.d-l.k}
+  let run=0;const tr=mv.map(v=>run+=v),all=[...ca,...ch,...tr,0],mx=Math.max(...all),mn=Math.min(...all);
+  const raw=(mx-mn)/5||1000,p=10**Math.floor(Math.log10(raw)),f=raw/p,st=(f<=1?1:f<=2?2:f<=5?5:10)*p,top=Math.ceil(mx/st)*st,bot=Math.floor(mn/st)*st;
+  const W=760,H=250,Lm=56,R=16,Tm=14,Bm=30,iw=W-Lm-R,ih=H-Tm-Bm,yv=v=>Tm+ih*(top-v)/((top-bot)||1),bw=iw/M.length,an=M[0].slice(0,4)!==M[M.length-1].slice(0,4);let g="";
+  for(let v=bot;v<=top+st/2;v+=st)g+=`<line x1="${Lm}" x2="${W-R}" y1="${yv(v)}" y2="${yv(v)}" stroke="var(--line-soft)"/><text x="${Lm-6}" y="${yv(v)+4}" text-anchor="end" font-size="10.5" fill="var(--muted)">${(Math.round(v/100)/10).toLocaleString("fr-FR")} k</text>`;
+  g+=`<line x1="${Lm}" x2="${W-R}" y1="${yv(0)}" y2="${yv(0)}" stroke="var(--muted)"/>`;
+  M.forEach((m,i)=>{const x=Lm+i*bw+bw*.14,w=bw*.34,lab=cpMl(m,an);
+    g+=`<rect x="${x}" y="${Math.min(yv(ca[i]),yv(0))}" width="${w}" height="${Math.abs(yv(0)-yv(ca[i]))}" rx="2" fill="var(--turq)"><title>${lab} : chiffre d'affaires ${cp0(ca[i])}</title></rect>`;
+    g+=`<rect x="${x+w+2}" y="${Math.min(yv(ch[i]),yv(0))}" width="${w}" height="${Math.abs(yv(0)-yv(ch[i]))}" rx="2" fill="var(--cp2)"><title>${lab} : charges ${cp0(ch[i])}</title></rect>`;
+    g+=`<text x="${Lm+i*bw+bw/2}" y="${H-10}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${cpMl(m)}</text>`});
+  g+=`<polyline points="${tr.map((v,i)=>`${Lm+i*bw+bw/2},${yv(v)}`).join(" ")}" fill="none" stroke="var(--fg)" stroke-width="2"/>`;
+  tr.forEach((v,i)=>{g+=`<circle cx="${Lm+i*bw+bw/2}" cy="${yv(v)}" r="${i===M.length-1?4:2.5}" fill="var(--fg)"><title>${cpMl(M[i],an)} : trésorerie ${cp0(v)}</title></circle>`});
+  return `<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:520px;display:block" role="img" aria-label="Chiffre d'affaires, charges et trésorerie par mois">${g}</svg></div>
+  <div class="legend"><span><i style="background:var(--turq)"></i>Chiffre d'affaires (70)</span><span><i style="background:var(--cp2)"></i>Charges (classe 6)</span><span><i style="background:var(--fg);height:2px;width:14px"></i>Trésorerie (51 + 53) : ${cp0(tr[tr.length-1])} en fin d'exercice</span></div>`}
+function cpCaClients(L){const ecr=new Map(),by=new Map();L.forEach(l=>{const k=l.j+"|"+l.n;if(!ecr.has(k))ecr.set(k,[]);ecr.get(k).push(l)});
+  for(const ls of ecr.values()){const ca=ls.filter(l=>l.c.startsWith("70")).reduce((s,l)=>s+l.k-l.d,0);if(Math.abs(ca)<0.005)continue;const c=ls.find(l=>l.c.startsWith("411"));const k=c?(c.axl||c.cl||c.ax||c.c):"Sans compte client";by.set(k,(by.get(k)||0)+ca)}
+  return [...by].sort((a,b)=>b[1]-a[1])}
+function cpSynth(y,d,K){const {E,B}=K,L=d.L,ex=d.ex,ca=E.ca||0;
+  const tres=cpSum(B,["51","53"]),cred=cpSum(B,["44567"]),due=-cpSum(B,["44551"]),AX=CM.balanceAux(L,"411"),nl=AX.reduce((s,a)=>s+a.nl,0),nlet=AX.reduce((s,a)=>s+a.nlet,0),bx=cpA(E,"BX"),pc=v=>ca?Math.round(v/ca*100)+" %":"";
+  const todo=cpTodo(y,d,K),cli=cpCaClients(L),top=cli.slice(0,8),autres=cli.slice(8).reduce((s,c)=>s+c[1],0);
+  return `<div class="kpis cpk">${cpKpi("",cp0(ca),"Chiffre d'affaires","comptes 70")}${cpKpi(E.res<0?"bad":"",cp0(E.res),"Résultat",(E.res<0?"perte":"bénéfice")+" · impôt "+cp0(cpC(E,"HK")))}
+    ${cpKpi("",cp0(tres),"Trésorerie en fin d'exercice","banque (51) + caisse (53)")}${cpKpi(nl&&!nlet&&bx>0?"warn":"",cp0(bx),"Créances clients",[pc(bx)&&pc(bx)+" du CA",nl?`${nlet}/${nl} lignes lettrées`:""].filter(Boolean).join(" · "))}
+    ${cpKpi("",cp0(cpP(E,"DX")),"Dettes fournisseurs","401 + 408")}${cred>0.005?cpKpi("",cp0(cred),"Crédit de TVA","à reporter ou à rembourser"):cpKpi("",cp0(due),"TVA à payer","compte 44551")}
+    ${cpKpi(E.moitieCapital?"bad":"",cp0(E.CP),"Capitaux propres",E.capital?"moitié du capital : "+cp0(E.capital/2):"")}</div>
+  <div class="cpg w"><div class="box"><h3>Mois par mois</h3>${cpChart(ex,L)}<p class="src">FEC ${y}, toutes les écritures</p></div>
+    <div class="box"><h3>À traiter</h3>${todo.length?`<ul class="cplist">${todo.map(([c,l,t])=>`<li><span class="pill ${c}">${l}</span><span>${t}</span></li>`).join("")}</ul>`:'<p class="note">Rien de bloquant dans le FEC de cet exercice.</p>'}</div></div>
+  <div class="cpg"><div class="box"><h3>Principaux clients ${y}</h3><div class="scroll"><table><thead><tr><th>Client</th><th class="num">CA HT</th><th class="num">Part</th></tr></thead><tbody>
+      ${top.map(c=>`<tr><td class="wrap">${esc(c[0])}</td><td class="num">${cp0(c[1])}</td><td class="num">${pc(c[1])}</td></tr>`).join("")}${autres?`<tr><td>Autres clients (${cli.length-8})</td><td class="num">${cp0(autres)}</td><td class="num">${pc(autres)}</td></tr>`:""}
+      ${top.length?"":'<tr><td colspan="3" class="empty">Aucune vente.</td></tr>'}</tbody></table></div><p class="src">FEC ${y}, comptes 70 et compte client de la même écriture</p></div>
+    <div class="box"><h3>Où va l'argent</h3><div class="scroll"><table><thead><tr><th>Poste</th><th class="num">Montant</th><th class="num">% du CA</th></tr></thead><tbody>
+      ${E.cr.filter(r=>r.sens==="C").map(r=>`<tr><td class="wrap">${esc(r.lib)}</td><td class="num">${cp0(r.v)}</td><td class="num">${pc(r.v)}</td></tr>`).join("")}</tbody></table></div><p class="src">FEC ${y}, classe 6, regroupée comme la liasse</p></div></div>`}
+function cpJour(y,d,K){const L=d.L,J=K.J;if(!CPT.jr||!J.some(j=>j.j===CPT.jr))CPT.jr=(J[0]||{}).j||"";
+  const q=norm(CPT.jq),M=cpMonths(d.ex.debut,d.ex.fin);
+  const ls=L.filter(l=>l.j===CPT.jr&&(!CPT.jm||l.dt.startsWith(CPT.jm))&&(!q||norm([l.n,l.pr,l.c,l.cl,l.axl,l.lib].join(" ")).includes(q))),max=CPT.jall?ls.length:500;let last="";
+  return `<div class="box"><h3>Journaux ${y}</h3><div class="scroll"><table><thead><tr><th>Code</th><th>Journal</th><th class="num">Écritures</th><th class="num">Lignes</th><th class="num">Total débit</th><th class="num">Total crédit</th><th>État</th></tr></thead><tbody>
+    ${J.map(j=>`<tr class="clk${j.j===CPT.jr?" sel":""}" data-cpj="${esc(j.j)}" tabindex="0"><td class="mono">${esc(j.j)}</td><td>${esc(j.l)}</td><td class="num">${j.ne}</td><td class="num">${j.nl}</td><td class="num">${cps(j.d)}</td><td class="num">${cps(j.k)}</td><td>${j.eq?'<span class="pill ok">Équilibré</span>':'<span class="pill bad">Déséquilibré</span>'}</td></tr>`).join("")}
+    <tr class="tot"><td></td><td>Total</td><td class="num">${J.reduce((s,j)=>s+j.ne,0)}</td><td class="num">${J.reduce((s,j)=>s+j.nl,0)}</td><td class="num">${cps(J.reduce((s,j)=>s+j.d,0))}</td><td class="num">${cps(J.reduce((s,j)=>s+j.k,0))}</td><td></td></tr></tbody></table></div></div>
+  <div class="box"><div class="cpbar"><h3>Journal ${esc(CPT.jr)} · ${esc((J.find(j=>j.j===CPT.jr)||{}).l||"")}</h3><span class="sp"></span>
+      <select data-cpf="jm" aria-label="Mois"><option value="">Tous les mois</option>${M.map(m=>`<option value="${m}"${m===CPT.jm?" selected":""}>${cpMl(m,true)}</option>`).join("")}</select>
+      <input type="search" data-cpq="jq" placeholder="Pièce, compte, tiers, libellé…" value="${esc(CPT.jq)}" aria-label="Rechercher dans le journal"></div>
+    <div class="scroll cpscroll"><table><thead><tr><th>Date</th><th>N°</th><th>Pièce</th><th>Compte</th><th>Tiers</th><th>Libellé</th><th class="num">Débit</th><th class="num">Crédit</th><th>Lettrage</th></tr></thead><tbody>
+    ${ls.slice(0,max).map(l=>{const s=l.n!==last;last=l.n;return `<tr${s?' class="ne"':""}><td>${s?cpd(l.dt):""}</td><td class="mono">${s?esc(l.n):""}</td><td class="mono">${s?esc(l.pr):""}</td><td class="mono">${esc(l.c)}</td><td>${esc(l.axl||"")}</td><td class="wrap">${esc(l.lib)}</td><td class="num">${cpn(l.d)}</td><td class="num">${cpn(l.k)}</td><td>${l.let?`<span class="pill ok">${esc(l.let)}</span>`:""}</td></tr>`}).join("")||'<tr><td colspan="9" class="empty">Aucune ligne pour ces filtres.</td></tr>'}
+    </tbody></table></div>${ls.length>max?`<div><button class="btn sm" data-cpall>Afficher les ${ls.length} lignes</button></div>`:""}<p class="src">FEC ${y}, ${plural(ls.length,"ligne","lignes")}</p></div>`}
+function cpGlOpts(K,L){const g=K.B.map(a=>[`c:${a.c}`,`${a.c} · ${a.l}`]),aux=r=>CM.balanceAux(L,r).map(a=>[`x:${r}:${a.c}`,`${a.c} · ${a.l}`]);return {g,cli:aux("411"),fou:aux("401")}}
+function cpGl(y,d,K){const L=d.L,O=cpGlOpts(K,L),all=[...O.cli,...O.fou,...O.g];if(!all.some(o=>o[0]===CPT.gl))CPT.gl=(O.cli[0]||O.g[0]||[""])[0];
+  const [ty,a,b]=CPT.gl.split(":"),f=ty==="x"?(l=>l.c.startsWith(a)&&(l.ax||l.c)===b):(l=>l.c===a),q=norm(CPT.glq);
+  const G=CM.grandLivre(L,f),ls=q?G.filter(l=>norm([l.lib,l.pr,l.n,l.j].join(" ")).includes(q)):G,td=G.reduce((s,l)=>s+l.d,0),tk=G.reduce((s,l)=>s+l.k,0),nlet=G.filter(l=>l.let).length;
+  const og=(t,L2)=>L2.length?`<optgroup label="${t}">${L2.map(([v,l])=>`<option value="${esc(v)}"${v===CPT.gl?" selected":""}>${esc(l)}</option>`).join("")}</optgroup>`:"";
+  return `<div class="box"><div class="cpbar"><h3>Grand livre ${y}</h3><span class="sp"></span>
+      <select data-cpf="gl" aria-label="Compte" style="max-width:420px">${og("Clients (comptes auxiliaires)",O.cli)}${og("Fournisseurs (comptes auxiliaires)",O.fou)}${og("Comptes généraux",O.g)}</select>
+      <input type="search" data-cpq="glq" placeholder="Libellé, pièce…" value="${esc(CPT.glq)}" aria-label="Rechercher dans le compte"><button class="btn sm" data-cpcsv="gl">Exporter (Excel)</button></div>
+    <div class="scroll cpscroll"><table><thead><tr><th>Date</th><th>Jnl</th><th>N°</th><th>Pièce</th><th>Libellé</th><th class="num">Débit</th><th class="num">Crédit</th><th class="num">Solde</th><th>Lettrage</th></tr></thead><tbody>
+    ${ls.map(l=>`<tr><td>${cpd(l.dt)}</td><td class="mono">${esc(l.j)}</td><td class="mono">${esc(l.n)}</td><td class="mono">${esc(l.pr)}</td><td class="wrap">${esc(l.lib)}</td><td class="num">${cpn(l.d)}</td><td class="num">${cpn(l.k)}</td><td class="num">${cpSd(l.solde)}</td><td>${l.let?`<span class="pill ok">${esc(l.let)}</span>`:'<span class="pill neu">non lettré</span>'}</td></tr>`).join("")||'<tr><td colspan="9" class="empty">Aucune ligne.</td></tr>'}
+    <tr class="tot"><td colspan="5">Total du compte au ${cpd(d.ex.fin)}${q?" (toutes lignes)":""}</td><td class="num">${cps(td)}</td><td class="num">${cps(tk)}</td><td class="num">${cpSd(td-tk)}</td><td>${G.length?`${nlet}/${G.length} lettrées`:""}</td></tr></tbody></table></div>
+    <p class="src">FEC ${y}</p></div>`}
+function cpBal(y,d,K){const ex=d.ex,M=cpMonths(ex.debut,ex.fin),au=CPT.au&&CPT.au>=ex.debut&&CPT.au<=ex.fin?CPT.au:ex.fin,mode=CPT.bal;
+  const seg=`<div class="seg" role="group" aria-label="Balance">${[["gen","Générale"],["cli","Clients"],["fou","Fournisseurs"]].map(([k,l])=>`<button type="button" data-cpbal="${k}" aria-pressed="${k===mode}">${l}</button>`).join("")}</div>
+    <select data-cpf="au" aria-label="Date">${M.map(cpFin).map(k=>`<option value="${k}"${k===au?" selected":""}>au ${cpd(k)}</option>`).join("")}</select><button class="btn sm" data-cpcsv="bal">Exporter (Excel)</button>`;
+  if(mode!=="gen"){const r=mode==="cli"?"411":"401",A=CM.balanceAux(d.L.filter(l=>l.dt<=au),r),td=A.reduce((s,a)=>s+a.d,0),tk=A.reduce((s,a)=>s+a.k,0);
+    return `<div class="box"><div class="cpbar"><h3>Balance ${mode==="cli"?"clients":"fournisseurs"} au ${cpd(au)}</h3><span class="sp"></span>${seg}</div>
+      <div class="scroll cpscroll"><table><thead><tr><th>Compte</th><th>Nom</th><th class="num">Débit</th><th class="num">Crédit</th><th class="num">Solde débiteur</th><th class="num">Solde créditeur</th><th class="num">Lettrées</th></tr></thead><tbody>
+      ${A.map(a=>`<tr class="clk" data-cpgo="x:${r}:${esc(a.c)}" tabindex="0"><td class="mono">${esc(a.c)}</td><td class="wrap">${esc(a.l)}</td><td class="num">${cpn(a.d)}</td><td class="num">${cpn(a.k)}</td><td class="num">${a.s>0?cpn(a.s):""}</td><td class="num">${a.s<0?cpn(-a.s):""}</td><td class="num">${a.nlet}/${a.nl}</td></tr>`).join("")||'<tr><td colspan="7" class="empty">Aucun compte.</td></tr>'}
+      <tr class="tot"><td colspan="2">Total</td><td class="num">${cps(td)}</td><td class="num">${cps(tk)}</td><td class="num">${td-tk>0?cps(td-tk):""}</td><td class="num">${td-tk<0?cps(tk-td):""}</td><td></td></tr></tbody></table></div>
+      <p class="note">Clic sur une ligne : grand livre du tiers.</p><p class="src">FEC ${y}, comptes ${r} par compte auxiliaire</p></div>`}
+  const B=CM.balance(d.L,au),CL={"1":"Classe 1 · Capitaux","2":"Classe 2 · Immobilisations","3":"Classe 3 · Stocks","4":"Classe 4 · Tiers","5":"Classe 5 · Trésorerie","6":"Classe 6 · Charges","7":"Classe 7 · Produits","8":"Classe 8 · Comptes spéciaux"};
+  const td=B.reduce((s,a)=>s+a.d,0),tk=B.reduce((s,a)=>s+a.k,0);let cur="",h="";
+  for(const a of B){if(a.c[0]!==cur){cur=a.c[0];const s=B.filter(b=>b.c[0]===cur).reduce((x,b)=>x+b.s,0);h+=`<tr class="cls"><td colspan="4">${CL[cur]||"Classe "+esc(cur)}</td><td class="num">${s>0?cpn(s):""}</td><td class="num">${s<0?cpn(-s):""}</td></tr>`}
+    h+=`<tr class="clk" data-cpgo="c:${esc(a.c)}" tabindex="0"><td class="mono">${esc(a.c)}</td><td class="wrap">${esc(a.l)}</td><td class="num">${cpn(a.d)}</td><td class="num">${cpn(a.k)}</td><td class="num">${a.s>0?cpn(a.s):""}</td><td class="num">${a.s<0?cpn(-a.s):""}</td></tr>`}
+  return `<div class="box"><div class="cpbar"><h3>Balance générale au ${cpd(au)}</h3>${Math.abs(td-tk)<0.005?`<span class="pill ok">Débit = crédit : ${cps(td)}</span>`:`<span class="pill bad">Écart débit/crédit : ${cps(td-tk)}</span>`}<span class="sp"></span>${seg}</div>
+    <div class="scroll cpscroll"><table><thead><tr><th>Compte</th><th>Intitulé</th><th class="num">Mouvements débit</th><th class="num">Mouvements crédit</th><th class="num">Solde débiteur</th><th class="num">Solde créditeur</th></tr></thead><tbody>${h}
+    <tr class="tot"><td colspan="2">Total</td><td class="num">${cps(td)}</td><td class="num">${cps(tk)}</td><td class="num">${cps(B.reduce((s,a)=>s+Math.max(a.s,0),0))}</td><td class="num">${cps(B.reduce((s,a)=>s+Math.max(-a.s,0),0))}</td></tr></tbody></table></div>
+    <p class="note">Clic sur un compte : son grand livre.</p><p class="src">FEC ${y}, ${plural(B.length,"compte","comptes")}</p></div>`}
+function cpBanque(y,d,K){const ex=d.ex,L=d.L,M=cpMonths(ex.debut,ex.fin),A=K.B.filter(a=>/^5[13]/.test(a.c));
+  const fin=M.map(m=>{const k=cpFin(m);return A.map(a=>L.reduce((s,l)=>l.c===a.c&&l.dt<=k?s+l.d-l.k:s,0))});
+  return `<div class="box"><h3>Comptes de trésorerie ${y}</h3><div class="scroll"><table><thead><tr><th>Compte</th><th>Intitulé</th><th class="num">Entrées (débit)</th><th class="num">Sorties (crédit)</th><th class="num">Solde au ${cpd(ex.fin)}</th></tr></thead><tbody>
+    ${A.map(a=>`<tr class="clk" data-cpgo="c:${esc(a.c)}" tabindex="0"><td class="mono">${esc(a.c)}</td><td class="wrap">${esc(a.l)}</td><td class="num">${cps(a.d)}</td><td class="num">${cps(a.k)}</td><td class="num">${cpSd(a.s)}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">Aucun compte 51 ou 53.</td></tr>'}
+    ${A.length>1?`<tr class="tot"><td colspan="4">Trésorerie totale</td><td class="num">${cpSd(A.reduce((s,a)=>s+a.s,0))}</td></tr>`:""}</tbody></table></div><p class="note">Clic sur un compte : son grand livre.</p></div>
+  ${A.length?`<div class="box"><h3>Solde en fin de mois</h3><div class="scroll"><table><thead><tr><th>Mois</th>${A.map(a=>`<th class="num">${esc(a.l||a.c)}</th>`).join("")}${A.length>1?'<th class="num">Total</th>':""}</tr></thead><tbody>
+    ${M.map((m,i)=>`<tr><td>${cpMl(m,true)}</td>${fin[i].map(v=>`<td class="num">${cps(v)}</td>`).join("")}${A.length>1?`<td class="num"><b>${cps(fin[i].reduce((s,v)=>s+v,0))}</b></td>`:""}</tr>`).join("")}</tbody></table></div><p class="src">FEC ${y}, comptes 51 et 53</p></div>`:""}
+  <div class="why"><b>Relevés et rapprochement : prochaine étape</b>Les relevés Shine et BNP de SharePoint (02_COMPTABILITE › ${y} › 03_Banque) seront lus pour pointer chaque opération avec son écriture et sa pièce, et signaler les mois de relevés manquants.</div>`}
+function cpTva(y,d,K){const T=K.T,B=K.B,r=cpReg(),cred=cpSum(B,["44567"]),due=-cpSum(B,["44551"]),S=k=>T.reduce((s,x)=>s+x[k],0),E=K.E;
+  return `<div class="cpg w"><div class="box"><h3>TVA ${y} par mois</h3><div class="scroll"><table><thead><tr><th>Mois</th><th class="num">Collectée (4457)</th><th class="num">Autoliquidée (4452)</th><th class="num">Déductible (44566, 44562)</th><th class="num">Solde du mois</th></tr></thead><tbody>
+    ${T.map(x=>`<tr><td>${cpMl(x.mois,true)}</td><td class="num">${cpn(x.collectee)}</td><td class="num">${cpn(x.autoliq)}</td><td class="num">${cpn(x.deductible)}</td><td class="num">${x.net>0.005?cps(x.net)+" à payer":x.net<-0.005?cps(-x.net)+" crédit":"0,00"}</td></tr>`).join("")}
+    <tr class="tot"><td>Total</td><td class="num">${cps(S("collectee"))}</td><td class="num">${cps(S("autoliq"))}</td><td class="num">${cps(S("deductible"))}</td><td class="num">${S("net")>0?cps(S("net"))+" à payer":cps(-S("net"))+" crédit"}</td></tr></tbody></table></div>
+    <p class="note">Calcul à partir des écritures (date d'écriture), tous journaux. Les montants déclarés sur chaque CA3 font foi : comparer avec les déclarations déposées.</p><p class="src">FEC ${y}</p></div>
+  <div class="box"><h3>TVA d'AFER</h3><ul class="cplist">
+    <li><span class="pill neu">Régime</span><span>${r.regime?esc(r.regime):PH("régime de TVA")} · déclarations ${r.periodicite?esc(r.periodicite.toLowerCase()):PH("périodicité")} <button class="btn xs" data-cpparam>Modifier</button></span></li>
+    ${cred>0.005?`<li><span class="pill warn">Crédit</span><span>Crédit de TVA au ${cpd(d.ex.fin)} : <b>${cps(cred)} €</b> (compte 44567).</span></li><li><span class="pill ok">Action</span><span>Remboursement par le formulaire 3519 : au moins 760 € en demande mensuelle ou trimestrielle, 150 € en demande annuelle. À défaut, le crédit s'impute sur les déclarations suivantes.</span></li>`
+      :`<li><span class="pill neu">Solde</span><span>TVA à payer au ${cpd(d.ex.fin)} : ${cps(due)} € (compte 44551).</span></li>`}
+    ${E.ca>0&&S("collectee")<E.ca*0.01?`<li><span class="pill neu">Pourquoi</span><span>TVA collectée ${cp0(S("collectee"))} pour ${cp0(E.ca)} de chiffre d'affaires : ventes en autoliquidation (sous-traitance BTP) probables. AFER paie la TVA sur ses achats sans en collecter sur ces ventes, d'où un crédit qui revient.</span></li>`:""}
+  </ul></div></div>`}
+function cpEtats(y,d,K){const E=K.E,d1=cpData(y-1),E1=d1.L?cpCalc(y-1,d1.L).E:null,r=v=>Math.round(v).toLocaleString("fr-FR"),ca=E.ca||0,n1=!!E1;
+  const a1=c=>E1?r(cpA(E1,c)):"",p1=c=>E1?r(cpP(E1,c)):"",c1=c=>E1?r(cpC(E1,c)):"",th=n1?`<th class="num">${y-1}</th>`:"";
+  const cp=E.passif.filter(x=>/^D[A-K]$/.test(x.code)),reste=E.passif.filter(x=>!/^D[A-K]$/.test(x.code)),CP1=E1?E1.CP:0;
+  const grp=[["expl","Exploitation"],["fin","Financier"],["exc","Exceptionnel"],["is","Participation et impôt"]];
+  const tot=(g,s,EE)=>EE.cr.filter(x=>x.grp===g&&x.sens===s).reduce((t,x)=>t+x.v,0),crRows=grp.map(([g,l])=>{const R=[...new Set([...E.cr,...(E1?E1.cr:[])].filter(x=>x.grp===g).map(x=>x.code))].map(c=>E.cr.find(x=>x.code===c)||E1.cr.find(x=>x.code===c));if(!R.length)return "";
+    const sub=g==="is"?"":`<tr class="tot"><td></td><td>Résultat ${l.toLowerCase()}</td><td class="num">${r(tot(g,"P",E)-tot(g,"C",E))}</td>${n1?`<td class="num">${r(tot(g,"P",E1)-tot(g,"C",E1))}</td>`:""}<td class="num">${ca?((tot(g,"P",E)-tot(g,"C",E))/ca*100).toFixed(1).replace(".",",")+" %":""}</td></tr>`;
+    return `<tr class="cls"><td colspan="${n1?5:4}">${l}</td></tr>${R.map(x=>`<tr><td class="mono">${x.code}</td><td class="wrap">${x.sens==="P"?"<b>"+esc(x.lib)+"</b>":esc(x.lib)}</td><td class="num">${x.sens==="C"?"− ":""}${r(cpC(E,x.code))}</td>${n1?`<td class="num">${x.sens==="C"?"− ":""}${c1(x.code)}</td>`:""}<td class="num">${ca?Math.round(cpC(E,x.code)/ca*100)+" %":""}</td></tr>`).join("")}${sub}`}).join("");
+  const crRes=E.resExpl+E.resFin+E.resExc-E.cr.filter(x=>x.grp==="is").reduce((t,x)=>t+x.v,0),ok=Math.abs(crRes-E.res)<0.01;
+  return `<div class="cpbar"><span class="pill ${E.equilibre?"ok":"bad"}">${E.equilibre?"Bilan équilibré":"Bilan déséquilibré"} : actif ${r(E.TA)} · passif ${r(E.TP)}</span><span class="pill ${ok?"ok":"warn"}">${ok?"Résultat du compte de résultat = résultat du bilan":"Écart entre compte de résultat et bilan : "+r(crRes-E.res)}</span>
+    ${n1?`<span class="pill neu">Comparé à ${y-1} (FEC importé)</span>`:d1.loading?'<span class="pill neu">Chargement de l\'exercice précédent…</span>':`<span class="pill neu">Pas de FEC ${y-1} : pas de comparaison</span>`}</div>
+  ${E.nonClasses.length?`<div class="box warn"><h3>Comptes non classés</h3><span>${esc(E.nonClasses.map(x=>x.c+" ("+cps(x.s)+")").join(", "))} : ils ne sont dans aucun poste du bilan, à vérifier.</span></div>`:""}
+  <div class="cpg"><div class="box"><h3>Bilan actif (2050)</h3><div class="scroll"><table><thead><tr><th></th><th>Poste</th><th class="num">Brut</th><th class="num">Amort.</th><th class="num">Net</th>${th}</tr></thead><tbody>
+    ${E.actif.map(a=>`<tr><td class="mono">${a.code}</td><td class="wrap">${esc(a.lib)}</td><td class="num">${r(a.brut)}</td><td class="num">${a.amo?r(a.amo):""}</td><td class="num">${r(a.net)}</td>${n1?`<td class="num">${a1(a.code)}</td>`:""}</tr>`).join("")}
+    ${E1?E1.actif.filter(a=>!E.actif.some(x=>x.code===a.code)).map(a=>`<tr><td class="mono">${a.code}</td><td class="wrap">${esc(a.lib)}</td><td class="num"></td><td class="num"></td><td class="num">0</td><td class="num">${r(a.net)}</td></tr>`).join(""):""}
+    <tr class="tot"><td></td><td>Total actif</td><td class="num">${r(E.actif.reduce((t,a)=>t+a.brut,0))}</td><td class="num">${r(E.actif.reduce((t,a)=>t+a.amo,0))}</td><td class="num">${r(E.TA)}</td>${n1?`<td class="num">${r(E1.TA)}</td>`:""}</tr></tbody></table></div></div>
+  <div class="box"><h3>Bilan passif (2051)</h3><div class="scroll"><table><thead><tr><th></th><th>Poste</th><th class="num">${y}</th>${th}</tr></thead><tbody>
+    ${cp.map(p=>`<tr><td class="mono">${p.code}</td><td class="wrap">${esc(p.lib)}</td><td class="num">${r(p.v)}</td>${n1?`<td class="num">${p1(p.code)}</td>`:""}</tr>`).join("")}
+    <tr class="cls"><td></td><td>Capitaux propres${E.moitieCapital?' <span class="pill bad">moins de la moitié du capital</span>':""}</td><td class="num">${r(E.CP)}</td>${n1?`<td class="num">${r(CP1)}</td>`:""}</tr>
+    ${reste.map(p=>`<tr><td class="mono">${p.code}</td><td class="wrap">${esc(p.lib)}</td><td class="num">${r(p.v)}</td>${n1?`<td class="num">${p1(p.code)}</td>`:""}</tr>`).join("")}
+    <tr class="tot"><td></td><td>Total passif</td><td class="num">${r(E.TP)}</td>${n1?`<td class="num">${r(E1.TP)}</td>`:""}</tr></tbody></table></div></div></div>
+  <div class="cpg w"><div class="box"><h3>Compte de résultat (2052-2053)</h3><div class="scroll"><table><thead><tr><th></th><th>Poste</th><th class="num">${y}</th>${th}<th class="num">% CA</th></tr></thead><tbody>${crRows}
+    <tr class="tot"><td class="mono">HN</td><td>${E.res>=0?"Bénéfice":"Perte"}</td><td class="num">${r(E.res)}</td>${n1?`<td class="num">${r(E1.res)}</td>`:""}<td class="num">${ca?(E.res/ca*100).toFixed(1).replace(".",",")+" %":""}</td></tr></tbody></table></div></div>
+  <div class="box"><h3>Soldes intermédiaires de gestion</h3><div class="scroll"><table><thead><tr><th>Solde</th><th class="num">${y}</th>${th}</tr></thead><tbody>
+    ${K.S.map((s,i)=>`<tr${i===K.S.length-1?' class="tot"':""}><td>${esc(s.l)}</td><td class="num">${r(s.v)}</td>${n1?`<td class="num">${r(CM.sig(E1)[i].v)}</td>`:""}</tr>`).join("")}</tbody></table></div>
+    <p class="note">Recalculé depuis le FEC avec le plan comptable 2025 (produits de cession 757 en « autres produits »). Les codes (AR, BX, DA, FI…) sont ceux de la liasse : comparer avec la liasse du cabinet.</p></div></div>`}
+function cpPieces(y,d){const all=docsAll(),F=all.filter(x=>(x.kind==="facture"||x.kind==="avoir")&&x.numero&&String(x.date||"").slice(0,4)===String(y)).sort((a,b)=>String(a.numero).localeCompare(String(b.numero)));
+  const L=d.L,pr=L?new Set(L.map(l=>l.pr)):null,libs=L?L.map(l=>l.lib+" "+l.pr).join("\n"):"",dans=n=>pr&&(pr.has(n)||libs.includes(n));
+  return `<div class="box"><h3>Factures et avoirs émis dans l'appli · ${y}</h3>${F.length?`<div class="scroll"><table><thead><tr><th>N°</th><th>Date</th><th>Client</th><th class="num">Total TTC</th><th>Comptabilité</th></tr></thead><tbody>
+    ${F.map(x=>{const t=totDoc(x.lines);return `<tr><td class="mono">${esc(x.numero)}</td><td>${fkl(x.date)}</td><td class="wrap">${esc((x.client||{}).nom||"")}</td><td class="num">${m2(x.kind==="avoir"?-Math.abs(t.ttc):t.ttc)}</td><td>${!L?'<span class="pill neu">Pas de FEC '+y+"</span>":dans(x.numero)?'<span class="pill ok">Dans le FEC</span>':'<span class="pill warn">Pas dans le FEC</span>'}</td></tr>`}).join("")}</tbody></table></div>`
+    :`<p class="note">Aucune facture numérotée en ${y} dans la fenêtre <button class="btn xs" data-view="devis">Devis et factures</button>.</p>`}
+    <p class="src">fenêtre Devis et factures ; « Dans le FEC » = numéro retrouvé dans une pièce ou un libellé d'écriture</p></div>
+  <div class="why"><b>Pièces SharePoint : prochaine étape</b>Claude lira chaque pièce du dossier SharePoint administration afer › 02_COMPTABILITE › ${y} (ventes, achats, banque, notes de frais) et proposera l'écriture ; tu valideras d'un clic. Les écritures validées rejoindront les journaux, le grand livre et les états de cette fenêtre.</div>`}
+function cpClo(y,d){const ex=d.ex,r=cpReg(),c=gid("cpt_reg","clo:"+y)||{},sir=cpSiren(),S={ok:'<span class="pill ok">Fait</span>',warn:'<span class="pill warn">À faire</span>',bad:'<span class="pill bad">Urgent</span>',neu:'<span class="pill neu">À vérifier</span>'};
+  let auto=[];
+  if(!ex)auto.push(["warn",`FEC ${y} pas encore importé <button class="btn xs" data-cpimp>Importer</button>`]);
+  else if(!d.L)auto.push(["neu",d.err?esc(d.err):"Chargement des écritures…"]);
+  else{const K=cpCalc(y,d.L),E=K.E,bad=K.pb.filter(p=>p.niv==="bad"),AX=CM.balanceAux(d.L,"411"),nl=AX.reduce((s,a)=>s+a.nl,0),nlet=AX.reduce((s,a)=>s+a.nlet,0);
+    auto=[["ok",`FEC importé le ${fdl(ex.importeLe)} : ${esc(ex.fichier||"")} (${plural(ex.nl,"ligne","lignes")}, ${plural(ex.ne,"écriture","écritures")})`],
+      [bad.length?"bad":"ok",bad.length?plural(bad.length,"anomalie bloquante","anomalies bloquantes")+" dans le FEC (détail ci-dessous)":"Débit = crédit, chaque écriture est équilibrée"],
+      [E.equilibre&&!E.nonClasses.length?"ok":"bad",E.equilibre?(E.nonClasses.length?plural(E.nonClasses.length,"compte non classé","comptes non classés")+" dans le bilan":"Bilan recalculé équilibré, tous les comptes classés"):"Bilan recalculé déséquilibré"],
+      [nl&&!nlet?"warn":"ok",`Lettrage des clients : ${nlet}/${nl} lignes lettrées`],
+      [E.moitieCapital?"bad":"ok",E.moitieCapital?`Capitaux propres ${cp0(E.CP)} sous la moitié du capital : décision des associés dans les 4 mois qui suivent l'approbation, puis publicité`:"Capitaux propres au moins égaux à la moitié du capital"]]}
+  const f=ex?PK(cpk(ex.fin)):new Date(y,11,31),lim=new Date(f.getFullYear(),f.getMonth()+7,0).toLocaleDateString("fr-FR");
+  const man=CP_COCHES.map(([k,l])=>`<li><button class="pill ${c[k]?"ok":"warn"}" data-cpcoche="${k}" aria-pressed="${!!c[k]}" title="Cliquer pour changer">${c[k]?"Fait":"À faire"}</button><span>${esc(l)}${k==="appro"?" (au plus tard le "+lim+")":""}${c[k]?` <span class="note">· coché le ${fkl(c[k])}</span>`:""}</span></li>`).join("");
+  let det="";if(ex&&d.L){const g=new Map();cpCalc(y,d.L).pb.forEach(p=>{const m=p.t.match(/^Ligne (\d+) : (.*)$/),k=p.niv+"|"+(m?m[2].replace(/date \d{4}-\d{2}-\d{2} /,"date "):p.t),x=g.get(k)||{niv:p.niv,t:m?m[2].replace(/date \d{4}-\d{2}-\d{2} /,"date "):p.t,n:0,l:[]};x.n++;if(m&&x.l.length<6)x.l.push(m[1]);g.set(k,x)});
+    det=g.size?`<div class="box"><h3>Contrôles du FEC</h3><ul class="cplist">${[...g.values()].sort((a,b)=>(a.niv==="bad"?0:1)-(b.niv==="bad"?0:1)||b.n-a.n).map(x=>`<li><span class="pill ${x.niv==="bad"?"bad":"neu"}">${x.n}</span><span>${esc(x.t)}${x.l.length?` <span class="note">(lignes ${x.l.join(", ")}${x.n>x.l.length?"…":""})</span>`:""}</span></li>`).join("")}</ul><p class="note">Remarques grises : sans effet sur les totaux. Numéros de ligne = lignes du fichier FEC.</p></div>`:""}
+  const pv=(v,lab)=>v?esc(v):PH(lab);
+  return `<div class="cpg"><div class="box"><h3>Clôture ${y} : contrôles automatiques</h3><ul class="cplist">${auto.map(([s,t])=>`<li>${S[s]}<span>${t}</span></li>`).join("")}</ul></div>
+    <div class="box"><h3>Clôture ${y} : à cocher</h3><ul class="cplist">${man}</ul><p class="note">Clic sur « À faire » ou « Fait » pour changer.</p></div></div>${det}
+  <div class="box"><div class="cpbar"><h3>Paramètres de la société</h3><span class="sp"></span><button class="btn sm" data-cpparam>Modifier</button>${ex?`<button class="btn sm dang" data-cpdel>Retirer le FEC ${y}</button>`:""}</div>
+    <div class="kv"><span>SIREN</span><span>${sir?esc(sir)+(r.siren?"":" (repris des réglages des devis)"):PH("SIREN")}</span></div>
+    <div class="kv"><span>Exercice ${y}</span><span>${ex?`du ${cpd(ex.debut)} au ${cpd(ex.fin)}`:PH("dates, d'après le FEC")}</span></div>
+    <div class="kv"><span>Régime de TVA</span><span>${pv(r.regime,"régime de TVA")}</span></div>
+    <div class="kv"><span>Déclarations de TVA</span><span>${pv(r.periodicite,"périodicité")}</span></div>
+    <div class="kv"><span>Cabinet comptable</span><span>${pv(r.cabinet,"cabinet")}</span></div>
+    <div class="kv"><span>Envoi des pièces au cabinet</span><span>${pv(r.canal,"canal et rythme")}</span></div>
+    <div class="kv"><span>Plateforme agréée (facture électronique)</span><span>${pv(r.plateforme,"plateforme")}</span></div>
+    <p class="note">Facture électronique : réception obligatoire pour toutes les entreprises depuis le 01/09/2026, émission obligatoire pour les PME et micro-entreprises au 01/09/2027.</p></div>`}
+
+// ---- clics et saisies ----
+document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);let el;
+  if(el=q("[data-cpy]")){CPT.y=+el.dataset.cpy;CPT.jr="";CPT.jm="";CPT.au="";RENDER();return}
+  if(el=q("[data-cptab]")){CPT.t=el.dataset.cptab;RENDER();return}
+  if(q("[data-cpimp]")){cpPick();return}
+  if(q("[data-cpexp]")){cpExport(CPT.y);return}
+  if(q("[data-cpretry]")){delete CPT.L[CPT.y];RENDER();return}
+  if(el=q("[data-cpj]")){CPT.jr=el.dataset.cpj;CPT.jall=false;RENDER();return}
+  if(q("[data-cpall]")){CPT.jall=true;RENDER();return}
+  if(el=q("[data-cpbal]")){CPT.bal=el.dataset.cpbal;RENDER();return}
+  if(el=q("[data-cpgo]")){CPT.gl=el.dataset.cpgo;CPT.glq="";CPT.t="gl";RENDER();$("#v-main").scrollTop=0;return}
+  if(el=q("[data-cpcoche]")){cpCoche(CPT.y,el.dataset.cpcoche);return}
+  if(q("[data-cpparam]")){cpParam();return}
+  if(q("[data-cpdel]")){cpDelete(CPT.y);return}
+  if(el=q("[data-cpcsv]")){const y=CPT.y,d=cpData(y);if(!d.L)return;const K=cpCalc(y,d.L);
+    if(el.dataset.cpcsv==="gl"){const [ty,a,b]=CPT.gl.split(":"),G=CM.grandLivre(d.L,ty==="x"?(l=>l.c.startsWith(a)&&(l.ax||l.c)===b):(l=>l.c===a));
+      cpCsv(`grand-livre-${y}-${slug(b||a)}.csv`,["Date","Journal","N° écriture","Pièce","Compte","Compte auxiliaire","Libellé","Débit","Crédit","Solde","Lettrage"],G.map(l=>[cpd(l.dt),l.j,l.n,l.pr,l.c,l.ax,l.lib,l.d,l.k,l.solde,l.let]))}
+    else{const ex=d.ex,au=CPT.au&&CPT.au>=ex.debut&&CPT.au<=ex.fin?CPT.au:ex.fin;
+      if(CPT.bal==="gen")cpCsv(`balance-${y}-au-${au}.csv`,["Compte","Intitulé","Débit","Crédit","Solde débiteur","Solde créditeur"],CM.balance(d.L,au).map(a=>[a.c,a.l,a.d,a.k,Math.max(a.s,0),Math.max(-a.s,0)]));
+      else{const r=CPT.bal==="cli"?"411":"401";cpCsv(`balance-${CPT.bal==="cli"?"clients":"fournisseurs"}-${y}-au-${au}.csv`,["Compte","Nom","Débit","Crédit","Solde débiteur","Solde créditeur","Lignes lettrées","Lignes"],CM.balanceAux(d.L.filter(l=>l.dt<=au),r).map(a=>[a.c,a.l,a.d,a.k,Math.max(a.s,0),Math.max(-a.s,0),a.nlet,a.nl]))}}
+    return}
+});
+document.addEventListener("change",e=>{const f=e.target.dataset&&e.target.dataset.cpf;if(f){CPT[f]=e.target.value;if(f==="jm")CPT.jall=false;RENDER()}});
+document.addEventListener("input",e=>{const f=e.target.dataset&&e.target.dataset.cpq;if(!f)return;CPT[f]=e.target.value;clearTimeout(CPT.T);
+  CPT.T=setTimeout(()=>{RENDER();const n=$(`[data-cpq="${f}"]`);if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}},250)});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches&&e.target.matches("tr[data-cpj],tr[data-cpgo]"))e.target.click()});
+
+const VIEWS={dash:vDash,plan:vPlan,renta:vRenta,devis:vDevis,compta:vCompta,res:vRes,cli:vCli,sync:vSync};
+const TITRES={dash:"Tableau de bord",plan:"Planning global",renta:"Rentabilité",devis:"Devis et factures",compta:"Comptabilité",res:"Personnel et matériel",cli:"Clients",sync:"Synchronisation"};
 function RENDER(){if(!C)return;buildAll();renderAlerts();
   if(VIEW==="sdb")return;
   if(popEl){needRender=true;return} // une fenêtre est ouverte : on redessine en la fermant
