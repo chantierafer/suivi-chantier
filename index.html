@@ -998,7 +998,7 @@ function versGestion(){try{if(window.top!==window.self)return false;const q=new 
       </div>
       <div class="pvbar" id="pvact"><button class="btn sec" id="sigclear">Effacer la signature</button><button class="btn" id="sigok" disabled>Valider et signer</button></div>
       <div class="signed" id="signed" hidden></div>
-      <div class="pvbar" id="pvdl" hidden><button class="btn" id="pvpdf">Télécharger le PV (PDF)</button></div>
+      <div class="pvbar" id="pvdl" hidden><button class="btn" id="pvpdf">Télécharger le PV (PDF)</button> <button class="btn" id="pvmail" hidden>Préparer le mail à DOMetVIE</button></div>
     </div>
   </section>
 
@@ -2278,15 +2278,44 @@ function checkPV(){document.getElementById("sigok").disabled=!canSign()||!drawn|
 document.getElementById("sigok").onclick=()=>{pv={choice,at:new Date().toISOString(),sig:pad.toDataURL(),dateTxt:pvDateTxt(),fields:{...F}};LS.set("pv",pv);notify(["afer","domevie"].filter(r=>r!==role),"PV de réception signé par le client","pv");setupPV();renderAll()};
 // 03/11 (Djalil) : PV signé téléchargeable en PDF depuis l'espace AFER et l'espace DOMetVIE (la feuille telle qu'affichée, sur une page A4)
 const pvLib=(src,ok)=>ok()?Promise.resolve():new Promise((res,rej)=>{const x=document.createElement("script");x.src=src;x.onload=()=>ok()?res():rej(new Error("lib"));x.onerror=()=>rej(new Error("lib"));document.head.appendChild(x)});
-async function pvPdf(btn){const t=btn.textContent;btn.disabled=true;btn.textContent="Préparation du PDF…";
-  try{await pvLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>!!(window.jspdf&&window.jspdf.jsPDF));await pvLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>!!window.html2canvas);
-    const P=document.getElementById("paper");P.classList.add("pdfmode");
-    const cv=await html2canvas(P,{scale:2,backgroundColor:"#ffffff",useCORS:true});P.classList.remove("pdfmode");
+async function pvBlob(){await pvLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>!!(window.jspdf&&window.jspdf.jsPDF));await pvLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>!!window.html2canvas);
+  const P=document.getElementById("paper");P.classList.add("pdfmode");
+  try{const cv=await html2canvas(P,{scale:2,backgroundColor:"#ffffff",useCORS:true});
     const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}),W=190,H=277;let w=W,h=cv.height*W/cv.width;if(h>H){w=w*H/h;h=H}
     doc.addImage(cv.toDataURL("image/jpeg",.92),"JPEG",(210-w)/2,10,w,h);
-    const d=pv&&pv.at?new Date(pv.at):new Date();doc.save(`PV de réception - ${CH.nom} - ${jKey(d)}.pdf`);gsay("PV téléchargé")}
-  catch(e){console.error("pvPdf",e);document.getElementById("paper").classList.remove("pdfmode");gsay("PDF impossible : vérifie la connexion internet")}
+    const d=pv&&pv.at?new Date(pv.at):new Date();return {doc,blob:doc.output("blob"),name:`PV de réception - ${CH.nom} - ${jKey(d)}.pdf`}}
+  finally{P.classList.remove("pdfmode")}}
+async function pvPdf(btn){const t=btn.textContent;btn.disabled=true;btn.textContent="Préparation du PDF…";
+  try{const r=await pvBlob();r.doc.save(r.name);gsay("PV téléchargé")}
+  catch(e){console.error("pvPdf",e);gsay("PDF impossible : vérifie la connexion internet")}
   finally{btn.disabled=false;btn.textContent=t}}
+// 03/11 (Djalil) : mail à DOMetVIE avec le PV et la facture. L'appli prépare le mail, Djalil l'envoie lui-même depuis sa boîte (rien ne part tout seul)
+const MAIL_DMV={to:"m.aitkaci@dometvie.fr",civ:"Madame Ait Kaci"};
+async function factureCh(){if(!(SB.ready&&SB.c))return null;
+  try{const {data,error}=await SB.c.from("gestion").select("id,data").eq("type","doc");if(error||!data)return null;
+    const L=data.map(r=>r.data||{}).filter(d=>d.kind==="facture"&&d.numero&&d.chId===CH.key).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+    const f=L[0];if(!f)return null;let blob=null;
+    if(f.pdf){const r=await SB.c.storage.from("fichiers").download(f.pdf);if(!r.error&&r.data)blob=new Blob([r.data],{type:"application/pdf"})}
+    return {numero:f.numero,date:f.date,blob,name:`Facture ${String(f.numero).replace(/[\/\\]/g,"-")} - ${CH.nom}.pdf`}}catch(e){console.warn("facture",e);return null}}
+function dlFile(blob,name){const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)}
+async function pvMail(btn){const t=btn.textContent;btn.disabled=true;btn.textContent="Préparation du mail…";
+  try{const [P,Fa]=await Promise.all([pvBlob(),factureCh()]);
+    const d=pv&&pv.at?new Date(pv.at):new Date(),adr=(F.adresse||"").trim();
+    const sujet=`Chantier ${CH.nom} - PV de réception${Fa?" et facture n° "+Fa.numero:""}`;
+    const corps=`Bonjour ${MAIL_DMV.civ},\n\nVeuillez trouver ci-joint le procès-verbal de réception signé le ${d.toLocaleDateString("fr-FR")}${Fa?` ainsi que la facture n° ${Fa.numero}`:""}, concernant le chantier ${CH.nom}${adr?` (${adr})`:""}.\n\nNous restons à votre disposition pour tout complément.\n\nCordialement,`;
+    const files=[new File([P.blob],P.name,{type:"application/pdf"})];if(Fa&&Fa.blob)files.push(new File([Fa.blob],Fa.name,{type:"application/pdf"}));
+    const manque=!Fa?"Aucune facture émise pour ce chantier dans « Devis et factures » : le mail part avec le PV seul, ou joins la facture toi-même.":!Fa.blob?`La facture n° ${Fa.numero} n'a pas de PDF enregistré : régénère-le dans « Devis et factures » ou joins-le toi-même.`:"";
+    const share=!!(navigator.canShare&&navigator.canShare({files}));
+    sheet(`<h2>Mail à DOMetVIE</h2><p class="sub">Le mail est prêt, c'est toi qui l'envoies depuis ta boîte.</p>
+      <p><b>À :</b> ${MAIL_DMV.to}<br><b>Objet :</b> ${esc(sujet)}</p><p style="white-space:pre-line">${esc(corps)}</p>
+      <p><b>Pièces jointes :</b> ${files.map(f=>esc(f.name)).join(", ")}</p>${manque?`<p class="sub" style="color:#8A3F0C">${esc(manque)}</p>`:""}
+      ${share?`<button class="btn" id="ml-share">Ouvrir dans Outlook avec les PDF</button><p class="sub">Choisis Outlook, puis mets ${MAIL_DMV.to} en destinataire.</p>`:""}
+      <button class="btn${share?" ghost":""}" id="ml-to">Ouvrir le mail et télécharger les PDF</button><p class="sub">Sur PC : le mail s'ouvre rempli, glisse les PDF téléchargés dedans.</p>`,el=>{
+      const sh=el.querySelector("#ml-share");if(sh)sh.onclick=async()=>{try{await navigator.share({files,title:sujet,text:corps})}catch(e){}};
+      el.querySelector("#ml-to").onclick=()=>{files.forEach((f,i)=>setTimeout(()=>dlFile(f,f.name),i*300));setTimeout(()=>{location.href=`mailto:${MAIL_DMV.to}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`},900)}})}
+  catch(e){console.error("pvMail",e);gsay("Mail impossible à préparer : vérifie la connexion internet")}
+  finally{btn.disabled=false;btn.textContent=t}}
+document.getElementById("pvmail").onclick=e=>pvMail(e.currentTarget);
 document.getElementById("pvpdf").onclick=e=>pvPdf(e.currentTarget);
 function drawSig(){const im=new Image();im.onload=()=>{pctx.setTransform(1,0,0,1,0,0);pctx.clearRect(0,0,pad.width,pad.height);pctx.drawImage(im,0,0,pad.width,pad.height);pctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)};im.src=pv.sig}
 const today=d=>d.toLocaleDateString("fr-FR");
@@ -2299,7 +2328,7 @@ function setupPV(){
   paper.classList.toggle("locked",!canSign());
   document.querySelectorAll(".paper .cb").forEach(b=>b.disabled=!canSign());
   document.getElementById("pvact").hidden=!(canSign()||(pv&&role==="afer"));
-  document.getElementById("pvdl").hidden=!(pv&&(role==="afer"||role==="domevie"));
+  document.getElementById("pvdl").hidden=!(pv&&(role==="afer"||role==="domevie"));document.getElementById("pvmail").hidden=!(pv&&role==="afer");
   document.getElementById("pvedit").hidden=!(role==="tech"||role==="afer")||!!pv;paintFields();
   document.getElementById("sigok").hidden=!!pv;
   document.getElementById("sigclear").textContent=pv?"Annuler la signature (AFER)":"Effacer la signature";
