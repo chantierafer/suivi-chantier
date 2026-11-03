@@ -1328,7 +1328,7 @@ function vDevis(){if(GOK===false)return baseManquante("Devis et factures");
     <aside class="dvside" id="dvside">${sel?dvPanel(sel,all,I.get(sel.id)):`<div class="box"><b>Numérotation</b><div class="note">Devis DEV-AAAA/MM-NNNN : ${maxUsed("devis",all)?"dernier "+maxUsed("devis",all):"aucun"}<br>Factures et avoirs FAC-AAAA-NNNN : ${maxUsed("facture",all)?"dernier "+maxUsed("facture",all):"aucun"}</div><p class="note">Le numéro est donné à l'émission, dans l'ordre. Un document numéroté n'est plus modifiable : on duplique, ou on émet un avoir.</p></div>`}</aside></div>`}
 function dvPanel(d,all,i){const kids=all.filter(x=>x.parent===d.id),par=d.parent&&docById(d.parent,all),fr=d.kind==="facture"&&d.numero,lock=!!d.numero||d.sdb;
   return `<div class="box dvpanel"><div class="row2" style="justify-content:space-between"><b>${esc(dNum(d))}</b><span class="pill ${i.cls}">${esc(i.lab)}</span></div>
-    <div class="note">${esc((d.client||{}).nom||"Client à choisir")}${CHI[d.chId]?" · "+esc(CHI[d.chId].code):""} · ${fkl(d.date)}</div>
+    <div class="note">${esc((d.client||{}).nom||"Client à choisir")}${CHI[d.chId]?" · "+esc(CHI[d.chId].code):""} · ${fkl(d.date)}${d.contexte==="st"?" · TVA autoliquidée":""}</div>
     ${d.att?`<div class="note" style="color:var(--warn)">${plural(d.att,"ligne attend","lignes attendent")} la validation de DOMetVIE (hors total).</div>`:""}
     <div class="dvprev" id="dvprev"><p class="note">Chargement de l'aperçu…</p></div>
     <div class="dvact">${d.sdb?`<button class="btn sm" data-dvsdb="${esc(d.chId)}">Ouvrir dans le suivi SDB</button>`:`<button class="btn sm pri" data-dvopen="${esc(d.id)}">${lock?"Ouvrir":"Modifier"}</button>`}
@@ -1482,7 +1482,7 @@ function edRender(keepScroll){const d=ED.d,ro=ED.ro,k=d.kind,lock=!!d.numero,all
       <label>Chantier<select data-ef="chId" ${ro?"disabled":""}><option value="">— aucun —</option>${liste().map(c=>`<option value="${esc(c.id)}"${c.id===d.chId?" selected":""}>${esc(c.code)} · ${esc(c.nom)}</option>`).join("")}</select></label>
       <label>Date<input type="date" data-ef="date" value="${esc(d.date||"")}" ${ro?"disabled":""}></label></div>
       <div class="grid3"><label style="grid-column:span 2">Objet<input data-ef="objet" value="${esc(d.objet||"")}" placeholder="Réhabilitation de salle de bain PMR" ${ro?"disabled":""}></label>
-      <label>Contexte de TVA<select data-ef="contexte" ${ro?"disabled":""}>${CTX.map(([v,t])=>`<option value="${v}"${v===d.contexte?" selected":""}>${esc(t)}</option>`).join("")}</select></label></div>
+      <label>Contexte de TVA<select data-ef="contexte" ${ro?"disabled":""}>${CTX.map(([v,t])=>`<option value="${v}"${v===d.contexte?" selected":""}>${esc(t)}</option>`).join("")}</select><label class="chk autoliq"><input type="checkbox" data-ef="autoliq"${d.contexte==="st"?" checked":""} ${ro?"disabled":""}> <span>Autoliquidation de TVA<small class="note"> client société, sous-traitance : TVA à 0 %, mention légale ajoutée</small></span></label></label></div>
       ${k==="devis"?`<div class="grid3"><label>Validité<input data-ef="validite" value="${esc(d.validite||"")}" ${ro?"disabled":""}></label><label>Début des travaux<input data-ef="chantier.debut" value="${esc((d.chantier||{}).debut||"")}" placeholder="date ou texte" ${ro?"disabled":""}></label><label>Durée estimée<input data-ef="chantier.duree" value="${esc((d.chantier||{}).duree||"")}" ${ro?"disabled":""}></label></div>`
         :k==="facture"?`<div class="grid3"><label>Délai de paiement<select data-ef="delai" ${ro?"disabled":""}><option value="">— choisir —</option>${[["0","À réception"],["15","15 jours"],["30","30 jours"],["45","45 jours"],["60","60 jours"]].map(([v,t])=>`<option value="${v}"${String(d.delai)===v?" selected":""}>${t}</option>`).join("")}</select></label><label>Échéance<input type="date" data-ef="echeance" value="${esc(d.echeance||"")}" ${ro?"disabled":""}></label><label>Référence<input data-ef="refDoc" value="${esc(d.refDoc||"")}" ${ro?"disabled":""}></label></div>`
         :`<label>Référence<input data-ef="refDoc" value="${esc(d.refDoc||"")}" ${ro?"disabled":""}></label>`}
@@ -1498,7 +1498,9 @@ function edRender(keepScroll){const d=ED.d,ro=ED.ro,k=d.kind,lock=!!d.numero,all
     ${ED.tab==="lib"&&!ro?`<div id="edlib">${libHtml()}</div>`:`<div id="edprev" class="dvprev big"><p class="note">Chargement de l'aperçu…</p></div>`}</div></div>`;
   const left=o.querySelector(".dvleft");if(left)left.scrollTop=sc;if(ED.tab!=="lib"||ro)edPrev()}
 function edSet(path,v){const d=ED.d,P=path.split(".");let o=d;for(let i=0;i<P.length-1;i++)o=o[P[i]]=o[P[i]]||{};o[P[P.length-1]]=v}
-function edField(e){const t=e.target,f=t.dataset.ef;if(!ED||ED.ro)return;const v=t.type==="checkbox"?t.checked:t.value;edSet(f,v);const d=ED.d;
+function edField(e){const t=e.target,f=t.dataset.ef;if(!ED||ED.ro)return;const v=t.type==="checkbox"?t.checked:t.value;if(f!=="autoliq")edSet(f,v);const d=ED.d;
+  if(f==="autoliq"){if(v){if(d.contexte!=="st")d.ctxAvant=d.contexte;d.contexte="st"}else d.contexte=d.ctxAvant&&d.ctxAvant!=="st"?d.ctxAvant:"pro";delete d.autoliq;
+    d.lines.forEach(l=>{if(l.kind!=="titre"&&!l.txManuel)l.tx=txFor(l.cat||"C",d.contexte)});edDirty();edRender(true);return}
   if(f==="cli"){d.client=v?clientDoc(v):d.client;if(v&&!d.chId)d.contexte=v==="dmv"?"st":d.contexte;edDirty();edRender(true);return}
   if(f==="chId"){if(v){d.chantier={...d.chantier,adresse:chantierDoc(v).adresse};const c=CHI[v];if(c&&c.cli&&!d.cli){d.cli=c.cli.id;d.client=clientDoc(c.cli.id);if(c.cli.id==="dmv")d.contexte="st"}}edDirty();edRender(true);return}
   if(f==="contexte"){d.lines.forEach(l=>{if(l.kind!=="titre"&&!l.txManuel)l.tx=txFor(l.cat||"C",v)});edDirty();edRender(true);return}
