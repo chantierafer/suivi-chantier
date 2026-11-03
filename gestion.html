@@ -1408,14 +1408,14 @@ function dvIssues(d,all){const L=[],B=(t)=>L.push({t,block:true}),W=(t)=>L.push(
   if(!cl.nom)B("Choisis le client.");if(!arts.length)B("Aucune ligne.");if(arts.some(l=>!String(l.designation||"").trim()))B("Une ligne n'a pas de désignation.");
   if(!d.objet)W("Pas d'objet.");if(!cl.adresse1||!cl.cp||!cl.ville)(d.kind==="devis"?W:B)("Adresse complète du client manquante (voie, code postal, ville).");
   if(d.kind==="facture"){if(t.ht<=0)B("Le total de la facture doit être positif.");if(!d.echeance)B("Choisis le délai de paiement : la date d'échéance est obligatoire sur une facture.");
-    if(!(gid("reglage","docs")||{}).confirme)B("Confirme d'abord les mentions légales des factures (bouton « Numérotation et mentions »).");
+    if(!(gid("reglage","docs")||{}).confirme){B("Confirme d'abord les mentions légales des factures.");L[L.length-1].act="mentions"}
     const dern=all.filter(x=>x.kind==="facture"&&x.numero).map(x=>x.date).sort().pop();if(dern&&d.date<dern)W("La date est antérieure à la dernière facture émise ("+fkl(dern)+") : les numéros doivent suivre l'ordre des dates.");
     if(d.client&&d.client.type==="pro"&&!cl.siret&&!cl.siren)W("SIREN ou SIRET du client absent.")}
   if(d.kind==="avoir"){if(t.ht>=0)B("Un avoir doit avoir un total négatif.");const f=d.parent&&docById(d.parent,all);
     if(f){const ant=all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id&&a.id!==d.id).reduce((s,a)=>s+totDoc(a.lines).ht,0);if(-t.ht>totDoc(f.lines).ht+ant)B("Cet avoir dépasse le montant restant de la facture "+f.numero+".")}}
   if(d.kind==="devis"&&!d.validite)W("Pas de durée de validité.");if(arts.some(l=>l.tx==null||l.tx===""))B("Une ligne n'a pas de taux de TVA.");return L}
-function issuesModal(L,titre,ok){const bl=L.some(i=>i.block);const p=openModal(`<h3>${esc(titre)}</h3><ul class="dvissues">${L.map(i=>`<li class="${i.block?"bad":""}">${esc(i.t)}</li>`).join("")}</ul>${bl?"":`<p class="note">Ces points ne bloquent pas.</p>`}<div class="acts"><button class="btn sm" data-x>${bl?"Fermer":"Revenir"}</button>${bl?"":`<button class="btn sm pri" id="is-ok">Émettre quand même</button>`}</div>`);
-  const b=p.querySelector("#is-ok");if(b)b.onclick=()=>{closeFloat();ok()}}
+function issuesModal(L,titre,ok){const bl=L.some(i=>i.block);const p=openModal(`<h3>${esc(titre)}</h3><ul class="dvissues">${L.map(i=>`<li class="${i.block?"bad":""}">${esc(i.t)}</li>`).join("")}</ul>${bl?"":`<p class="note">Ces points ne bloquent pas.</p>`}<div class="acts"><button class="btn sm" data-x>${bl?"Fermer":"Revenir"}</button>${L.some(i=>i.act==="mentions")?`<button class="btn sm pri" id="is-men">Vérifier les mentions</button>`:""}${bl?"":`<button class="btn sm pri" id="is-ok">Émettre quand même</button>`}</div>`);
+  const b=p.querySelector("#is-ok");if(b)b.onclick=()=>{closeFloat();ok()};const m=p.querySelector("#is-men");if(m)m.onclick=()=>{closeFloat();dvSettings()}}
 let emitting=false;
 async function dvEmettre(id){if(emitting)return;const all=docsAll(),d=ED&&ED.id===id?ED.d:docById(id,all);if(!d||d.numero||d.sdb)return;
   const L=dvIssues(d,all);if(L.length){if(L.some(i=>i.block)){issuesModal(L,"À corriger avant d'émettre");return}return issuesModal(L,"À vérifier avant d'émettre",()=>dvEmettre2(id,d))}return dvEmettre2(id,d)}
