@@ -194,6 +194,7 @@ button.jcol:hover .jseg{filter:brightness(.95)}button.jcol{cursor:pointer}
 /* PV : copie du modèle papier, toujours sur fond blanc */
 .pvwrap{display:grid;gap:14px;justify-items:center}
 .paper{width:100%;max-width:794px;background:#fff;color:#111;font-family:var(--paper);font-size:clamp(13px,2.1vw,16.5px);line-height:1.45;padding:5% 8% 3%;border-radius:4px;box-shadow:0 2px 14px rgba(0,0,0,.15);position:relative}
+.paper.pdfmode{box-shadow:none;border-radius:0;max-width:794px;width:794px}.paper.pdfmode .cb{box-shadow:none}.paper.pdfmode canvas{border:0;background:#fff!important;box-shadow:none!important}.paper.pdfmode .val{background:none!important;outline:0!important;box-shadow:none!important}
 .paper .logo{display:block;margin:0 auto 4%;width:38%;max-width:300px}
 .paper .ttl{border:1.2px solid #444;text-align:center;padding:.35em;font-weight:700;font-size:1.32em;letter-spacing:.05em;margin:0 0 6%}
 .paper .lab{font-weight:700;text-decoration:underline;text-underline-offset:2px}
@@ -997,6 +998,7 @@ function versGestion(){try{if(window.top!==window.self)return false;const q=new 
       </div>
       <div class="pvbar" id="pvact"><button class="btn sec" id="sigclear">Effacer la signature</button><button class="btn" id="sigok" disabled>Valider et signer</button></div>
       <div class="signed" id="signed" hidden></div>
+      <div class="pvbar" id="pvdl" hidden><button class="btn" id="pvpdf">Télécharger le PV (PDF)</button></div>
     </div>
   </section>
 
@@ -1081,7 +1083,7 @@ function versGestion(){try{if(window.top!==window.self)return false;const q=new 
   <p class="proto">Prototype : les données restent sur cet appareil. Le partage en direct entre téléphones arrive avec la base en ligne.</p>
 </div>
 
-<input type="file" id="file" accept="image/*" capture="environment" hidden>
+<input type="file" id="file" accept="image/*" capture="environment" hidden><input type="file" id="file2" accept="image/*" multiple hidden>
 <input type="file" id="docfile" multiple hidden>
 <div class="lightbox" id="lb" hidden><button class="lbnav" id="lbprev" aria-label="Photo précédente">‹</button><figure><img id="lbimg" alt=""><figcaption><span id="lbcap"></span><span id="lbn" class="sub" style="color:#C7D0D2"></span><button class="btn" id="lbclose">Fermer</button></figcaption></figure><button class="lbnav" id="lbnext" aria-label="Photo suivante">›</button></div>
 <div class="sbgate" id="sbgate" hidden></div>
@@ -1499,9 +1501,9 @@ const ALL_STEPS=[
 ];
 const PB_TYPES=["Accès impossible (client absent, code, clé)","Refus du client","Matériel manquant ou abîmé","Imprévu technique","Risque sécurité (amiante suspectée, électricité…)","Autre"];
 const FRAIS_CAT=["Carburant","Petit outillage","Fournitures","Péage ou stationnement","Autre"];
-/* BPU : seul le forfait de base a un prix (900 € HT). Les autres prix restent à compléter par AFER. */
+/* BPU : forfait de base 1200 € HT (03/11/2026, avant 900 €). Les autres prix restent à compléter par AFER. */
 const BPU_DEFAULT=[
- ["base","Forfait","Installation salle de bain simple, forfait par salle de bain","forfait",900],
+ ["base","Forfait","Installation salle de bain simple, forfait par salle de bain","forfait",1200],
  ["d1","Dépose et démolition","Dépose et évacuation d'une baignoire","u"],
  ["d2","Dépose et démolition","Dépose de faïence murale","m²"],
  ["d3","Dépose et démolition","Dépose de carrelage au sol","m²"],
@@ -1611,6 +1613,10 @@ const BPU_DEFAULT=[
 // 18/10 après-midi : 45 lignes de travaux en plus ajoutées (prix et sources : deploiement/bpu-sdb-prix-idf.md).
 // Hors dépôt public (build.py le vide) : la version en ligne le reçoit avec parametres-devis-afer.json.
 const BPU_PROV=/*DV-BPU*/{}/*/DV-BPU*/;
+// 03/11/2026 (Djalil) : forfait SDB 900 → 1200 € et hausse de 10 % des travaux en plus ; BPU_PROV_V1 = anciens prix, pour ne mettre à jour que les prix provisoires jamais retouchés
+const BPU_PROV_V1=/*DV-BPU1*/{}/*/DV-BPU1*/;
+// base : 900 → 1200 une seule fois (rev) ; prix provisoires : seulement ceux encore égaux à l'ancien prix (tables absentes du site public, elles arrivent par l'import)
+function bpuRev(P,V1){let n=0;(bpu||[]).forEach(b=>{if(b.id==="base"){if(!b.rev&&Number(b.pu)===900){b.pu=1200;n++}if(!b.rev){b.rev=2;n++}}else if(b.prov&&P&&V1&&P[b.id]!=null&&V1[b.id]!=null&&Number(b.pu)===V1[b.id]){b.pu=P[b.id];n++}});return n}
 // lignes ajoutées au BPU par une mise à jour : insérées dans un BPU déjà enregistré, à la fin de leur rubrique (prix et libellés existants inchangés)
 function bpuMerge(B){if(!Array.isArray(B))return 0;const have=new Set(B.map(b=>b.id));let n=0;
   BPU_DEFAULT.forEach(d=>{if(have.has(d.id))return;let i=-1;B.forEach((b,j)=>{if(b.cat===d.cat)i=j});B.splice(i<0?B.length:i+1,0,{...d});have.add(d.id);n++});return n}
@@ -1639,7 +1645,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 
 /* ===== Données (prototype : stockées sur l'appareil) ===== */
 // Communes à tous les chantiers : BPU, notifications, rôle, historique
-let bpu=GS.get("bpu",null)||peek("saint-denis-v3","bpu",null)||BPU_DEFAULT.map(x=>({...x}));if(bpuMerge(bpu)+bpuProv(BPU_PROV))GS.set("bpu",bpu);
+let bpu=GS.get("bpu",null)||peek("saint-denis-v3","bpu",null)||BPU_DEFAULT.map(x=>({...x}));if(bpuMerge(bpu)+bpuProv(BPU_PROV)+bpuRev(BPU_PROV,BPU_PROV_V1))GS.set("bpu",bpu);
 let notifs=GS.get("notifs",null)||peek("saint-denis-v3","notifs",[]).map(n=>({...n,ch:"saint-denis-v3"}));
 // Propres au chantier ouvert (rechargées par loadChantier)
 let photos={},devis=[],dvinfo=null,reqs=[],pbs=[],docs=[],bls=[],frais=[],sav=[],closed=null;
@@ -1733,8 +1739,10 @@ function sheet(html,bind){shb.innerHTML=html;sh.hidden=false;shb.querySelectorAl
 function closeSheet(){sh.hidden=true;shb.innerHTML=""}
 sh.onclick=e=>{if(e.target===sh)closeSheet()};
 function gsay(t){let e=document.getElementById("gtoast");if(!e){e=document.createElement("div");e.id="gtoast";e.className="gtoast";document.body.appendChild(e)}e.textContent=t;e.classList.add("on");clearTimeout(e._h);e._h=setTimeout(()=>e.classList.remove("on"),1800)}
-function shotField(el,cb){const b=el.querySelector("[data-shot]"),pv=el.querySelector("[data-shotpv]");b.onclick=()=>pickOnce(k=>{cb(k);getImg(k).then(s=>{pv.innerHTML=s?`<img src="${s}" alt="Photo jointe">`:"";b.textContent="Reprendre la photo"})})}
-const SHOT=(label)=>`<div class="shot"><button type="button" class="btn sec" data-shot>${label}</button><span data-shotpv></span></div>`;
+// dans un formulaire déjà ouvert : deux boutons côte à côte (appareil ou galerie) au lieu de la fenêtre de choix
+function shotField(el,cb){const b=el.querySelector("[data-shot]"),g=el.querySelector("[data-shotgal]"),pv=el.querySelector("[data-shotpv]"),done=k=>{cb(k);getImg(k).then(s=>{pv.innerHTML=s?`<img src="${s}" alt="Photo jointe">`:"";b.textContent="Reprendre la photo"})};
+  b.onclick=()=>pickOnceFrom(file,done);if(g)g.onclick=()=>pickOnceFrom(file2,done)}
+const SHOT=(label)=>`<div class="shot"><button type="button" class="btn sec" data-shot>${label}</button><button type="button" class="btn sec" data-shotgal>Galerie</button><span data-shotpv></span></div>`;
 // Travaux en plus proposés d'abord selon l'étape (le reste du BPU suit, rien n'est masqué)
 const STEP_BPU={constat:["v1","v3","v6","v7","d6"],protection:["v3","v6","v7","d6","d11"],depose:["d"],plomberie:["p","e5","e6"],receveur:["c1","c2","c3","c4","s1","s5","s6","s7","d7","p1","p23"],
   etancheite:["c5","c6","c7","s11","s2","s3","s8","s9"],dalles:["r","s2","s3","s4","s8"],colonne:["p11","p17","p3","p5","p9","p27","p28","p15"],paroi:["c8","c9","c10"],
@@ -1746,15 +1754,20 @@ function bpuOptions(withPrice,sel,step){const L=bpu.filter(b=>b.id!=="base"),opt
 
 /* ===== Photos : prise, compression, grille ===== */
 const CAM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="4"/></svg>';
-let target=null,oneShot=null;const file=document.getElementById("file");
-function pick(key){if(list(key).length>=lim(key).max)return;target=key;oneShot=null;file.value="";file.click()}
-function pickOnce(cb){oneShot=cb;target=null;file.value="";file.click()}
+let target=null,oneShot=null;const file=document.getElementById("file"),file2=document.getElementById("file2");
+// 03/11 (Djalil) : à chaque ajout, choisir entre prendre une photo (appareil) et importer depuis la galerie (plusieurs d'un coup)
+function choose(go){sheet(`<h2>Ajouter une photo</h2><div class="form"><button class="btn" id="ch-cam">${CAM}Prendre une photo</button><button class="btn sec" id="ch-gal">Choisir dans la galerie</button><button class="btn sec" data-close>Annuler</button></div>`,
+  el=>{el.querySelector("#ch-cam").onclick=()=>{closeSheet();go(file)};el.querySelector("#ch-gal").onclick=()=>{closeSheet();go(file2)}})}
+function pick(key){if(list(key).length>=lim(key).max)return;choose(inp=>{target=key;oneShot=null;inp.value="";inp.click()})}
+function pickOnce(cb){choose(inp=>pickOnceFrom(inp,cb))}
+function pickOnceFrom(inp,cb){oneShot=cb;target=null;inp.value="";inp.click()}
 function compress(f){return new Promise(res=>{const rd=new FileReader();rd.onload=()=>{const im=new Image();im.onload=()=>{const M=1600,sc=Math.min(1,M/Math.max(im.width,im.height)),cv=document.createElement("canvas");cv.width=im.width*sc;cv.height=im.height*sc;cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);res(cv.toDataURL("image/jpeg",.82))};im.onerror=()=>res(null);im.src=rd.result};rd.onerror=()=>res(null);rd.readAsDataURL(f)})}
-file.onchange=async()=>{const f=file.files[0];if(!f)return;const d=await compress(f);if(!d)return;
-  if(oneShot){const k="img-"+uid(),cb=oneShot;oneShot=null;putImg(k,d);cb(k);return}
-  if(target){const key=target;target=null;addPhoto(key,d)}};
+const onFiles=async inp=>{const F=[...inp.files];if(!F.length)return;
+  if(oneShot){const d=await compress(F[0]);if(!d)return;const k="img-"+uid(),cb=oneShot;oneShot=null;putImg(k,d);cb(k);return}
+  if(target){const key=target;target=null;for(const f of F){const d=await compress(f);if(d)addPhoto(key,d)}}};
+file.onchange=()=>onFiles(file);file2.onchange=()=>onFiles(file2);
 function addPhoto(key,d){
-  const k=key.replace(/:/g,"_")+"-"+Date.now();putImg(k,d);
+  const k=key.replace(/:/g,"_")+"-"+Date.now()+"-"+uid().slice(-4);putImg(k,d);
   const before=globalPct();photos[key]=[...list(key),{id:k,at:iso()}];save("photos",photos);
   const n=list(key).length,s=ALL_STEPS.find(x=>x.id===key);
   if(key==="materiel"){if(n===1){notify(["afer","domevie"],"Matériel réceptionné : début du chantier","suivi");toast("Chantier démarré")}else toast("Photo ajoutée")}
@@ -2263,6 +2276,18 @@ function paintBoxes(){document.querySelectorAll(".paper .cb").forEach(b=>{b.text
 document.getElementById("sigclear").onclick=()=>{if(pv){if(role!=="afer")return;pv=null;LS.set("pv",null);choice=null;paintBoxes()}pctx.clearRect(0,0,pad.width,pad.height);drawn=false;setupPV()};
 function checkPV(){document.getElementById("sigok").disabled=!canSign()||!drawn||!choice}
 document.getElementById("sigok").onclick=()=>{pv={choice,at:new Date().toISOString(),sig:pad.toDataURL(),dateTxt:pvDateTxt(),fields:{...F}};LS.set("pv",pv);notify(["afer","domevie"].filter(r=>r!==role),"PV de réception signé par le client","pv");setupPV();renderAll()};
+// 03/11 (Djalil) : PV signé téléchargeable en PDF depuis l'espace AFER et l'espace DOMetVIE (la feuille telle qu'affichée, sur une page A4)
+const pvLib=(src,ok)=>ok()?Promise.resolve():new Promise((res,rej)=>{const x=document.createElement("script");x.src=src;x.onload=()=>ok()?res():rej(new Error("lib"));x.onerror=()=>rej(new Error("lib"));document.head.appendChild(x)});
+async function pvPdf(btn){const t=btn.textContent;btn.disabled=true;btn.textContent="Préparation du PDF…";
+  try{await pvLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>!!(window.jspdf&&window.jspdf.jsPDF));await pvLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>!!window.html2canvas);
+    const P=document.getElementById("paper");P.classList.add("pdfmode");
+    const cv=await html2canvas(P,{scale:2,backgroundColor:"#ffffff",useCORS:true});P.classList.remove("pdfmode");
+    const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}),W=190,H=277;let w=W,h=cv.height*W/cv.width;if(h>H){w=w*H/h;h=H}
+    doc.addImage(cv.toDataURL("image/jpeg",.92),"JPEG",(210-w)/2,10,w,h);
+    const d=pv&&pv.at?new Date(pv.at):new Date();doc.save(`PV de réception - ${CH.nom} - ${jKey(d)}.pdf`);gsay("PV téléchargé")}
+  catch(e){console.error("pvPdf",e);document.getElementById("paper").classList.remove("pdfmode");gsay("PDF impossible : vérifie la connexion internet")}
+  finally{btn.disabled=false;btn.textContent=t}}
+document.getElementById("pvpdf").onclick=e=>pvPdf(e.currentTarget);
 function drawSig(){const im=new Image();im.onload=()=>{pctx.setTransform(1,0,0,1,0,0);pctx.clearRect(0,0,pad.width,pad.height);pctx.drawImage(im,0,0,pad.width,pad.height);pctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)};im.src=pv.sig}
 const today=d=>d.toLocaleDateString("fr-FR");
 let F={};const PVF=[["e-client","client"],["e-adresse","adresse"],["e-devis","devis"],["e-lieu","lieu"],["e-date","date"]];
@@ -2274,6 +2299,7 @@ function setupPV(){
   paper.classList.toggle("locked",!canSign());
   document.querySelectorAll(".paper .cb").forEach(b=>b.disabled=!canSign());
   document.getElementById("pvact").hidden=!(canSign()||(pv&&role==="afer"));
+  document.getElementById("pvdl").hidden=!(pv&&(role==="afer"||role==="domevie"));
   document.getElementById("pvedit").hidden=!(role==="tech"||role==="afer")||!!pv;paintFields();
   document.getElementById("sigok").hidden=!!pv;
   document.getElementById("sigclear").textContent=pv?"Annuler la signature (AFER)":"Effacer la signature";
@@ -2542,7 +2568,7 @@ function setChantiers(L){const cur=CH.key;if(SB.lien&&SB.lien.ch&&!SB.afer)L=L.f
     if(!pv){F=pvF(c,peek(c.id,"pvfields",null));PVF.forEach(([i,k])=>document.getElementById(i).value=F[k]||"")}renderAll();if(!pv)paintFields()})}
 const evN=e=>({id:"e"+e.id,ch:e.chantier_id,to:e.pour||[],txt:e.texte,tab:e.type,at:e.created_at,par:e.par,seen:{afer:!!SEEN["e"+e.id+"|afer"],tech:!!SEEN["e"+e.id+"|tech"],domevie:!!SEEN["e"+e.id+"|domevie"]}});
 function onPar1(p){
-  if(p.cle==="bpu"&&SB.afer)later(()=>{if(cj(p.valeur)===cj(bpu))return;bpu=p.valeur;if(bpuMerge(bpu))GS.set("bpu",bpu);else rawGS("bpu",bpu);if(SB.ready)renderAll()});
+  if(p.cle==="bpu"&&SB.afer)later(()=>{if(cj(p.valeur)===cj(bpu))return;bpu=p.valeur;if(bpuMerge(bpu)+bpuRev(BPU_PROV,BPU_PROV_V1))GS.set("bpu",bpu);else rawGS("bpu",bpu);if(SB.ready)renderAll()});
   else if(["catalogue","devis_reglages","devis_images","devis_compteur"].includes(p.cle))later(()=>{rawGS(p.cle,p.valeur);if(p.cle!=="devis_compteur"){DV.par(p.cle,p.valeur);if(SB.ready)renderDevis()}});
   else if(p.cle==="pv_cachet"){rawGS(p.cle,p.valeur);cachet()}
   else if(p.cle==="bpu_libelles"&&!SB.afer){bpu=(p.valeur||[]).map(x=>({...x,pu:null}));rawGS("bpu",bpu)}
@@ -2911,7 +2937,7 @@ function freeLine(lot, lib = '') {
   return { id: uid(), kind: 'article', code: null, bpu: null, lot, designation: lib, detail: '', qty: 1, unit: 'u', pu: 0, puCat: null, cat: 'C', tvaMode: 'auto', tva: 0.2, st: 'att', valAt: null, at: iso(), ph: true };
 }
 function baseLine() {
-  const b = (bpu || []).find(x => x.id === 'base'), pu = b && b.pu != null && b.pu !== '' ? Number(b.pu) : 900;
+  const b = (bpu || []).find(x => x.id === 'base'), pu = b && b.pu != null && b.pu !== '' ? Number(b.pu) : 1200;
   return { id: 'L0', kind: 'article', code: 'SDB-base', bpu: 'base', lot: 'SDB', designation: b ? b.lib : 'Installation salle de bain simple', detail: '', qty: 1, unit: 'forfait', pu, puCat: pu, cat: 'C', tvaMode: 'auto', tva: 0.2, st: 'val', base: true, at: iso(), ord: 0 };
 }
 // lignes enregistrées par les versions précédentes (lib / q / u) -> format de l'appli de devis
@@ -3550,7 +3576,7 @@ function importPack(j, fname, out) {
     if (j.reglages) { S = mergeSettings({ ...S, ...j.reglages }); DS.saveSettings(S); }
     if (j.images) DS.saveImages(j.images);
     if (j.pv_cachet) { GS.set('pv_cachet', j.pv_cachet); cachet(); }
-    if (j.bpu_provisoire && bpuProv(j.bpu_provisoire)) { GS.set('bpu', bpu); renderBPU(); }
+    if (j.bpu_provisoire && (bpuProv(j.bpu_provisoire) + bpuRev(j.bpu_provisoire, j.bpu_provisoire_v1))) { GS.set('bpu', bpu); renderBPU(); }
     $('#dvimp').hidden = true;
     onCatalogChanged(); toast('Paramètres du devis importés'); openCatalogModal();
   });
