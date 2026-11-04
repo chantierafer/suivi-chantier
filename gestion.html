@@ -1246,7 +1246,7 @@ const pcx=r=>(Math.round(r*1000)/10).toLocaleString("fr-FR")+" %";
 const kr=r=>Math.round(r*1000);
 const slug=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const clone=o=>JSON.parse(JSON.stringify(o));
-function totDoc(lines){const by=new Map();let ht=0;for(const l of lines||[]){if(l.kind==="titre")continue;const t=Math.round((Number(l.qty)||0)*cts(l.pu));by.set(kr(Number(l.tx)||0),(by.get(kr(Number(l.tx)||0))||0)+t);ht+=t}
+function totDoc(lines){const by=new Map();let ht=0;for(const l of lines||[]){if(l.kind==="titre")continue;const t=l.rt?Math.round((Number(l.qty)||0)*(Number(l.pu)||0)*100):Math.round((Number(l.qty)||0)*cts(l.pu)); /* rt : ligne reprise de Tolteck, arrondie comme Tolteck (au centime sur le montant en euros) */by.set(kr(Number(l.tx)||0),(by.get(kr(Number(l.tx)||0))||0)+t);ht+=t}
   const rates=[...by.keys()].sort((a,b)=>a-b).map(k=>({r:k/1000,base:by.get(k),tva:Math.round(by.get(k)*k/1000)})),tva=rates.reduce((s,x)=>s+x.tva,0);return{ht,tva,ttc:ht+tva,rates}}
 // ---- les documents : lignes gestion « doc » + devis du suivi SDB ----
 function docsAll(){const out=[];Object.entries(gt("doc")).forEach(([id,d])=>out.push({...d,id}));
@@ -1467,24 +1467,25 @@ async function bigPrev(id){const d=docById(id);if(!d)return;const w=document.cre
 // ---- reprise Tolteck : fichier import-tolteck-*.json préparé par Claude à partir des exports Tolteck (clients, registre des documents, bibliothèque) ----
 function tlkPick(){if(needBase())return;let i=$("#tlk-file");if(!i){i=document.createElement("input");i.type="file";i.id="tlk-file";i.accept=".json,application/json";i.hidden=true;
     i.onchange=()=>{const f=i.files[0];i.value="";if(f)f.text().then(tlkPreview).catch(()=>toast("Fichier illisible."))};document.body.appendChild(i)}i.click()}
+const tlkTotaux=d=>!!(d&&d.tolteck&&!d.tolteck.lignes&&(d.lines||[]).every(l=>/^Montant repris de Tolteck/.test(l.designation||"")));
 function tlkPreview(txt){let J;try{J=JSON.parse(txt)}catch(e){toast("Ce fichier n'est pas un import Tolteck.");return}
   if(!J||J.type!=="import-tolteck"||!Array.isArray(J.clients)||!Array.isArray(J.docs)||!Array.isArray(J.biblio)){toast("Ce fichier n'est pas un import Tolteck.");return}
-  const all=docsAll(),cm=clientsMap(),dd=gt("doc"),nCli=J.clients.filter(c=>!cm[c.id]).length,nDoc=J.docs.filter(d=>!dd[d.id]).length,
+  const all=docsAll(),cm=clientsMap(),dd=gt("doc"),nCli=J.clients.filter(c=>!cm[c.id]).length,nDoc=J.docs.filter(d=>!dd[d.id]).length,nMaj=J.docs.filter(d=>dd[d.id]&&d.tolteck&&d.tolteck.lignes&&tlkTotaux(dd[d.id])).length,v2=J.version>=2,
     pris=new Map(all.filter(d=>d.numero&&!d.tolteck).map(d=>[d.numero,d])),coll=J.docs.filter(d=>d.numero&&pris.has(d.numero)).map(d=>d.numero);
-  const p=openModal(`<h3>Importer depuis Tolteck</h3><p class="note">Export Tolteck du ${esc(fkl(J.exporte_le)||J.exporte_le||"")}. Rien n'est supprimé ni écrasé : ce qui existe déjà dans l'appli est gardé tel quel.</p>
-    <div class="fgrp"><div class="kv"><span>Clients nouveaux</span><b>${nCli} / ${J.clients.length}</b></div><div class="kv"><span>Devis, factures et avoirs (totaux, statut, paiement)</span><b>${nDoc} / ${J.docs.length}</b></div><div class="kv"><span>Articles et ouvrages de la bibliothèque</span><b>${J.biblio.length}</b></div></div>
-    <p class="note">Les documents repris gardent leur numéro Tolteck, en lecture seule. Le détail des lignes n'est pas dans l'export Tolteck : chaque document porte son total par taux de TVA. Unités et TVA des articles à compléter.</p>
+  const p=openModal(`<h3>Importer depuis Tolteck</h3><p class="note">Export Tolteck du ${esc(fkl(J.exporte_le)||J.exporte_le||"")}. Rien n'est supprimé : ce que tu as saisi ou modifié dans l'appli est gardé tel quel.</p>
+    <div class="fgrp"><div class="kv"><span>Clients nouveaux</span><b>${nCli} / ${J.clients.length}</b></div><div class="kv"><span>Devis, factures et avoirs nouveaux</span><b>${nDoc} / ${J.docs.length}</b></div>${nMaj?`<div class="kv"><span>Documents déjà repris complétés avec leurs lignes</span><b>${nMaj}</b></div>`:""}<div class="kv"><span>Articles et ouvrages de la bibliothèque</span><b>${J.biblio.length}</b></div></div>
+    <p class="note">${v2?"Les documents repris gardent leur numéro Tolteck et toutes leurs lignes (désignation, quantité, unité, prix, TVA), en lecture seule s'ils sont émis. La bibliothèque garde unités, prix de vente et déboursés.":"Les documents repris gardent leur numéro Tolteck, en lecture seule. Le détail des lignes n'est pas dans l'export Tolteck : chaque document porte son total par taux de TVA. Unités et TVA des articles à compléter."}</p>
     ${coll.length?`<p class="note"><b>Numéros déjà utilisés dans l'appli :</b> ${coll.map(esc).join(", ")}. Les deux documents sont gardés, à vérifier.</p>`:""}
     <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="tlk-ok">Importer</button></div>`);
   p.querySelector("#tlk-ok").onclick=()=>{closeFloat();tlkImport(J)}}
 async function tlkImport(J){const cm=clientsMap(),dd=gt("doc"),rows=[],now=new Date().toISOString();
   J.clients.forEach(c=>{const {id,...d}=c,k=gid("client",id);if(id==="dmv"){const b=k||{},m={...b};["adresse","tel","email","siret","info"].forEach(f=>{if(!m[f]&&d[f])m[f]=d[f]});rows.push({type:"client",id,data:m});return}
     if(cm[id])return;rows.push({type:"client",id,data:{...d,cree:now}})});
-  J.docs.forEach(x=>{const {id,...d}=x;if(!dd[id])rows.push({type:"doc",id,data:d})});
+  J.docs.forEach(x=>{const {id,...d}=x;if(!dd[id]||(d.tolteck&&d.tolteck.lignes&&tlkTotaux(dd[id])))rows.push({type:"doc",id,data:dd[id]?{...d,paiements:dd[id].paiements||d.paiements}:d})});
   const bib=gid("biblio","tolteck");rows.push({type:"biblio",id:"tolteck",data:{...(bib||{}),source:"Tolteck",exporte_le:J.exporte_le,rows:J.biblio,importeLe:now}});
   const all=docsAll().concat(J.docs);if(!await gputMany(rows))return;LIBC=null;
   for(const k of["devis","facture"]){const n=await lireCompteur(k,all);await ecrireCompteur(k,n)}
-  toast(`Tolteck importé : ${plural(rows.filter(r=>r.type==="client").length,"client","clients")}, ${plural(rows.filter(r=>r.type==="doc").length,"document","documents")}, ${plural(J.biblio.length,"article","articles")}.`);RENDER()}
+  toast(`Tolteck importé : ${plural(rows.filter(r=>r.type==="client").length,"client","clients")}, ${plural(rows.filter(r=>r.type==="doc").length,"document","documents")} ajoutés ou complétés, ${plural(J.biblio.length,"article","articles")}.`);RENDER()}
 function edOpen(id){const d=docById(id);if(!d||d.sdb)return;ED={id,d:clone(d),ro:dvFrozen(d),tab:"prev",lq:"",lot:"",sel:new Set(),T:null,PT:null};edRender()}
 function edClose(){if(ED){edFlush();const o=$("#dved");if(o)o.remove();ED=null;RENDER()}}
 function edDirty(){if(!ED||ED.ro)return;clearTimeout(ED.T);ED.T=setTimeout(edFlush,900)}
