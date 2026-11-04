@@ -383,7 +383,7 @@ kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--l
 #page select{max-width:100%}
 .dvbar input[type=search]{margin-left:auto;min-width:200px;border-radius:6px}
 .dvsplit{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
-.dvlist{flex:1 1 640px;min-width:0;max-width:100%}.dvlist th,.dvlist td{padding:8px 6px}.dvlist td.wrap{min-width:120px} /* 7 colonnes lisibles à 1366 px avec le panneau ouvert */
+.dvlist tr.dday td{background:var(--turq-soft);font-weight:700;font-size:12px;padding:4px 6px;border-top:10px solid var(--card,#fff);border-bottom:0;cursor:default}.dvlist tr.dday:first-child td{border-top:0}.dvlist{flex:1 1 640px;min-width:0;max-width:100%}.dvlist th,.dvlist td{padding:8px 6px}.dvlist td.wrap{min-width:120px} /* 7 colonnes lisibles à 1366 px avec le panneau ouvert */
 .dvside{flex:0 0 320px;max-width:420px;min-width:280px;position:sticky;top:0}
 tr.clk.sel td{background:var(--turq-soft)}
 .dvpanel{display:grid;gap:9px}
@@ -1267,6 +1267,9 @@ function dInfo(d,all){const t=totDoc(d.lines);let lab="Brouillon",cls="neu",rest
     else{const j=d.echeance&&d.echeance<today()?daysBetween(d.echeance,today()):0;if(j>0){lab="Échue "+j+" j";cls="bad"}else{lab=paye>0?"Partielle":"À encaisser";cls="warn"}}}
   return{t,lab,cls,reste}}
 const dNum=d=>d.numero||(d.sdb?"Devis SDB (sans n°)":"Brouillon");
+// un devis a son numéro dès la création et reste modifiable ; il n'est figé qu'une fois accepté ET facturé. Facture / avoir : figés dès le numéro (à l'émission).
+const dvFrozen=(d,all)=>!!d.sdb||(d.kind==="devis"?!!d.tolteck||(d.statut==="accepte"&&(all||docsAll()).some(x=>x.parent===d.id&&x.numero)):!!d.numero);
+async function numeroterDevis(d,all){const n=await lireCompteur("devis",all||docsAll());if(!await ecrireCompteur("devis",n+1)){toast("Compteur de devis pas enregistré, réessaie.");return null}return fmtNum("devis",n,d.date)}
 // ---- numérotation : un compteur par type, sans trou, attribué à l'émission ----
 // factures et avoirs : une seule série FAC-AAAA-NNNN (reprise de la série existante, dernier numéro vu 0023) ; devis : DEV-AAAA/MM-NNNN
 const serie=k=>k==="avoir"?"facture":k,SERIE_DEPART={facture:27,devis:49}; // séries reprises de Tolteck (dernier FAC-2026-0026, dernier DEV-2026/10-0048)
@@ -1304,6 +1307,7 @@ async function fillPrev(el,d,tok){if(!el)return;el.dataset.tok=tok;try{const r=a
 // ---- registre ----
 function dvFilter(all){const F=DVF,q=norm(F.q);return all.filter(d=>(F.t==="all"||d.kind===F.t)&&(!F.st||dInfo(d,all).lab.replace(/ \d+ j$/,"")===F.st)&&(!F.cli||d.cli===F.cli)&&(!F.ch||d.chId===F.ch)&&(!F.an||String(d.date||"").slice(0,4)===F.an)
   &&(!q||norm([d.numero,(d.client||{}).nom,d.objet,(CHI[d.chId]||{}).code].join(" ")).includes(q))).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))||String(b.numero||"~").localeCompare(String(a.numero||"~")))}
+function jourLong(j){try{if(!j)return "Sans date";const t=new Date(j+"T12:00:00");if(isNaN(t))return j;const s=t.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});return s.charAt(0).toUpperCase()+s.slice(1)}catch(e){return j}}
 function vDevis(){if(GOK===false)return baseManquante("Devis et factures");
   const all=docsAll(),F=DVF,rows=dvFilter(all),mois=today().slice(0,7),I=new Map(all.map(d=>[d.id,dInfo(d,all)]));
   const att=all.filter(d=>d.kind==="devis"&&d.statut==="envoye").length,due=all.filter(d=>d.kind==="facture"&&d.numero).reduce((s,d)=>s+(I.get(d.id).reste||0),0),
@@ -1322,11 +1326,11 @@ function vDevis(){if(GOK===false)return baseManquante("Devis et factures");
     <select data-dvf="an" aria-label="Année"><option value="">Toutes les années</option>${opts(ans,F.an,false)}</select>
     <input type="search" data-dvq placeholder="Rechercher un n° ou un client…" value="${esc(F.q)}" aria-label="Rechercher"></div>
   <div class="dvsplit"><div class="dvlist"><div class="scroll"><table><thead><tr><th>N°</th><th>Client</th><th>Chantier</th><th>Date</th><th>Statut</th><th class="num">Total HT</th><th class="num">Reste dû</th></tr></thead><tbody>
-    ${rows.length?rows.map(d=>{const i=I.get(d.id),c=CHI[d.chId];return `<tr class="clk${d.id===DSEL?" sel":""}" data-dvsel="${esc(d.id)}" tabindex="0"><td><b>${d.numero?esc(d.numero):`<span class="ph dim">${d.sdb?"devis SDB sans n°":"n° à l'émission"}</span>`}</b>${d.sdb?' <span class="pill neu">SDB</span>':""}</td>
+    ${rows.length?rows.map((d,k)=>{const i=I.get(d.id),c=CHI[d.chId],jr=String(d.date||""),sep=k===0||String(rows[k-1].date||"")!==jr?`<tr class="dday"><td colspan="7">${esc(jourLong(jr))} · ${plural(rows.filter(x=>String(x.date||"")===jr).length,"document","documents")}</td></tr>`:"";return sep+`<tr class="clk${d.id===DSEL?" sel":""}" data-dvsel="${esc(d.id)}" tabindex="0"><td><b>${d.numero?esc(d.numero):`<span class="ph dim">${d.sdb?"devis SDB sans n°":"n° à l'émission"}</span>`}</b>${d.sdb?' <span class="pill neu">SDB</span>':""}</td>
       <td class="wrap">${esc((d.client||{}).nom||"")||'<span class="ph dim">client à choisir</span>'}</td><td>${c?esc(c.code):"—"}</td><td>${fkl(d.date)}</td><td><span class="pill ${i.cls}">${esc(i.lab)}</span></td><td class="num">${m2(i.t.ht)}</td><td class="num">${i.reste==null?"—":m2(i.reste)}</td></tr>`}).join(""):`<tr><td colspan="7" class="empty">Aucun document pour ces filtres.</td></tr>`}
     </tbody></table></div></div>
     <aside class="dvside" id="dvside">${sel?dvPanel(sel,all,I.get(sel.id)):`<div class="box"><b>Numérotation</b><div class="note">Devis DEV-AAAA/MM-NNNN : ${maxUsed("devis",all)?"dernier "+maxUsed("devis",all):"aucun"}<br>Factures et avoirs FAC-AAAA-NNNN : ${maxUsed("facture",all)?"dernier "+maxUsed("facture",all):"aucun"}</div><p class="note">Le numéro est donné à l'émission, dans l'ordre. Un document numéroté n'est plus modifiable : on duplique, ou on émet un avoir.</p></div>`}</aside></div>`}
-function dvPanel(d,all,i){const kids=all.filter(x=>x.parent===d.id),par=d.parent&&docById(d.parent,all),fr=d.kind==="facture"&&d.numero,lock=!!d.numero||d.sdb;
+function dvPanel(d,all,i){const kids=all.filter(x=>x.parent===d.id),par=d.parent&&docById(d.parent,all),fr=d.kind==="facture"&&d.numero,lock=dvFrozen(d,all);
   return `<div class="box dvpanel"><div class="row2" style="justify-content:space-between"><b>${esc(dNum(d))}</b><span class="pill ${i.cls}">${esc(i.lab)}</span></div>
     <div class="note">${esc((d.client||{}).nom||"Client à choisir")}${CHI[d.chId]?" · "+esc(CHI[d.chId].code):""} · ${fkl(d.date)}${d.contexte==="st"?" · TVA autoliquidée":""}</div>
     ${d.att?`<div class="note" style="color:var(--warn)">${plural(d.att,"ligne attend","lignes attendent")} la validation de DOMetVIE (hors total).</div>`:""}
@@ -1336,8 +1340,8 @@ function dvPanel(d,all,i){const kids=all.filter(x=>x.parent===d.id),par=d.parent
       ${d.kind==="devis"&&(d.numero||d.sdb)?`<button class="btn sm pri" data-dvfac="${esc(d.id)}">Créer la facture ▾</button>`:""}
       ${fr?`<button class="btn sm" data-dvpay="${esc(d.id)}">+ Paiement</button><button class="btn sm" data-dvavoir="${esc(d.id)}">Créer un avoir</button>`:""}
       ${!d.sdb?`<button class="btn sm" data-dvdup="${esc(d.id)}">Dupliquer</button>`:""}
-      ${d.kind==="devis"&&d.numero&&!d.sdb&&d.statut==="envoye"?`<button class="btn sm" data-dvst="${esc(d.id)}|accepte">Marquer accepté</button><button class="btn sm" data-dvst="${esc(d.id)}|refuse">Marquer refusé</button>`:""}
-      ${!d.numero&&!d.sdb?`<button class="btn sm dang" data-dvdel="${esc(d.id)}">Supprimer</button>`:""}
+      ${d.kind==="devis"&&!d.sdb?[["brouillon","Remettre en brouillon"],["envoye","Marquer envoyé"],["accepte","Marquer accepté"],["refuse","Marquer refusé"]].filter(([k])=>k!==(d.statut||"brouillon")).map(([k,l])=>`<button class="btn sm${k==="envoye"&&(d.statut||"brouillon")==="brouillon"?" pri":""}" data-dvst="${esc(d.id)}|${k}">${l}</button>`).join(""):""}
+      ${!d.sdb&&(d.kind==="devis"?!kids.length:!d.numero)?`<button class="btn sm dang" data-dvdel="${esc(d.id)}">Supprimer</button>`:""}
       ${(d.client||{}).email&&d.numero?`<a class="btn sm" href="mailto:${esc(d.client.email)}?subject=${encodeURIComponent(titreDoc(d)+" "+d.numero+" · AFER")}">Écrire un mail</a>`:""}</div>
     ${fr||(d.paiements||[]).length?`<div class="dvpays"><b>Paiements</b>${(d.paiements||[]).map((p,k)=>`<div class="kv"><span>${fkl(p.date)} · ${esc(p.mode||"")}</span><span>${m2(cts(p.montant))} <button class="btn xs" data-dvpaydel="${esc(d.id)}|${k}" aria-label="Retirer ce paiement">✕</button></span></div>`).join("")||'<span class="note">Aucun paiement enregistré.</span>'}
       ${i.reste!=null?`<div class="kv tot"><span>Reste dû (TTC)</span><span>${m2(i.reste)}</span></div>`:""}</div>`:""}
@@ -1351,12 +1355,16 @@ function chantierDoc(chId){const r=ROWS.find(x=>x.id===chId),g=gid("chantier",ch
 function baseDoc(kind,extra={}){const cli=extra.cli||"",ctx=cli==="dmv"?"st":"pro";
   return{kind,genre:kind==="facture"?"libre":null,numero:null,statut:"brouillon",date:today(),cli,client:cli?clientDoc(cli):{type:"pro",nom:"",adresse1:"",adresse2:"",cp:"",ville:"",pays:"France",siren:"",siret:"",tva:"",tel:"",email:""},chId:"",chantier:{adresse:"",debut:"",duree:""},
     objet:"",contexte:ctx,paiement:"Paiement en espèces, par chèque ou par virement bancaire.",note:"",options:{details:true,sousTotaux:false,revision:kind==="devis"},validite:"3 mois",echeance:"",delai:"",parent:null,refDoc:"",lines:[],paiements:[],cree:new Date().toISOString(),...extra}}
-async function dvCreate(d,open=true){const id=uid("d-");if(!await gput("doc",id,d))return null;DSEL=id;if(open)edOpen(id);return id}
+async function dvCreate(d,open=true){if(d.kind==="devis"&&!d.numero){const nu=await numeroterDevis(d);if(!nu)return null;d={...d,numero:nu}}const id=uid("d-");if(!await gput("doc",id,d))return null;DSEL=id;if(open)edOpen(id);return id}
 async function dvDup(id){const s=docById(id);if(!s)return;const d=clone(s);["numero","pdf","emisLe","parent","refDoc","pct","sdb","att","id"].forEach(k=>delete d[k]);
   Object.assign(d,{statut:"brouillon",date:today(),echeance:"",delai:"",paiements:[],cree:new Date().toISOString(),lines:(s.lines||[]).filter(l=>s.sdb?l.st==="val"||l.kind==="titre":true).map(l=>({...l,id:uid("l-")}))});
   if(s.sdb){d.kind="devis";d.cli=s.cli;d.chId=s.chId;delete d.statut;d.statut="brouillon"}
   const nid=await dvCreate(d);if(nid)toast("Copie créée en brouillon.")}
-async function dvDel(id){const d=docById(id);if(!d||d.numero||d.sdb)return;if(!confirm("Supprimer ce brouillon ? Il n'a pas de numéro, rien n'est perdu côté numérotation."))return;if(await gdelMany("doc",[id])){if(DSEL===id)DSEL=null;toast("Brouillon supprimé.");RENDER()}}
+async function dvDel(id){const all=docsAll(),d=docById(id,all);if(!d||d.sdb)return;const dv=d.kind==="devis";
+  if(dv?all.some(x=>x.parent===id):d.numero)return;
+  const n=dv&&d.numero?+((String(d.numero).match(/-(\d+)$/)||[])[1]||0):0,dernier=dv&&n&&n===maxUsed("devis",all);
+  if(!confirm(dv&&d.numero?`Supprimer le devis ${d.numero} ? ${dernier?"Son numéro sera libéré.":"Un trou restera dans la série des devis (sans conséquence)."}`:"Supprimer ce brouillon ? Il n'a pas de numéro, rien n'est perdu côté numérotation."))return;
+  if(await gdelMany("doc",[id])){if(dernier)await ecrireCompteur("devis",n);if(DSEL===id)DSEL=null;toast(dv?"Devis supprimé.":"Brouillon supprimé.");RENDER()}}
 // ---- facturation : acompte, situation, finale, avoir ----
 function marcheLines(P){const L=(P.lines||[]).filter(l=>!P.sdb||l.kind==="titre"||l.st==="val"),out=[];
   L.forEach((l,i)=>{if(l.kind!=="titre"){out.push(l);return}const n=L.slice(i+1).findIndex(x=>x.kind==="titre"),seg=n<0?L.slice(i+1):L.slice(i+1,i+1+n);if(seg.some(x=>x.kind!=="titre"))out.push(l)});return out}
@@ -1402,7 +1410,16 @@ function payModal(fid){const all=docsAll(),f=docById(fid,all),i=dInfo(f,all);
     <label>Mode<select id="pp-mo">${opts(MODES,"Virement",false)}</select></label><div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="pp-ok">Enregistrer</button></div>`);
   p.querySelector("#pp-ok").onclick=()=>{const m=num(p.querySelector("#pp-m").value),d=p.querySelector("#pp-d").value;if(!(m>0)||!d){toast("Date et montant requis.");return}
     const nf={...gid("doc",fid),paiements:[...(f.paiements||[]),{date:d,montant:m,mode:p.querySelector("#pp-mo").value}]};closeFloat();gput("doc",fid,nf).then(ok=>{if(ok&&ED&&ED.id===fid){ED.d=clone(docById(fid));edRender(true)}});toast("Paiement enregistré.")}}
-async function dvSetStatut(id,st){const d=gid("doc",id);if(d)await gput("doc",id,{...d,statut:st})}
+async function dvSetStatut(id,st){const d=gid("doc",id);if(!d)return;let nu=d.numero;if(d.kind==="devis"&&!nu&&!d.tolteck){nu=await numeroterDevis(d);if(!nu)return}if(await gput("doc",id,{...d,numero:nu,statut:st})){if(ED&&ED.id===id){ED.d={...ED.d,numero:nu,statut:st};edRender(true)}RENDER()}}
+// devis : « Marquer envoyé » = contrôle des points bloquants, numéro si absent, PDF figé, statut Envoyé, en un clic
+async function dvEnvoyer(id){if(emitting)return;const all=docsAll(),d0=ED&&ED.id===id?ED.d:docById(id,all);if(!d0||d0.kind!=="devis"||d0.sdb)return;
+  if(d0.tolteck){return dvSetStatut(id,"envoye")}
+  const L=dvIssues(d0,all).filter(i=>i.block);if(L.length){issuesModal(L,"À corriger avant d'envoyer");return}
+  emitting=true;try{const d={...d0};if(!d.numero){d.numero=await numeroterDevis(d,all);if(!d.numero)return}
+    d.statut="envoye";d.emisLe=new Date().toISOString();
+    try{const r=await rendreDoc(d,true),path=`gestion/doc/${String(d.date||today()).slice(0,4)}/${slug(d.numero)}.pdf`;const {error}=await C.storage.from("fichiers").upload(path,r.pdf,{upsert:true,contentType:"application/pdf"});if(error)throw error;d.pdf=path}catch(e){console.warn("PDF non enregistré",e);toast("Devis marqué envoyé, mais le PDF n'a pas pu être enregistré : bouton « Enregistrer le PDF ».")}
+    if(!await gput("doc",id,d))return;if(ED&&ED.id===id){ED.d=d;edRender()}toast(d.numero+" marqué envoyé.");DSEL=id;RENDER()}
+  finally{emitting=false}}
 // ---- émission : contrôle, numéro, PDF figé ----
 function dvIssues(d,all){const L=[],B=(t)=>L.push({t,block:true}),W=(t)=>L.push({t}),cl=d.client||{},arts=(d.lines||[]).filter(l=>l.kind!=="titre"),t=totDoc(d.lines);
   if(!cl.nom)B("Choisis le client.");if(!arts.length)B("Aucune ligne.");if(arts.some(l=>!String(l.designation||"").trim()))B("Une ligne n'a pas de désignation.");
@@ -1417,7 +1434,7 @@ function dvIssues(d,all){const L=[],B=(t)=>L.push({t,block:true}),W=(t)=>L.push(
 function issuesModal(L,titre,ok){const bl=L.some(i=>i.block);const p=openModal(`<h3>${esc(titre)}</h3><ul class="dvissues">${L.map(i=>`<li class="${i.block?"bad":""}">${esc(i.t)}</li>`).join("")}</ul>${bl?"":`<p class="note">Ces points ne bloquent pas.</p>`}<div class="acts"><button class="btn sm" data-x>${bl?"Fermer":"Revenir"}</button>${L.some(i=>i.act==="mentions")?`<button class="btn sm pri" id="is-men">Vérifier les mentions</button>`:""}${bl?"":`<button class="btn sm pri" id="is-ok">Émettre quand même</button>`}</div>`);
   const b=p.querySelector("#is-ok");if(b)b.onclick=()=>{closeFloat();ok()};const m=p.querySelector("#is-men");if(m)m.onclick=()=>{closeFloat();dvSettings()}}
 let emitting=false;
-async function dvEmettre(id){if(emitting)return;const all=docsAll(),d=ED&&ED.id===id?ED.d:docById(id,all);if(!d||d.numero||d.sdb)return;
+async function dvEmettre(id){if(emitting)return;const all=docsAll(),d=ED&&ED.id===id?ED.d:docById(id,all);if(d&&d.kind==="devis"&&!d.sdb)return d.statut==="brouillon"||!d.pdf?dvEnvoyer(id):dvRegen(id);if(!d||d.numero||d.sdb)return;
   const L=dvIssues(d,all);if(L.length){if(L.some(i=>i.block)){issuesModal(L,"À corriger avant d'émettre");return}return issuesModal(L,"À vérifier avant d'émettre",()=>dvEmettre2(id,d))}return dvEmettre2(id,d)}
 async function dvEmettre2(id,d0){if(emitting)return;emitting=true;try{
     const all=docsAll(),k=d0.kind;try{await rendreDoc(d0,false)}catch(e){toast("Aperçu impossible, rien n'est numéroté : "+e.message);return}
@@ -1468,7 +1485,7 @@ async function tlkImport(J){const cm=clientsMap(),dd=gt("doc"),rows=[],now=new D
   const all=docsAll().concat(J.docs);if(!await gputMany(rows))return;LIBC=null;
   for(const k of["devis","facture"]){const n=await lireCompteur(k,all);await ecrireCompteur(k,n)}
   toast(`Tolteck importé : ${plural(rows.filter(r=>r.type==="client").length,"client","clients")}, ${plural(rows.filter(r=>r.type==="doc").length,"document","documents")}, ${plural(J.biblio.length,"article","articles")}.`);RENDER()}
-function edOpen(id){const d=docById(id);if(!d||d.sdb)return;ED={id,d:clone(d),ro:!!d.numero,tab:"prev",lq:"",lot:"",sel:new Set(),T:null,PT:null};edRender()}
+function edOpen(id){const d=docById(id);if(!d||d.sdb)return;ED={id,d:clone(d),ro:dvFrozen(d),tab:"prev",lq:"",lot:"",sel:new Set(),T:null,PT:null};edRender()}
 function edClose(){if(ED){edFlush();const o=$("#dved");if(o)o.remove();ED=null;RENDER()}}
 function edDirty(){if(!ED||ED.ro)return;clearTimeout(ED.T);ED.T=setTimeout(edFlush,900)}
 function edFlush(){if(!ED||ED.ro||!ED.T)return Promise.resolve();clearTimeout(ED.T);ED.T=null;return gput("doc",ED.id,ED.d)}
@@ -1492,11 +1509,11 @@ function libRows(){if(LIBC)return LIBC;const out=[];if(Array.isArray(PAR.bpu))PA
   out.forEach(o=>o._s=norm([o.code,o.des,o.desc,o.fam,o.lot].join(" ")));LIBC=out;return out}
 function txFor(cat,ctx){const i=(CTX.find(c=>c[0]===ctx)||CTX[1])[2],t=((PAR.catalogue||{}).tva||{})[cat];return t&&t.rates&&t.rates[i]!=null?Number(t.rates[i]):ctx==="st"?0:0.2}
 function addLine(l){ED.d.lines.push({id:uid("l-"),kind:"article",designation:"",detail:"",qty:1,unit:"u",pu:0,tx:txFor("C",ED.d.contexte),...l});edDirty();edRender(true)}
-function edRender(keepScroll){const d=ED.d,ro=ED.ro,k=d.kind,lock=!!d.numero,all=docsAll(),I=dInfo(d,all);let o=$("#dved");const sc=o&&keepScroll?o.querySelector(".dvleft").scrollTop:0;
+function edRender(keepScroll){const d=ED.d,ro=ED.ro,k=d.kind,all=docsAll(),lock=dvFrozen(d,all),I=dInfo(d,all);let o=$("#dved");const sc=o&&keepScroll?o.querySelector(".dvleft").scrollTop:0;
   if(!o){o=document.createElement("div");o.id="dved";o.className="dvedit";o.setAttribute("role","dialog");document.body.appendChild(o)}
   const cl=d.client||{},fl=(lbl,path,v,extra="")=>`<label>${lbl}<input data-ef="${path}" value="${esc(v||"")}" ${ro?"disabled":""} ${extra}></label>`;
   o.innerHTML=`<header><button class="btn sm" data-edx>← Retour au registre</button><b class="ttl">${esc(titreDoc(d))} ${d.numero?esc(d.numero):'<span class="ph dim">numéro à l\'émission</span>'}</b><span class="pill ${I.cls}">${esc(I.lab)}</span><span class="sp"></span>
-    <span class="note" id="edsave">${ro?"Document numéroté : non modifiable":"Enregistré automatiquement"}</span><button class="btn sm" data-dvpdf="${esc(ED.id)}">PDF</button>${ro?"":`<button class="btn sm pri" data-dvemit="${esc(ED.id)}">${k==="devis"?"Émettre le devis":k==="facture"?"Émettre la facture":"Émettre l'avoir"}</button>`}</header>
+    <span class="note" id="edsave">${ro?(k==="devis"?"Devis accepté et facturé : non modifiable":"Document numéroté : non modifiable"):"Enregistré automatiquement"}</span><button class="btn sm" data-dvpdf="${esc(ED.id)}">PDF</button>${ro?"":`<button class="btn sm pri" data-dvemit="${esc(ED.id)}">${k==="devis"?(d.statut==="brouillon"||!d.pdf?"Marquer envoyé":"Mettre à jour le PDF"):k==="facture"?"Émettre la facture":"Émettre l'avoir"}</button>`}</header>
   <div class="dvbody"><div class="dvleft">
     ${lock?`<div class="box warn"><b>Ce document est numéroté et figé.</b><span class="note">Pour corriger : ${k==="facture"?"émets un avoir puis refais une facture (bouton Dupliquer).":"duplique-le en brouillon."}</span></div>`:""}
     <div class="box"><div class="grid3">
@@ -1567,7 +1584,7 @@ document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);let el;
   if(el=q("[data-dvavoir]")){dvAvoir(el.dataset.dvavoir);return}
   if(el=q("[data-dvdup]")){dvDup(el.dataset.dvdup);return}
   if(el=q("[data-dvdel]")){dvDel(el.dataset.dvdel);return}
-  if(el=q("[data-dvst]")){const [id,s]=el.dataset.dvst.split("|");dvSetStatut(id,s);return}
+  if(el=q("[data-dvst]")){const [id,s]=el.dataset.dvst.split("|");if(s==="envoye")dvEnvoyer(id);else dvSetStatut(id,s);return}
   if(el=q("[data-dvregen]")){dvRegen(el.dataset.dvregen);return}
 });
 document.addEventListener("change",e=>{const f=e.target.dataset&&e.target.dataset.dvf;if(f){DVF[f]=e.target.value;RENDER()}});
