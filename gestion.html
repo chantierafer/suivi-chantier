@@ -1269,7 +1269,7 @@ function dInfo(d,all){const t=totDoc(d.lines);let lab="Brouillon",cls="neu",rest
 const dNum=d=>d.numero||(d.sdb?"Devis SDB (sans n°)":"Brouillon");
 // ---- numérotation : un compteur par type, sans trou, attribué à l'émission ----
 // factures et avoirs : une seule série FAC-AAAA-NNNN (reprise de la série existante, dernier numéro vu 0023) ; devis : DEV-AAAA/MM-NNNN
-const serie=k=>k==="avoir"?"facture":k,SERIE_DEPART={facture:24};
+const serie=k=>k==="avoir"?"facture":k,SERIE_DEPART={facture:27,devis:49}; // séries reprises de Tolteck (dernier FAC-2026-0026, dernier DEV-2026/10-0048)
 function fmtNum(k,n,date){const d=date&&isK(date)?PK(date):new Date();return serie(k)==="facture"?`FAC-${d.getFullYear()}-${String(n).padStart(4,"0")}`:`${DT[k].pre}-${d.getFullYear()}/${pad(d.getMonth()+1)}-${String(n).padStart(4,"0")}`}
 function maxUsed(k,all){let n=0;all.filter(d=>serie(d.kind)===serie(k)&&d.numero).forEach(d=>{const m=String(d.numero).match(/-(\d+)$/);if(m)n=Math.max(n,+m[1])});return n}
 async function lireCompteur(k,all){k=serie(k);const mx=Math.max(maxUsed(k,all)+1,SERIE_DEPART[k]||1);
@@ -1312,7 +1312,7 @@ function vDevis(){if(GOK===false)return baseManquante("Devis et factures");
   const ans=[...new Set(all.map(d=>String(d.date||"").slice(0,4)).filter(Boolean))].sort().reverse(),sel=DSEL&&docById(DSEL,all);
   const stat=[...new Set(all.map(d=>I.get(d.id).lab.replace(/ \d+ j$/,"")))].sort();
   return `<div class="topline"><div><h2>Devis et factures</h2><p>Tous les documents de vente d'AFER, numérotés dans l'ordre et sans trou, avec leur PDF figé. Les devis du suivi SDB y sont déjà. Clic sur une ligne : aperçu à droite. Double clic : ouvre le document.</p></div>
-    <div class="tools"><button class="btn sm" data-dvset>Numérotation et mentions</button><button class="btn sm" data-dvnew="avoir">+ Avoir</button><button class="btn sm" data-dvnew="facture">+ Facture</button><button class="btn sm pri" data-dvnew="devis">+ Devis</button></div></div>
+    <div class="tools"><button class="btn sm" data-tlkimp>Importer depuis Tolteck</button><button class="btn sm" data-dvset>Numérotation et mentions</button><button class="btn sm" data-dvnew="avoir">+ Avoir</button><button class="btn sm" data-dvnew="facture">+ Facture</button><button class="btn sm pri" data-dvnew="devis">+ Devis</button></div></div>
   <div class="kpis"><div class="kpi"><div class="v">${att}</div><div class="l">Devis en attente de réponse</div></div><div class="kpi"><div class="v">${m2(due)}</div><div class="l">Factures à encaisser (TTC)</div></div>
     <div class="kpi"><div class="v">${m2(fm)}</div><div class="l">Facturé ce mois (HT, avoirs déduits)</div></div><div class="kpi${ech?" bad":""}"><div class="v">${ech}</div><div class="l">Factures échues à relancer</div></div></div>
   <div class="dvbar">${[["all","Tous"],["devis","Devis"],["facture","Factures"],["avoir","Avoirs"]].map(([k,l])=>`<button class="chip" aria-pressed="${F.t===k}" data-dvt="${k}">${l}</button>`).join("")}
@@ -1433,7 +1433,7 @@ async function dvRegen(id){const d=gid("doc",id);if(!d||!d.numero)return;try{con
 function dvSettings(){const all=docsAll(),R=mentionsReg(),cf=(gid("reglage","docs")||{}).confirme;
   const p=openModal(`<h3>Numérotation et mentions</h3><div class="fgrp"><b>Prochain numéro</b>
     ${["devis","facture"].map(k=>`<label>${k==="devis"?"Devis · DEV-AAAA/MM-NNNN":"Factures et avoirs (même série) · FAC-AAAA-NNNN"} (dernier utilisé : ${maxUsed(k,all)||"aucun"})<input type="number" min="${maxUsed(k,all)+1}" step="1" data-dvn="${k}" placeholder="chargement…"></label>`).join("")}
-    <span class="note">Un compteur par type, tous chantiers confondus, sans trou. On peut seulement avancer le compteur (pour reprendre une série existante), jamais reculer sous le dernier numéro utilisé. Série FAC reprise de la comptabilité existante (dernier numéro vu : FAC-2026-0023).</span></div>
+    <span class="note">Un compteur par type, tous chantiers confondus, sans trou. On peut seulement avancer le compteur (pour reprendre une série existante), jamais reculer sous le dernier numéro utilisé. Séries reprises de Tolteck : dernière facture FAC-2026-0026, dernier devis DEV-2026/10-0048.</span></div>
   <div class="fgrp"><b>Mentions ajoutées aux factures</b><label>Pénalités de retard<textarea id="mn-pen" rows="2">${esc(R.penalites)}</textarea></label><label>Indemnité de recouvrement (clients professionnels)<textarea id="mn-ind" rows="2">${esc(R.indemnite)}</textarea></label><label>Escompte<textarea id="mn-esc" rows="1">${esc(R.escompte)}</textarea></label>
     <label class="chk"><input type="checkbox" id="mn-ok"${cf?" checked":""}> <span>J'ai vérifié ces mentions (obligatoire avant d'émettre une facture)<small class="note">Textes proposés d'après les règles courantes ; à valider avec ton comptable.</small></span></label></div>
   <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="mn-save">Enregistrer</button></div>`);
@@ -1447,6 +1447,27 @@ async function bigPrev(id){const d=docById(id);if(!d)return;const w=document.cre
   w.tabIndex=-1;w.focus({preventScroll:true});w.querySelector("[data-dvbigx]").onclick=fermer;document.addEventListener("keydown",surEchap,true); // Échap ferme l'aperçu même sans le focus dedans
   try{w.querySelector(".dvbigbody").innerHTML=pagesHtml(await rendreDoc(d,false))}catch(e){w.querySelector(".dvbigbody").innerHTML=miniPrev(d)}}
 // ---- éditeur ----
+// ---- reprise Tolteck : fichier import-tolteck-*.json préparé par Claude à partir des exports Tolteck (clients, registre des documents, bibliothèque) ----
+function tlkPick(){if(needBase())return;let i=$("#tlk-file");if(!i){i=document.createElement("input");i.type="file";i.id="tlk-file";i.accept=".json,application/json";i.hidden=true;
+    i.onchange=()=>{const f=i.files[0];i.value="";if(f)f.text().then(tlkPreview).catch(()=>toast("Fichier illisible."))};document.body.appendChild(i)}i.click()}
+function tlkPreview(txt){let J;try{J=JSON.parse(txt)}catch(e){toast("Ce fichier n'est pas un import Tolteck.");return}
+  if(!J||J.type!=="import-tolteck"||!Array.isArray(J.clients)||!Array.isArray(J.docs)||!Array.isArray(J.biblio)){toast("Ce fichier n'est pas un import Tolteck.");return}
+  const all=docsAll(),cm=clientsMap(),dd=gt("doc"),nCli=J.clients.filter(c=>!cm[c.id]).length,nDoc=J.docs.filter(d=>!dd[d.id]).length,
+    pris=new Map(all.filter(d=>d.numero&&!d.tolteck).map(d=>[d.numero,d])),coll=J.docs.filter(d=>d.numero&&pris.has(d.numero)).map(d=>d.numero);
+  const p=openModal(`<h3>Importer depuis Tolteck</h3><p class="note">Export Tolteck du ${esc(fkl(J.exporte_le)||J.exporte_le||"")}. Rien n'est supprimé ni écrasé : ce qui existe déjà dans l'appli est gardé tel quel.</p>
+    <div class="fgrp"><div class="kv"><span>Clients nouveaux</span><b>${nCli} / ${J.clients.length}</b></div><div class="kv"><span>Devis, factures et avoirs (totaux, statut, paiement)</span><b>${nDoc} / ${J.docs.length}</b></div><div class="kv"><span>Articles et ouvrages de la bibliothèque</span><b>${J.biblio.length}</b></div></div>
+    <p class="note">Les documents repris gardent leur numéro Tolteck, en lecture seule. Le détail des lignes n'est pas dans l'export Tolteck : chaque document porte son total par taux de TVA. Unités et TVA des articles à compléter.</p>
+    ${coll.length?`<p class="note"><b>Numéros déjà utilisés dans l'appli :</b> ${coll.map(esc).join(", ")}. Les deux documents sont gardés, à vérifier.</p>`:""}
+    <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="tlk-ok">Importer</button></div>`);
+  p.querySelector("#tlk-ok").onclick=()=>{closeFloat();tlkImport(J)}}
+async function tlkImport(J){const cm=clientsMap(),dd=gt("doc"),rows=[],now=new Date().toISOString();
+  J.clients.forEach(c=>{const {id,...d}=c,k=gid("client",id);if(id==="dmv"){const b=k||{},m={...b};["adresse","tel","email","siret","info"].forEach(f=>{if(!m[f]&&d[f])m[f]=d[f]});rows.push({type:"client",id,data:m});return}
+    if(cm[id])return;rows.push({type:"client",id,data:{...d,cree:now}})});
+  J.docs.forEach(x=>{const {id,...d}=x;if(!dd[id])rows.push({type:"doc",id,data:d})});
+  const bib=gid("biblio","tolteck");rows.push({type:"biblio",id:"tolteck",data:{...(bib||{}),source:"Tolteck",exporte_le:J.exporte_le,rows:J.biblio,importeLe:now}});
+  const all=docsAll().concat(J.docs);if(!await gputMany(rows))return;LIBC=null;
+  for(const k of["devis","facture"]){const n=await lireCompteur(k,all);await ecrireCompteur(k,n)}
+  toast(`Tolteck importé : ${plural(rows.filter(r=>r.type==="client").length,"client","clients")}, ${plural(rows.filter(r=>r.type==="doc").length,"document","documents")}, ${plural(J.biblio.length,"article","articles")}.`);RENDER()}
 function edOpen(id){const d=docById(id);if(!d||d.sdb)return;ED={id,d:clone(d),ro:!!d.numero,tab:"prev",lq:"",lot:"",sel:new Set(),T:null,PT:null};edRender()}
 function edClose(){if(ED){edFlush();const o=$("#dved");if(o)o.remove();ED=null;RENDER()}}
 function edDirty(){if(!ED||ED.ro)return;clearTimeout(ED.T);ED.T=setTimeout(edFlush,900)}
@@ -1461,11 +1482,12 @@ function totHtml(d){const t=totDoc(d.lines);return `<div class="kv"><span>Total 
 function libHtml(){const rows=libRows(),c=PAR.catalogue||{},q=norm(ED.lq),lots=(c.lots||[]);
   if(!rows.length)return `<p class="note">La bibliothèque n'est pas encore dans la base. Ouvre une fois l'onglet Devis d'un chantier du suivi SDB (il la dépose), ou importe parametres-devis-afer.json. ${PH("bibliothèque à importer")}</p>`;
   const f=rows.filter(r=>(!ED.lot||r.lot===ED.lot)&&(!q||r._s.includes(q))).slice(0,40),ouv=Object.entries(gt("ouvrage"));
-  return `<div class="grid2"><select data-edlot aria-label="Lot"><option value="">Tous les lots</option><option value="SDB"${ED.lot==="SDB"?" selected":""}>SDB · BPU salle de bain</option>${lots.filter(l=>l.code!=="SDB").map(l=>`<option value="${esc(l.code)}"${ED.lot===l.code?" selected":""}>${esc(l.name)}</option>`).join("")}</select><input type="search" data-edlq placeholder="Rechercher une prestation…" value="${esc(ED.lq)}"></div>
-  <div class="dvlib">${f.map(r=>`<button data-libadd="${esc(r.code)}"><span><b>${esc(r.des)}</b><small>${esc(r.code)} · ${esc(r.unit)}</small></span><span>${r.pu==null?'<span class="ph">prix à compléter</span>':m2(cts(r.pu))}</span></button>`).join("")||'<p class="note">Aucun résultat.</p>'}</div>
+  return `<div class="grid2"><select data-edlot aria-label="Lot"><option value="">Tous les lots</option><option value="SDB"${ED.lot==="SDB"?" selected":""}>SDB · BPU salle de bain</option>${gid("biblio","tolteck")?`<option value="TLK"${ED.lot==="TLK"?" selected":""}>TLK · Bibliothèque reprise de Tolteck</option>`:""}${lots.filter(l=>l.code!=="SDB").map(l=>`<option value="${esc(l.code)}"${ED.lot===l.code?" selected":""}>${esc(l.name)}</option>`).join("")}</select><input type="search" data-edlq placeholder="Rechercher une prestation…" value="${esc(ED.lq)}"></div>
+  <div class="dvlib">${f.map(r=>`<button data-libadd="${esc(r.code)}"><span><b>${esc(r.des)}</b><small>${esc(r.code)} · ${r.unit?esc(r.unit):r.lot==="TLK"?"unité à compléter":""}${r.desc&&r.lot==="TLK"?" · "+esc(r.desc.split("\n").length)+" composants":""}</small></span><span>${r.pu==null?'<span class="ph">prix à compléter</span>':m2(cts(r.pu))}</span></button>`).join("")||'<p class="note">Aucun résultat.</p>'}</div>
   <div class="fgrp"><b>Mes ouvrages</b>${ouv.map(([id,o])=>`<div class="kv"><span>${esc(o.nom)} <small class="note">${plural((o.lines||[]).length,"ligne","lignes")}</small></span><span><button class="btn xs" data-ouvadd="${esc(id)}">+</button> <button class="btn xs" data-ouvdel="${esc(id)}" aria-label="Supprimer l'ouvrage">✕</button></span></div>`).join("")||'<span class="note">Coche des lignes du document puis « Enregistrer comme ouvrage » : le regroupement est réutilisable.</span>'}
   <button class="btn xs" data-ouvsave>Enregistrer les lignes cochées comme ouvrage</button></div>`}
 function libRows(){if(LIBC)return LIBC;const out=[];if(Array.isArray(PAR.bpu))PAR.bpu.forEach(b=>out.push({code:"SDB-"+b.id,lot:"SDB",fam:b.cat||"BPU",des:b.lib||"",desc:"",unit:b.u||"u",pu:b.pu==null||b.pu===""?null:Number(b.pu),cat:"C"}));
+  const tk=gid("biblio","tolteck");if(tk&&Array.isArray(tk.rows))tk.rows.forEach(r=>out.push({...r,lot:"TLK",unit:r.unit||"",cat:r.cat||"C"}));
   const c=PAR.catalogue;if(c&&Array.isArray(c.rows))c.rows.forEach(r=>{const o=Array.isArray(r)?{code:r[0],lot:r[1],fam:r[2],des:r[3],desc:r[4]||"",unit:r[5]||"u",pu:Number(r[9])||0,cat:r[10]||"C",rem:r[11]||""}:r;if(!/obsol/i.test(o.rem||""))out.push(o)});
   out.forEach(o=>o._s=norm([o.code,o.des,o.desc,o.fam,o.lot].join(" ")));LIBC=out;return out}
 function txFor(cat,ctx){const i=(CTX.find(c=>c[0]===ctx)||CTX[1])[2],t=((PAR.catalogue||{}).tva||{})[cat];return t&&t.rates&&t.rates[i]!=null?Number(t.rates[i]):ctx==="st"?0:0.2}
@@ -1533,6 +1555,7 @@ document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);let el;
   if(el=q("[data-dvpdf]")){const d=ED&&ED.id===el.dataset.dvpdf?ED.d:docById(el.dataset.dvpdf);if(d)dvPdf(d);return}
   if(el=q("[data-dvnew]")){if(!needBase()){const k=el.dataset.dvnew;dvCreate(baseDoc(k,k==="avoir"?{genre:"avoir"}:{}))}return}
   if(q("[data-dvset]")){dvSettings();return}
+  if(q("[data-tlkimp]")){tlkPick();return}
   if(el=q("[data-dvt]")){DVF.t=el.dataset.dvt;RENDER();return}
   if(el=q("[data-dvsel]")){DSEL=el.dataset.dvsel;RENDER();if(innerWidth<1100){const s=$("#dvside");s&&s.scrollIntoView({behavior:"smooth",block:"start"})}return}
   if(el=q("[data-dvopen]")){edOpen(el.dataset.dvopen);return}
