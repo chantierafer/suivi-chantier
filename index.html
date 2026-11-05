@@ -1406,6 +1406,18 @@ const Engine = (() => {
     let pb = tt + 10.9; let payLast = tt;
     wrap(dv.paiement || '', 'R', 9.7, 250).forEach((s, i) => { T(28.4, pb, s, 'R', 9.7); payLast = pb; pb += 14.1; });
     let cursor = Math.max(bandBottom, payLast + 6);
+    // 05/11 : échéancier de paiement (montants calculés par la gestion : % du TTC, solde = net à payer moins les échéances)
+    const ECH = Array.isArray(dv.echeancier) ? dv.echeancier.filter(e => e && (e.lib || e.pct || e.solde)) : [];
+    if (ECH.length) {
+      let ey = cursor + 26.8;
+      if (ey + 14.1 * ECH.length + 6 > FOOT_LIMIT) { newPage(); ey = CONT_TOP + 10; }
+      T(28.4, ey, 'Échéancier de paiement', 'B', 9.7, C.title); ey += 14.1;
+      ECH.forEach(e => {
+        const left = clean(e.lib || '') + ' : ' + (e.solde ? 'solde' : num(e.pct, 2) + NB + '%') + ' soit ' + money(e.montant || 0) + (e.solde ? '' : ' TTC');
+        T(40, ey, left, 'R', 9.7); ey += 14.1;
+      });
+      cursor = ey - 14.1 + 4;
+    }
 
     // --- mentions ---
     const paras = [];
