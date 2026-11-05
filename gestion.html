@@ -271,6 +271,13 @@ kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--l
 .cell.off{background:repeating-linear-gradient(45deg,var(--line-soft) 0 5px,transparent 5px 10px);color:var(--muted);font-size:11.5px;justify-content:center;align-items:center;text-align:center}
 .cell.half{background:linear-gradient(135deg,var(--line-soft) 50%,transparent 50%)}
 .wk .cell{position:relative}
+.scroll.defile{overscroll-behavior-x:contain;position:relative}
+.scroll.defile .wk .lab,.scroll.defile .wk .hd.per{position:sticky;left:0;z-index:3;background:var(--surface)}
+.scroll.defile .wk .hd.per{z-index:4;background:var(--surface-2)}
+.wk .hd.lun{box-shadow:inset 2px 0 0 var(--line)}
+.wk .bh .stk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%}
+.scroll.defile .wk .bh .stk{position:sticky;left:6px;width:calc(var(--vw,100%) - 12px)}
+.wk .bh .chsw{width:12px;height:12px;border-radius:3px;flex:none;border:1px solid rgba(255,255,255,.6)}
 .cell.zo{background:var(--zone-o)} .cell.zr{background:var(--zone-r)}
 .cell.zo:hover,.cell.zr:hover{background:var(--turq-soft)}
 .cell.mko::after{content:"";position:absolute;top:0;bottom:-1px;right:-2px;border-right:3px dashed var(--rep-o);pointer-events:none;z-index:2}
@@ -594,6 +601,9 @@ const today=()=>K(new Date());
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 const hashCol=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return AV_COL[h%AV_COL.length]};
+// une couleur par chantier, identique dans ouvrier.html (même liste, même calcul ; le turquoise reste à AFER)
+const CH_COL=["#4F6D9A","#C0782E","#8A6BB0","#3E8E5E","#B5487A","#2E6F8E","#A3612A","#6B7F2E","#7A5C99","#B04A4A","#3F7F86","#8C6D1F"];
+const chCol=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;return CH_COL[h%CH_COL.length]};
 const initials=n=>String(n||"?").replace(/[\[\]().]/g," ").trim().split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
 const daysBetween=(a,b)=>Math.round((PK(b)-PK(a))/864e5);
 function workdays(a,b){const out=[];if(!isK(a)||!isK(b))return out;for(let d=PK(a<b?a:b),e=PK(a<b?b:a);d<=e;d=addD(d,1))if(!isWE(d))out.push(K(d));return out}
@@ -896,12 +906,25 @@ function renderDetail(){const x=CHI[SEL],box=$("#detail");if(!x){SEL=null;box.in
   box.querySelector(".drawer [data-close]").focus({preventScroll:true})}
 
 /* ---------- 2. planning global ---------- */
+// Semaine et mois : les jours défilent en continu (glisser ou molette), la plage s'agrandit d'elle-même aux deux bords
+let planDeb=null,planFin=null,planVers=null,planEtend=false;
+function plage(){if(!planDeb||!planFin){const m=monday(cur);planDeb=K(addD(m,-28));planFin=K(addD(m,7*26-1));planVers=planVers||K(monday(cur))}}
 function cols(){
   if(zoom==="jour")return [new Date(cur.getFullYear(),cur.getMonth(),cur.getDate())];
-  if(zoom==="semaine"){const m=monday(cur);return range(7).map(i=>addD(m,i))}
-  const f=new Date(cur.getFullYear(),cur.getMonth(),1),n=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();return range(n).map(i=>addD(f,i))}
-function periodLabel(){const cs=cols();if(zoom==="jour")return `${DN[cur.getDay()]} ${fk(K(cur))}/${cur.getFullYear()}`;if(zoom==="semaine")return `Semaine ${isoWeek(cs[0])} · ${fk(K(cs[0]))} → ${fk(K(cs[6]))}`;return `${MN[cur.getMonth()]} ${cur.getFullYear()}`}
+  plage();const out=[];for(let d=PK(planDeb),e=PK(planFin);d<=e;d=addD(d,1))out.push(d);return out}
+function periodLabel(k){if(zoom==="jour")return `${DN[cur.getDay()]} ${fk(K(cur))}/${cur.getFullYear()}`;const d=PK(k||planVers||K(cur));return zoom==="semaine"?`Semaine ${isoWeek(d)} · ${MN[d.getMonth()].toLowerCase()} ${d.getFullYear()}`:`${MN[d.getMonth()]} ${d.getFullYear()}`}
+const CW=()=>zoom==="mois"?36:112,LW=()=>zoom==="mois"?170:200;
+function planApres(){if(VIEW!=="plan"||planMode!=="sem"||zoom==="jour")return;const sc=document.querySelector("#page .scroll"),wk=sc&&sc.querySelector(".wk");if(!sc||!wk)return;
+  wk.style.setProperty("--vw",(sc.clientWidth-2)+"px");
+  if(planVers){const i=Math.round((PK(planVers)-PK(planDeb))/864e5);if(i>=0)sc.scrollLeft=Math.max(0,i*CW()-(zoom==="mois"?CW()*2:0));planVers=null}
+  planLabel(sc)}
+function jourAGauche(sc){const i=Math.max(0,Math.floor((sc.scrollLeft+1)/CW()));return K(addD(PK(planDeb),i))}
+function planLabel(sc){const el=sc.querySelector(".wk .hd.per");if(el)el.textContent=periodLabel(jourAGauche(sc))}
+function planDefile(sc){if(planEtend)return;planLabel(sc);
+  if(sc.scrollLeft<CW()*3){planEtend=true;planVers=jourAGauche(sc);planDeb=K(addD(PK(planDeb),-56));RENDER();setTimeout(()=>{planEtend=false},60);return}
+  if(sc.scrollLeft+sc.clientWidth>sc.scrollWidth-CW()*3){planEtend=true;planFin=K(addD(PK(planFin),56));RENDER();setTimeout(()=>{planEtend=false},60)}}
 function shift(n){if(zoom==="jour"){cur=addD(cur,n);while(isWE(cur))cur=addD(cur,n)}else if(zoom==="semaine")cur=addD(cur,7*n);else cur=new Date(cur.getFullYear(),cur.getMonth()+n,1)}
+function allerA(d){cur=new Date(d);planDeb=planFin=null;planVers=K(monday(cur))}
 const GRPN={chantier:"Équipe AFER",externe:"Sous-traitants et indépendants",bureau:"Bureau",materiel:"Véhicules et matériel"};
 function sansExcel(){return !Object.keys(gt("personne")).length&&!Object.keys(gt("vehicule")).length}
 function vPlan(){
@@ -914,29 +937,30 @@ function vPlan(){
     <div class="tools"><div class="seg"><button data-pm="sem" aria-pressed="${planMode==="sem"}">Planning chantiers</button><button data-pm="gantt" aria-pressed="${planMode==="gantt"}">Gantt</button></div>
      ${planMode==="sem"?`<div class="seg" title="Chantiers affichés"><button data-pt="0" aria-pressed="${!planTous}">En cours</button><button data-pt="1" aria-pressed="${planTous}">Avec les terminés</button></div>`:""}
      <div class="seg" title="Zoom">${["jour","semaine","mois"].map(z=>`<button data-zoom="${z}" aria-pressed="${(planMode==="sem"?zoom:gZoom)===z}">${{jour:"Jour",semaine:"Semaine",mois:"Mois"}[z]}</button>`).join("")}</div>
-     <button class="btn sm" data-nav="-1" aria-label="Période précédente">‹</button><button class="btn sm" data-nav="0">Aujourd'hui</button><button class="btn sm" data-nav="1" aria-label="Période suivante">›</button>
+     ${planMode==="sem"&&zoom!=="jour"?"":`<button class="btn sm" data-nav="-1" aria-label="Période précédente">‹</button>`}<button class="btn sm" data-nav="0">Aujourd'hui</button>${planMode==="sem"&&zoom!=="jour"?"":`<button class="btn sm" data-nav="1" aria-label="Période suivante">›</button>`}
      <button class="btn sm" data-conge>+ Absence</button><button class="btn sm" data-newch>+ Chantier</button></div></div>
   ${planMode==="sem"?`${tray?`<div class="tray">${tray}</div>`:`<div class="box warn"><b>Aucune personne ni aucun véhicule</b><span class="note">${sansExcel()?"La liste vient des 2 fichiers Excel du dossier SharePoint « Gestion AFER » : elle arrive dès que la synchronisation tourne (voir Synchronisation).":"Toutes les fiches sont marquées sorties ou vendues."}</span></div>`}
   ${a?`<div class="hintbar">${avatar(a)}<b>${esc(a.nom)}</b> sélectionné · clic sur un chantier = tous ses jours ouvrés · double clic sur une case = ce jour seul · cases hachurées = absence · <kbd>Échap</kbd> pour annuler <button class="btn xs" data-unsel>Annuler</button></div>`:`<p class="hint">Personne sélectionnée en haut : clic sur un chantier = tous ses jours ouvrés, double clic sur une case = ce jour seul. <kbd>Maj</kbd> + clic étend une sélection de jours. Glisser une étiquette du haut vers une case marche aussi.</p>`}
-  <div class="scroll"><div class="wk" style="grid-template-columns:${zoom==="mois"?"170px":"200px"} repeat(${cs.length},minmax(${zoom==="mois"?36:zoom==="jour"?420:112}px,1fr));min-width:${zoom==="mois"?170+cs.length*36:zoom==="jour"?620:980}px">${week(cs)}</div></div>
+  <div class="scroll${zoom==="jour"?"":" defile"}" data-defile><div class="wk" style="${zoom==="jour"?"grid-template-columns:200px minmax(420px,1fr);min-width:620px":`grid-template-columns:${LW()}px repeat(${cs.length},${CW()}px);width:${LW()+cs.length*CW()}px`}">${week(cs)}</div></div>
   <p class="hint">Ligne orange pointillée = date idéale, ligne rouge = à ne pas dépasser (fond orange pâle entre les deux, rouge pâle au-delà) : elles rappellent, elles ne bloquent rien. Point turquoise = mission écrite (en entier avec le zoom Jour). Cadre rouge = même personne sur deux chantiers dans le même créneau. Hachures = absence (onglet Absences de l'Excel du personnel) : la case refuse l'affectation ; demi-hachure = demi-journée.</p>`
   :`<div class="scroll"><div class="gt">${gantt()}</div></div>
   <div class="leg"><span><span class="sw" style="--cc:var(--anth)"></span>Chantier</span><span><span class="sw" style="border:1px solid var(--mo);background:transparent"></span>Phase (remplie selon l'avancement)</span><span><span class="sw" style="background:repeating-linear-gradient(45deg,var(--muted) 0 3px,transparent 3px 7px)"></span>Opportunité</span><span><span class="sw" style="background:repeating-linear-gradient(45deg,var(--warn) 0 3px,transparent 3px 7px)"></span>Absence</span><span><span class="sw" style="--cc:var(--bad);width:2px"></span>Aujourd'hui</span></div>`}`}
 function week(cs){
   const mois=zoom==="mois",jour=zoom==="jour",t=today();
-  let h=`<div class="hd" style="text-align:left">${esc(periodLabel())}</div>`+cs.map(d=>`<div class="hd ${K(d)===t?"today":""} ${isWE(d)?"we":""}">${mois?DN[d.getDay()][0]+"<small>"+d.getDate()+"</small>":DN[d.getDay()]+" "+fk(K(d))}</div>`).join("");
+  let h=`<div class="hd per" style="text-align:left">${esc(periodLabel())}</div>`+cs.map(d=>{const lun=d.getDay()===1,p1=d.getDate()===1;
+    return `<div class="hd ${K(d)===t?"today":""} ${isWE(d)?"we":""} ${lun?"lun":""}" data-k="${K(d)}">${mois?DN[d.getDay()][0]+"<small>"+(p1?MN[d.getMonth()].slice(0,4)+" ":"")+d.getDate()+"</small>":(lun?`<small>S${isoWeek(d)}</small>`:"<small>&nbsp;</small>")+DN[d.getDay()]+" "+fk(K(d))}</div>`}).join("");
   const k0=K(cs[0]),k1=K(cs[cs.length-1]);
   // un chantier ne s'arrête pas à une date : il reste affiché tant qu'il n'est pas terminé (ou s'il a quelqu'un sur la période) ; « Avec les terminés » pour les réserves et le SAV
   const shown=CH.filter(c=>AFF.some(a=>a.ch===c.id&&a.d>=k0&&a.d<=k1)||(c.deb<=k1&&(planTous||!termine(c)))).sort((a,b)=>a.deb.localeCompare(b.deb)||a.code.localeCompare(b.code));
   shown.forEach(c=>{const p=c.pilote?rs(c.pilote):null;
-    h+=`<div class="bh" style="--cc:${c.cli.c}" data-chhead="${esc(c.id)}"><span class="dot"></span><span class="code">${esc(c.code)}</span><button class="nm" data-ch="${esc(c.id)}">${esc(c.nom)}</button><span style="font-weight:500;opacity:.75">· ${esc(c.cli.nom)}${c.cat?" · "+esc(c.cat):""} · ${c.sansDates?"début à fixer":"début "+fk(c.deb)}</span>
-     <span class="right">${termine(c)?`<span class="pill neu">Terminé · réserves / SAV</span>`:""}${c.ideal?`<span class="pill rep o" title="Ligne orange : date idéale">Idéal ${fk(c.ideal)}</span>`:""}${c.limite?`<span class="pill rep r" title="Ligne rouge : à ne pas dépasser">Limite ${fk(c.limite)}</span>`:""}<span class="eur" data-tip="${esc(c.id)}" aria-hidden="true">€</span>${c.sdb?`<button class="btn" data-open="${esc(c.id)}">Appli SDB</button>`:""}<button class="btn" data-editch="${esc(c.id)}">Dates</button><button class="pilot" data-pilot="${esc(c.id)}" title="Changer le pilote">${p?avatar(p)+"Pilote : "+esc(p.nom):"Choisir le pilote"}</button></span></div>`;
+    h+=`<div class="bh" style="--cc:${c.cli.c}" data-chhead="${esc(c.id)}"><div class="stk"><span class="chsw" style="background:${chCol(c.id)}" title="Couleur du chantier (la même chez les ouvriers)"></span><span class="code">${esc(c.code)}</span><button class="nm" data-ch="${esc(c.id)}">${esc(c.nom)}</button><span style="font-weight:500;opacity:.75">· ${esc(c.cli.nom)}${c.cat?" · "+esc(c.cat):""} · ${c.sansDates?"début à fixer":"début "+fk(c.deb)}</span>
+     <span class="right">${termine(c)?`<span class="pill neu">Terminé · réserves / SAV</span>`:""}${c.ideal?`<span class="pill rep o" title="Ligne orange : date idéale">Idéal ${fk(c.ideal)}</span>`:""}${c.limite?`<span class="pill rep r" title="Ligne rouge : à ne pas dépasser">Limite ${fk(c.limite)}</span>`:""}<span class="eur" data-tip="${esc(c.id)}" aria-hidden="true">€</span>${c.sdb?`<button class="btn" data-open="${esc(c.id)}">Appli SDB</button>`:""}<button class="btn" data-editch="${esc(c.id)}">Dates</button><button class="pilot" data-pilot="${esc(c.id)}" title="Changer le pilote">${p?avatar(p)+"Pilote : "+esc(p.nom):"Choisir le pilote"}</button></span></div></div>`;
     [["eq","Équipe AFER"],["ext","Sous-traitants"],["veh","Véhicules et matériel"]].forEach(([row,lab])=>{
       h+=`<div class="lab">${lab}</div>`+cs.map(d=>{const kk=K(d);
         const bl=active&&bloque(active,kk);
         const items=(AFFI[c.id+"|"+kk]||[]).filter(a=>rowOf(rs(a.r))===row);
         const chip=a=>{const r=rs(a.r);
-          return `<button class="as ${clash(a.r,kk)?"clash":""} ${mois?"mini":""}" style="--cc:${c.cli.c}" data-aff="${esc(a.id)}" title="${esc(r.nom)}${a.c?" · "+CRN[a.c]:""}${a.m?" · "+esc(a.m):""}">${avatar(r)}${mois?"":`<span class="n">${esc(r.nom)}</span>`}${a.m&&!mois?'<span class="m"></span>':""}${jour&&a.m?`<span class="mis">${esc(a.m)}</span>`:""}</button>`};
+          return `<button class="as ${clash(a.r,kk)?"clash":""} ${mois?"mini":""}" style="--cc:${chCol(c.id)}" data-aff="${esc(a.id)}" title="${esc(r.nom)}${a.c?" · "+CRN[a.c]:""}${a.m?" · "+esc(a.m):""}">${avatar(r)}${mois?"":`<span class="n">${esc(r.nom)}</span>`}${a.m&&!mois?'<span class="m"></span>':""}${jour&&a.m?`<span class="mis">${esc(a.m)}</span>`:""}</button>`};
         const zone=termine(c)?"":c.limite&&kk>c.limite?"zr":c.ideal&&kk>c.ideal?"zo":""; // chantier terminé : plus de fond, les lignes restent
         const mk=(c.ideal===kk?" mko":"")+(c.limite===kk?" mkr":"");
         const hdl=row==="eq"?(c.ideal===kk?`<button class="hdl o" data-mk="ideal|${esc(c.id)}" title="Ligne orange (idéal) : glisser pour la déplacer" aria-label="Déplacer la ligne orange, date idéale ${fk(kk)}">J</button>`:"")+(c.limite===kk?`<button class="hdl r" data-mk="limite|${esc(c.id)}" title="Ligne rouge (limite) : glisser pour la déplacer" aria-label="Déplacer la ligne rouge, date limite ${fk(kk)}">R</button>`:""):"";
@@ -2355,7 +2379,7 @@ function RENDER(){if(!C)return;buildAll();renderAlerts();
   const v=$("#v-main"),y=v.scrollTop,sx=[...document.querySelectorAll("#page .scroll")].map(s=>s.scrollLeft);
   sel=null;drag=null;hideTip();
   $("#page").innerHTML=VIEWS[VIEW]();if(VIEW==="devis")dvAfter();
-  v.scrollTop=y;document.querySelectorAll("#page .scroll").forEach((s,i)=>{if(sx[i])s.scrollLeft=sx[i]});
+  v.scrollTop=y;document.querySelectorAll("#page .scroll").forEach((s,i)=>{if(sx[i])s.scrollLeft=sx[i]});planApres();
   document.body.classList.toggle("picking",!!active&&VIEW==="plan");
   if(SEL)renderDetail()}
 function setView(v){VIEW=v;closeFloat();
@@ -2373,7 +2397,7 @@ function openSdb(ch){SEL=null;$("#detail").innerHTML="";
   history.replaceState(null,"","#sdb"+(ch?"="+encodeURIComponent(ch):""));setView("sdb")}
 addEventListener("message",e=>{if(e.origin!==location.origin||!e.data||e.data.gestion!=="pret")return;frameReady=true;
   if(pending){frame.contentWindow.postMessage({gestion:"ouvrir",ch:pending,tab:"suivi"},location.origin);pending=null}});
-function goPlanChantier(id){const c=CHI[id];if(!c)return;planMode="sem";zoom="semaine";const t=today();cur=t>=c.deb&&t<=c.fin?new Date():PK(c.deb);SEL=null;$("#detail").innerHTML="";go("plan")}
+function goPlanChantier(id){const c=CHI[id];if(!c)return;planMode="sem";zoom="semaine";const t=today();allerA(t>=c.deb&&t<=c.fin?new Date():PK(c.deb));SEL=null;$("#detail").innerHTML="";go("plan")}
 function closeDetail(){const id=SEL;SEL=null;$("#detail").innerHTML="";RENDER();const c=document.querySelector(`.card[data-ch="${CSS.escape(id||"")}"]`);c&&c.focus()}
 
 document.addEventListener("click",e=>{const t=e.target;
@@ -2404,8 +2428,8 @@ document.addEventListener("click",e=>{const t=e.target;
   if(el=q("[data-pt]")){planTous=el.dataset.pt==="1";RENDER();return}
   if(el=q("[data-lienouv]")){lienOuvrierPop(el.dataset.lienouv,el);return}
   if(q("[data-mk]"))return;
-  if(el=q("[data-zoom]")){if(planMode==="sem")zoom=el.dataset.zoom;else gZoom=el.dataset.zoom;if(zoom==="jour")while(isWE(cur))cur=addD(cur,1);RENDER();return}
-  if(el=q("[data-nav]")){const n=+el.dataset.nav;if(planMode==="sem"){if(n===0)cur=new Date();else shift(n)}else{if(n===0)gCur=new Date();else gShift(n)}RENDER();return}
+  if(el=q("[data-zoom]")){if(planMode==="sem"){const sc=document.querySelector("#page .scroll.defile");if(sc&&zoom!=="jour")cur=PK(jourAGauche(sc));zoom=el.dataset.zoom;if(zoom!=="jour")allerA(cur)}else gZoom=el.dataset.zoom;if(zoom==="jour")while(isWE(cur))cur=addD(cur,1);RENDER();return}
+  if(el=q("[data-nav]")){const n=+el.dataset.nav;if(planMode==="sem"){if(n===0)allerA(new Date());else shift(n)}else{if(n===0)gCur=new Date();else gShift(n)}RENDER();return}
   if(el=q("[data-rt]")){resTab=el.dataset.rt;selRes=null;RENDER();return}
   if(el=q("[data-sortis]")){voirSortis=el.checked;RENDER();return}
   if(el=q("[data-rs]")){selRes=el.dataset.rs;RENDER();if(innerWidth<1100){const f=$("#fiche");f&&f.scrollIntoView({behavior:"smooth",block:"start"})}return}
@@ -2447,7 +2471,8 @@ document.addEventListener("keydown",e=>{const h=e.target.closest&&e.target.close
   setTimeout(()=>{const x=document.querySelector(`[data-mk="${CSS.escape(h.dataset.mk)}"]`);x&&x.focus()},0)});
 document.addEventListener("contextmenu",e=>{const t=e.target.closest(".card[data-ch],[data-chhead]");if(!t)return;const id=t.dataset.ch||t.dataset.chhead,c=CHI[id];if(!c||!c.sdb)return;e.preventDefault();openSdb(id)});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(popEl){closeFloat();return}if(active){active=null;RENDER();return}if(SEL)closeDetail()});
-addEventListener("resize",()=>{hideTip()});
+addEventListener("resize",()=>{hideTip();planApres()});
+document.addEventListener("scroll",e=>{const sc=e.target;if(sc&&sc.matches&&sc.matches("#page .scroll.defile"))planDefile(sc)},true);
 addEventListener("hashchange",()=>{if(C&&gate.hidden)route(location.hash.slice(1))}); // lien collé ou favori #plan, #res…
 $("#out").onclick=async()=>{await C.auth.signOut().catch(()=>{});location.replace(location.pathname)};
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
