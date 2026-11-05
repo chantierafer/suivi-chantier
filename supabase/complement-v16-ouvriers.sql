@@ -63,14 +63,16 @@ drop trigger if exists gestion_ouvrier on public.gestion;
 create trigger gestion_ouvrier after insert or update or delete on public.gestion
   for each row execute function public.gestion_ouvrier();
 
--- 3. Ce que voit l'ouvrier avec son lien (appelée par ouvrier.html, sans compte)
+-- 3. Ce que voit l'ouvrier avec son lien (appelée par ouvrier.html, sans compte) :
+--    ses affectations (5 semaines passées, 4 mois à venir) et ses chantiers avec leurs lignes idéal (orange) et limite (rouge).
 create or replace function public.espace_ouvrier(p_jeton text) returns json
 language plpgsql security definer set search_path = public as $$
 declare
   rid text;
   nom text;
   tag text;
-  res json;
+  mis json;
+  chs json;
 begin
   if p_jeton is null or length(p_jeton) < 32 then raise exception 'Lien invalide ou désactivé'; end if;
   select id into rid from public.gestion
@@ -79,23 +81,31 @@ begin
   tag := '[' || rid || ']';
   select coalesce(nullif(data->>'Nom affiché dans l''appli', ''), nullif(data->>'Prénom', ''), rid) into nom
     from public.gestion where type = 'personne' and id = substr(rid, 3);
-  select coalesce(json_agg(x order by x.d, x.c nulls first, x.nom), '[]'::json) into res from (
-    select a.data->>'d' as d, a.data->>'c' as c, a.data->>'m' as m,
+  select coalesce(json_agg(json_build_object('d', o.d, 'c', o.c, 'm', o.m, 'ch', o.ch) order by o.d, o.c nulls first), '[]'::json) into mis
+    from (select a.data->>'d' d, a.data->>'c' c, a.data->>'m' m, a.data->>'ch' ch
+            from public.gestion a
+           where a.type = 'aff' and a.data->>'r' = rid and a.data->>'ch' is not null
+             and a.data->>'d' >= to_char(current_date - 35, 'YYYY-MM-DD')
+             and a.data->>'d' <= to_char(current_date + 120, 'YYYY-MM-DD')) o;
+  select coalesce(json_agg(x), '[]'::json) into chs from (
+    select o.ch,
            case when sc.id is not null then coalesce('Chantier ' || nullif(sc.fiche->>'ville', ''), sc.nom)
                 else coalesce(gc.data->>'nom', 'Chantier') end as nom,
            coalesce(sc.fiche->>'adresse', '') as adresse,
            coalesce(nullif(sc.fiche->>'ville', ''), gc.data->>'ville', '') as ville,
            (sc.id is not null) as sdb,
+           coalesce(nullif(gc.data->>'ideal', ''), nullif(gc.data->>'fin', '')) as ideal,
+           coalesce(nullif(gc.data->>'limite', ''), nullif(gc.data->>'ideal', ''), nullif(gc.data->>'fin', '')) as limite,
            (select ac.token from public.acces ac
              where ac.chantier_id = sc.id and ac.role = 'tech' and ac.actif
                and right(coalesce(ac.libelle, ''), length(tag)) = tag limit 1) as k
-      from public.gestion a
-      left join public.chantiers sc on sc.id = a.data->>'ch'
-      left join public.gestion gc on gc.type = 'chantier' and gc.id = a.data->>'ch'
-     where a.type = 'aff' and a.data->>'r' = rid
-       and a.data->>'d' >= to_char(current_date - 7, 'YYYY-MM-DD')
-       and a.data->>'d' <= to_char(current_date + 60, 'YYYY-MM-DD')) x;
-  return json_build_object('nom', nom, 'missions', res);
+      from (select distinct a.data->>'ch' ch from public.gestion a
+           where a.type = 'aff' and a.data->>'r' = rid and a.data->>'ch' is not null
+             and a.data->>'d' >= to_char(current_date - 35, 'YYYY-MM-DD')
+             and a.data->>'d' <= to_char(current_date + 120, 'YYYY-MM-DD')) o
+      left join public.chantiers sc on sc.id = o.ch
+      left join public.gestion gc on gc.type = 'chantier' and gc.id = o.ch) x;
+  return json_build_object('nom', nom, 'missions', mis, 'chantiers', chs);
 end $$;
 revoke execute on function public.espace_ouvrier(text) from public;
 grant execute on function public.espace_ouvrier(text) to anon, authenticated;
