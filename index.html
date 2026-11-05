@@ -189,6 +189,11 @@ button.jcol:hover .jseg{filter:brightness(.95)}button.jcol{cursor:pointer}
 .add svg{width:34px;height:34px}
 .add.req{background:rgba(47,191,191,.08)}
 .add small{font-weight:600;color:var(--muted);font-size:12px}
+.add.gal{border-style:solid;border-width:1.5px}
+.add.gal svg{width:28px;height:28px}
+.nxb{display:flex;flex-direction:column;gap:6px}
+.nxb .btn.gal{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.55);font-size:13px;padding:7px 10px}
+.nxb .btn.gal svg{width:16px;height:16px}
 .full{font-size:13px;color:var(--muted)}
 
 /* PV : copie du modèle papier, toujours sur fond blanc */
@@ -1738,7 +1743,7 @@ const sh=document.getElementById("sheet"),shb=document.getElementById("sheetbody
 function sheet(html,bind){shb.innerHTML=html;sh.hidden=false;shb.querySelectorAll("[data-close]").forEach(b=>b.onclick=closeSheet);bind&&bind(shb)}
 function closeSheet(){sh.hidden=true;shb.innerHTML=""}
 sh.onclick=e=>{if(e.target===sh)closeSheet()};
-function gsay(t){let e=document.getElementById("gtoast");if(!e){e=document.createElement("div");e.id="gtoast";e.className="gtoast";document.body.appendChild(e)}e.textContent=t;e.classList.add("on");clearTimeout(e._h);e._h=setTimeout(()=>e.classList.remove("on"),1800)}
+function gsay(t,ms){let e=document.getElementById("gtoast");if(!e){e=document.createElement("div");e.id="gtoast";e.className="gtoast";document.body.appendChild(e)}e.textContent=t;e.classList.add("on");clearTimeout(e._h);e._h=setTimeout(()=>e.classList.remove("on"),ms||1800)}
 // dans un formulaire déjà ouvert : deux boutons côte à côte (appareil ou galerie) au lieu de la fenêtre de choix
 function shotField(el,cb){const b=el.querySelector("[data-shot]"),g=el.querySelector("[data-shotgal]"),pv=el.querySelector("[data-shotpv]"),done=k=>{cb(k);getImg(k).then(s=>{pv.innerHTML=s?`<img src="${s}" alt="Photo jointe">`:"";b.textContent="Reprendre la photo"})};
   b.onclick=()=>pickOnceFrom(file,done);if(g)g.onclick=()=>pickOnceFrom(file2,done)}
@@ -1758,13 +1763,22 @@ let target=null,oneShot=null;const file=document.getElementById("file"),file2=do
 // 03/11 (Djalil) : à chaque ajout, choisir entre prendre une photo (appareil) et importer depuis la galerie (plusieurs d'un coup)
 function choose(go){sheet(`<h2>Ajouter une photo</h2><div class="form"><button class="btn" id="ch-cam">${CAM}Prendre une photo</button><button class="btn sec" id="ch-gal">Choisir dans la galerie</button><button class="btn sec" data-close>Annuler</button></div>`,
   el=>{el.querySelector("#ch-cam").onclick=()=>{closeSheet();go(file)};el.querySelector("#ch-gal").onclick=()=>{closeSheet();go(file2)}})}
+const GAL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>';
 function pick(key){if(list(key).length>=lim(key).max)return;choose(inp=>{target=key;oneShot=null;inp.value="";inp.click()})}
+// 05/11 (Djalil) : galerie en accès direct, sans passer par la fenêtre de choix
+function pickGal(key){if(list(key).length>=lim(key).max)return;target=key;oneShot=null;file2.value="";file2.click()}
 function pickOnce(cb){choose(inp=>pickOnceFrom(inp,cb))}
 function pickOnceFrom(inp,cb){oneShot=cb;target=null;inp.value="";inp.click()}
-function compress(f){return new Promise(res=>{const rd=new FileReader();rd.onload=()=>{const im=new Image();im.onload=()=>{const M=1600,sc=Math.min(1,M/Math.max(im.width,im.height)),cv=document.createElement("canvas");cv.width=im.width*sc;cv.height=im.height*sc;cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);res(cv.toDataURL("image/jpeg",.82))};im.onerror=()=>res(null);im.src=rd.result};rd.onerror=()=>res(null);rd.readAsDataURL(f)})}
+// 05/11 : lecture par URL temporaire (moins de mémoire que FileReader sur les grosses photos de galerie), secours createImageBitmap, null si illisible (HEIC hors iPhone)
+function drawJpg(src,w,h){const M=1600,sc=Math.min(1,M/Math.max(w,h)),cv=document.createElement("canvas");cv.width=Math.max(1,Math.round(w*sc));cv.height=Math.max(1,Math.round(h*sc));cv.getContext("2d").drawImage(src,0,0,cv.width,cv.height);return cv.toDataURL("image/jpeg",.82)}
+function compress(f){return new Promise(res=>{let u=null;try{u=URL.createObjectURL(f)}catch(e){}
+  const viaBitmap=()=>{if(!window.createImageBitmap)return res(null);createImageBitmap(f).then(b=>{try{res(drawJpg(b,b.width,b.height))}catch(e){res(null)}}).catch(()=>res(null))};
+  if(!u)return viaBitmap();const im=new Image();im.onload=()=>{try{res(drawJpg(im,im.naturalWidth,im.naturalHeight))}catch(e){res(null)}URL.revokeObjectURL(u)};im.onerror=()=>{URL.revokeObjectURL(u);viaBitmap()};im.src=u})}
+const isHeic=f=>/heic|heif/i.test(f.type||"")||/\.(heic|heif)$/i.test(f.name||"");
+function badPhotos(bad){if(!bad.length)return;const h=bad.some(isHeic);gsay(bad.length+(bad.length>1?" photos non lues":" photo non lue")+(h?" (format HEIC) : sur l'iPhone, Réglages › Appareil photo › Formats › « Le plus compatible »":" : format non reconnu"),6000)}
 const onFiles=async inp=>{const F=[...inp.files];if(!F.length)return;
-  if(oneShot){const d=await compress(F[0]);if(!d)return;const k="img-"+uid(),cb=oneShot;oneShot=null;putImg(k,d);cb(k);return}
-  if(target){const key=target;target=null;for(const f of F){const d=await compress(f);if(d)addPhoto(key,d)}}};
+  if(oneShot){const d=await compress(F[0]);if(!d)return badPhotos([F[0]]);const k="img-"+uid(),cb=oneShot;oneShot=null;putImg(k,d);cb(k);return}
+  if(target){const key=target,bad=[];target=null;let i=0;for(const f of F){i++;if(F.length>1)toast("Import "+i+" / "+F.length+"…");const d=await compress(f);if(d)addPhoto(key,d);else bad.push(f)}badPhotos(bad)}};
 file.onchange=()=>onFiles(file);file2.onchange=()=>onFiles(file2);
 function addPhoto(key,d){
   const k=key.replace(/:/g,"_")+"-"+Date.now()+"-"+uid().slice(-4);putImg(k,d);
@@ -1794,7 +1808,8 @@ function grid(key,title,labels){
   L.forEach((ph,j)=>{const t=document.createElement("div");t.className="th";t.innerHTML=`<span class="when">${j+1} · ${fd(ph.at)}</span>`;imgInto(t,ph.id,title+" · photo "+(j+1)+" · "+ft(ph.at));
     if(ed){const d=document.createElement("button");d.className="del";d.textContent="✕";d.setAttribute("aria-label","Supprimer la photo");d.onclick=ev=>{ev.stopPropagation();if(!d.classList.contains("arm")){d.classList.add("arm");d.textContent="Supprimer ?";setTimeout(()=>{d.classList.remove("arm");d.textContent="✕"},3000);return}removePhoto(key,j)};t.appendChild(d)}
     g.appendChild(t)});
-  if(ed&&L.length<max){const a=document.createElement("button");a.className="add"+(L.length<min?" req":"");a.innerHTML=`${CAM}<span>${L.length<min?(labels[L.length]||"Prendre la photo"):"Ajouter une photo"}</span><small>${L.length<min?"Obligatoire":"Facultatif"}</small>`;a.onclick=()=>pick(key);g.appendChild(a)}
+  if(ed&&L.length<max){const a=document.createElement("button");a.className="add"+(L.length<min?" req":"");a.innerHTML=`${CAM}<span>${L.length<min?(labels[L.length]||"Prendre la photo"):"Ajouter une photo"}</span><small>${L.length<min?"Obligatoire":"Facultatif"}</small>`;a.onclick=()=>pick(key);g.appendChild(a);
+    const gb=document.createElement("button");gb.className="add gal";gb.innerHTML=`${GAL}<span>Depuis la galerie</span><small>Plusieurs d'un coup</small>`;gb.onclick=()=>pickGal(key);g.appendChild(gb)}
   if(!L.length&&!ed){const e=document.createElement("p");e.className="full";e.textContent="Pas encore de photo.";g.appendChild(e)}
   return g}
 
@@ -1806,11 +1821,11 @@ function renderSuivi(){
   if(open===null||(open&&!S.find(s=>s.id===open)))open=S[ci].id;
   // bandeau « prochaine photo »
   const nx=document.getElementById("next"),cs=S[ci],n=list(cs.id).length,rec=list("materiel").length,todoX=extras().find(l=>!extraDone(l));
-  if(!rec){nx.innerHTML=ed?`<div><div class="k">Prochaine photo · avant de commencer</div><div class="v">Le matériel reçu, déballé et visible</div><div class="s">Cette photo marque le début du chantier</div></div><button class="btn" data-shoot="materiel">${CAM}Photo</button>`:`<div><div class="k">En attente</div><div class="v">Réception du matériel</div><div class="s">Le chantier démarre à la première photo du matériel</div></div>`}
-  else if(globalPct()<100){nx.innerHTML=ed?`<div><div class="k">Prochaine photo · étape ${ci+1}</div><div class="v">${cs.shots[Math.min(n,MIN-1)]}</div><div class="s">${cs.t} · ${n} / ${MIN} photos</div></div><button class="btn" data-shoot="${cs.id}">${CAM}Photo</button>`:`<div><div class="k">En cours</div><div class="v">${cs.t}</div><div class="s">Étape ${ci+1} sur ${S.length}</div></div>`}
-  else if(todoX){const side=list("x:"+todoX.id+":av").length?"ap":"av";nx.innerHTML=`<div><div class="k">Travaux supplémentaires</div><div class="v">${esc(todoX.designation)}</div><div class="s">Photo ${side==="av"?"avant":"après"} à prendre</div></div>`+(ed?`<button class="btn" data-shoot="x:${todoX.id}:${side}">${CAM}Photo</button>`:"")}
+  if(!rec){nx.innerHTML=ed?`<div><div class="k">Prochaine photo · avant de commencer</div><div class="v">Le matériel reçu, déballé et visible</div><div class="s">Cette photo marque le début du chantier</div></div><div class="nxb"><button class="btn" data-shoot="materiel">${CAM}Photo</button><button class="btn gal" data-gal="materiel">${GAL}Galerie</button></div>`:`<div><div class="k">En attente</div><div class="v">Réception du matériel</div><div class="s">Le chantier démarre à la première photo du matériel</div></div>`}
+  else if(globalPct()<100){nx.innerHTML=ed?`<div><div class="k">Prochaine photo · étape ${ci+1}</div><div class="v">${cs.shots[Math.min(n,MIN-1)]}</div><div class="s">${cs.t} · ${n} / ${MIN} photos</div></div><div class="nxb"><button class="btn" data-shoot="${cs.id}">${CAM}Photo</button><button class="btn gal" data-gal="${cs.id}">${GAL}Galerie</button></div>`:`<div><div class="k">En cours</div><div class="v">${cs.t}</div><div class="s">Étape ${ci+1} sur ${S.length}</div></div>`}
+  else if(todoX){const side=list("x:"+todoX.id+":av").length?"ap":"av";nx.innerHTML=`<div><div class="k">Travaux supplémentaires</div><div class="v">${esc(todoX.designation)}</div><div class="s">Photo ${side==="av"?"avant":"après"} à prendre</div></div>`+(ed?`<div class="nxb"><button class="btn" data-shoot="x:${todoX.id}:${side}">${CAM}Photo</button><button class="btn gal" data-gal="x:${todoX.id}:${side}">${GAL}Galerie</button></div>`:"")}
   else{nx.innerHTML=`<div><div class="k">Chantier</div><div class="v">Toutes les photos sont prises</div><div class="s">${pv?"PV signé.":"Il reste à faire signer le PV de réception."}</div></div>`+(ed&&!pv?`<button class="btn" data-go2="pv">PV</button>`:"")}
-  nx.querySelectorAll("[data-shoot]").forEach(b=>b.onclick=()=>pick(b.dataset.shoot));
+  nx.querySelectorAll("[data-shoot]").forEach(b=>b.onclick=()=>pick(b.dataset.shoot));nx.querySelectorAll("[data-gal]").forEach(b=>b.onclick=()=>pickGal(b.dataset.gal));
   nx.querySelectorAll("[data-go2]").forEach(b=>b.onclick=()=>setTab("pv"));
   document.getElementById("techact").hidden=!ed;
   document.getElementById("btn-extra").textContent=role==="afer"?"＋ Ajouter une prestation":"＋ Travaux en plus";
