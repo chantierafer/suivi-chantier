@@ -1470,7 +1470,7 @@ function tlkPick(){if(needBase())return;let i=$("#tlk-file");if(!i){i=document.c
       const f=L[0];if(f)f.text().then(tlkPreview).catch(()=>toast("Fichier illisible."))};document.body.appendChild(i)}i.click()}
 // PDF téléchargés depuis Tolteck (« devis DEV-2026_10-0047 Client.pdf », « facture FAC-2026-0024 Client.pdf ») : rattachés au document repris de même numéro
 async function tlkPdfs(files){const dd=gt("doc"),vus=new Set(),todo=[];let sans=0,deja=0;
-  for(const f of files){const m=f.name.match(/(DEV-\d{4}(?:_\d{2})?-\d{4}|FAC-\d{4}-\d{4})/);const id=m&&"tlk-"+m[1].replace(/_/g,"-"),d=id&&dd[id];
+  for(const f of files){const m=f.name.match(/^(?:devis|facture) (DEV-\d{4}(?:_\d{2})?-\d{4}|FAC-\d{4}-\d{4})(?: [^/]*)?\.pdf$/i);const id=m&&"tlk-"+m[1].replace(/_/g,"-"),d=id&&dd[id];
     if(!d||!d.tolteck){sans++;continue}if(vus.has(id))continue;vus.add(id);if(d.pdf){deja++;continue}todo.push([id,d,f])}
   if(!todo.length){toast(`Aucun PDF à rattacher${deja?` (${deja} déjà rattachés)`:""}${sans?`, ${sans} sans document Tolteck correspondant`:""}.`);return}
   toast(`Envoi de ${plural(todo.length,"PDF","PDF")}…`);const rows=[];let err=0;
