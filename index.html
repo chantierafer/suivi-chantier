@@ -1264,8 +1264,9 @@ const Engine = (() => {
     const devisBase = Math.max(259.1, boxBottom + 36.7, companyBottom + 40);
     const numero = dv.numero || cfg.provisionalNumber || 'DEV-…';
     const isDevis = !dv.docType || dv.docType === 'devis';
-    T(28.4, devisBase, (dv.titre || 'Devis') + ' n° ' + numero, 'B', 14.2, C.title);
-    if (isDevis) T(28.4, devisBase + 15.5, 'Valable ' + (dv.validite || '3 mois'), 'R', 9.7);
+    const SP = !!dv.sansPrix; // 05/11 : version sans prix (technicien, sous-traitant) : ni prix, ni totaux, ni signatures
+    T(28.4, devisBase, SP ? 'Descriptif des travaux · devis n° ' + numero : (dv.titre || 'Devis') + ' n° ' + numero, 'B', 14.2, C.title);
+    if (isDevis && !SP) T(28.4, devisBase + 15.5, 'Valable ' + (dv.validite || '3 mois'), 'R', 9.7);
     else {
       let ey = devisBase + 15.5;
       if (dv.echeance) { T(28.4, ey, 'Échéance : ' + dateFR(dv.echeance), 'R', 9.7); ey += 12.5; }
@@ -1297,7 +1298,7 @@ const Engine = (() => {
     const rows = [];
     let n = 0;
     const showDet = dv.options?.details !== false;
-    const subtot = !!dv.options?.sousTotaux;
+    const subtot = !!dv.options?.sousTotaux && !SP;
     let sectAcc = null, sectName = '';
     const flushSect = () => { if (subtot && sectAcc !== null) rows.push({ k: 'sub', label: 'Sous-total' + (sectName ? ' ' + sectName : ''), v: sectAcc, h: 19 }); };
     dv.lines.forEach((l, idx) => {
@@ -1326,6 +1327,7 @@ const Engine = (() => {
       const by = top + 15.4;
       T(35.1, by, 'N°', 'B', 9.7, C.white);
       T(58.0, by, 'DÉSIGNATION', 'B', 9.7, C.white);
+      if (SP) { T(COL.r - 6.4, by, 'QTÉ', 'B', 9.7, C.white, 'r'); return top + 24.6; }
       T(COL.q - 5.2, by, 'QTÉ', 'B', 9.7, C.white, 'r');
       T(COL.p - 5.1, by, 'PU HT', 'B', 9.7, C.white, 'r');
       T(COL.t - 5.1, by, 'TVA', 'B', 9.7, C.white, 'r');
@@ -1333,7 +1335,7 @@ const Engine = (() => {
       return top + 24.6;
     };
     const closeBody = (top, bottom) => {
-      [COL.l, COL.n, COL.d, COL.q, COL.p, COL.t, COL.r].forEach(x => L(x, top, x, bottom, C.grid, 0.8));
+      (SP ? [COL.l, COL.n, COL.t, COL.r] : [COL.l, COL.n, COL.d, COL.q, COL.p, COL.t, COL.r]).forEach(x => L(x, top, x, bottom, C.grid, 0.8));
       L(COL.l, bottom, COL.r, bottom, C.grid, 0.8);
     };
     let bodyTop = drawHead(tableTop);
@@ -1352,6 +1354,7 @@ const Engine = (() => {
         const db = b + (row.des.length - 1) * 12.2;
         row.det.forEach((s, i) => T(58.4, db + 11.9 * (i + 1), s, 'R', 8.4, C.sub));
         const fit = (s, mw) => { const w = tw(clean(s), 'R', 9.7); return w > mw ? Math.max(6, 9.7 * mw / w) : 9.7; };
+        if (SP) { T((COL.t + COL.r) / 2, b, row.q, 'R', fit(row.q, COL.r - COL.t - 6), C.txt, 'c'); ry += row.h; continue; }
         T((COL.d + COL.q) / 2, b, row.q, 'R', fit(row.q, COL.q - COL.d - 5), C.txt, 'c');
         T(COL.p - 5.5, b, row.pu, 'R', fit(row.pu, COL.p - COL.q - 8), C.txt, 'r');
         T((COL.p + COL.t) / 2, b, row.tva, 'R', fit(row.tva, COL.t - COL.p - 5), C.txt, 'c');
@@ -1369,6 +1372,9 @@ const Engine = (() => {
     const tableBottom = ry + Q;
     closeBody(bodyTop, tableBottom);
 
+    if (SP) {
+      if (dv.noteSansPrix && String(dv.noteSansPrix).trim()) { let nb = tableBottom + 26.8; wrap(String(dv.noteSansPrix).trim(), 'R', 9.7, 538).forEach(s => { if (nb > FOOT_LIMIT) { newPage(); nb = CONT_TOP + 10; } T(28.4, nb, s, 'R', 9.7); nb += 14.1; }); }
+    } else {
     // --- totaux + conditions de paiement ---
     const nR = Math.max(totals.rates.length, 1);
     const hasRem = totals.remise > 0, hasPrime = totals.prime > 0;
@@ -1436,8 +1442,8 @@ const Engine = (() => {
       lastBase = mb + h; mb = lastBase + 18.6;
     });
 
-    // --- signatures ---
-    if (isDevis) {
+    // --- signatures (bloc « Bon pour accord » du client + signature AFER) ---
+    if (isDevis && dv.options?.signature !== false) {
     let lc = lastBase !== null ? lastBase + 47.1 : cursor + 40;
     if (lc + 82.2 > FOOT_LIMIT + 4) lc = (lastBase !== null ? lastBase : cursor - 12) + 30; // espace réduit si ça tient
     if (lc + 82.2 > FOOT_LIMIT + 4) { newPage(); lc = CONT_TOP + 10; }
@@ -1451,6 +1457,7 @@ const Engine = (() => {
     R(325.1, st + 20.9, 214.6, 56.3, C.box, 3);
     if (cfg.showSignature) I('sig', 390.0, st + 22.4, 86.0, 54.5);
     }
+    } // fin de la version avec prix
 
     // --- pieds de page ---
     const N = pages.length;

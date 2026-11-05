@@ -413,7 +413,8 @@ tr.clk.sel td{background:var(--turq-soft)}
 .remx{display:grid;gap:8px;padding-bottom:8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
 .remx label{display:grid;gap:3px;font-size:12.5px;color:var(--muted)}
 .remin{display:flex;gap:6px}.remin input{flex:1 1 60px;min-width:0;width:auto}.remin input.sm{flex:0 0 80px;width:80px}.remin select{flex:0 0 84px;width:84px;min-width:0}
-.kv.rem b{color:var(--turq-ink,#1B7F7F)}.kv.net{font-size:15px}
+.kv.rem b{color:var(--turq-ink,#1B7F7F)}
+.sdx{display:grid;gap:6px;margin:10px 0}.sdx .sdn{color:var(--turq-ink)}.sdx label{display:grid;gap:3px}.kv.net{font-size:15px}
 .echx{display:grid;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
 .echh{display:flex;align-items:center;gap:8px;justify-content:space-between}.echh select{width:auto;max-width:60%}
 .echr{display:grid;grid-template-columns:minmax(0,1fr) 72px auto;gap:4px 8px;align-items:center}
@@ -1317,6 +1318,45 @@ function dlBlob(b,name){const u=URL.createObjectURL(b),a=document.createElement(
 const pdfName=d=>(slug(d.numero||"brouillon-"+DT[d.kind].nom)+"-"+slug((d.client||{}).nom||"")).replace(/-$/,"")+".pdf";
 async function dvPdf(d){try{if(d.pdf){const {data,error}=await C.storage.from("fichiers").download(d.pdf);if(!error&&data){dlBlob(data,pdfName(d));return}}
     toast("Préparation du PDF…");const r=await rendreDoc(d,true);dlBlob(r.pdf,pdfName(d))}catch(e){toast("PDF impossible : "+e.message)}}
+// 05/11 (Tolteck, maquette C) : « Envoyer… » en 3 étapes. Le mail est préparé (comme le mail du PV) : sur téléphone, partage vers Outlook avec le PDF ;
+// sur PC, le PDF se télécharge et le mail s'ouvre rempli (destinataire, copie AFER, objet, message). Rien ne part sans que Djalil clique Envoyer dans sa boîte.
+const CC_AFER="chantier@aferfrance.com";
+function sdTexte(d,sp){const n=d.numero||"",ob=(d.objet||"").trim(),adr=((d.chantier||{}).adresse||"").trim(),T=titreDoc(d).toLowerCase();
+  if(sp)return["Descriptif des travaux"+(ob?" · "+ob:"")+(n?" (devis n° "+n+")":""),`Bonjour,\n\nVeuillez trouver ci-joint le descriptif des travaux${adr?" du chantier situé "+adr:""}${n?" (devis n° "+n+")":""}.\n\nMerci de me confirmer votre disponibilité.\n\nCordialement,`];
+  if(d.kind==="devis")return[`Devis n° ${n}`+(ob?" · "+ob:""),`Bonjour,\n\nVeuillez trouver ci-joint notre devis n° ${n}${ob?" concernant : "+ob:""}.\n\nPour l'accepter, merci de nous le retourner daté et signé avec la mention « Bon pour accord ».\n\nNous restons à votre disposition pour tout complément.\n\nCordialement,`];
+  return[`${titreDoc(d)} n° ${n}`+(ob?" · "+ob:""),`Bonjour,\n\nVeuillez trouver ci-joint notre ${T} n° ${n}${d.kind==="facture"&&d.echeance?", à régler au plus tard le "+fkl(d.echeance):""}.\n\nNous restons à votre disposition pour tout complément.\n\nCordialement,`]}
+function dvSendModal(id){const d0=ED&&ED.id===id?ED.d:docById(id);if(!d0)return;const dv=d0.kind==="devis";
+  if(!dv&&!d0.numero){openModal(`<h3>${esc(titreDoc(d0))} pas encore émise</h3><p class="note">Émets-la d'abord (bouton « Émettre ») : elle prend son numéro et son PDF définitif, ensuite tu peux l'envoyer.</p><div class="acts"><button class="btn sm" data-x>Fermer</button></div>`);return}
+  const [o1,m1]=sdTexte(d0,false),cl=d0.client||{};
+  const p=openModal(`<h3>Envoyer ${dv?"le devis":"la "+esc(titreDoc(d0).toLowerCase())}${d0.numero?" n° "+esc(d0.numero):""}</h3>
+    <div class="sdx"><b><span class="sdn">Étape 1 ·</span> Quoi</b>
+      <label class="chk"><input type="radio" name="sdv" value="client" checked> <span>PDF ${dv?"client, avec prix":"de la "+esc(titreDoc(d0).toLowerCase())}</span></label>
+      ${dv?`<label class="chk"><input type="radio" name="sdv" value="sp"> <span>PDF sans prix, pour un technicien ou un sous-traitant</span></label>`:""}</div>
+    <div class="sdx"><b><span class="sdn">Étape 2 ·</span> À qui</b><label>Destinataire<input id="sd-to" type="email" value="${esc(cl.email||"")}" placeholder="adresse e-mail"></label><label>Copie<input id="sd-cc" value="${esc(CC_AFER)}"></label></div>
+    <div class="sdx"><b><span class="sdn">Étape 3 ·</span> Message</b><label>Objet<input id="sd-obj" value="${esc(o1)}"></label><label>Message<textarea id="sd-msg" rows="7">${esc(m1)}</textarea></label></div>
+    ${dv&&d0.statut==="brouillon"?`<p class="note">Le devis passera « Envoyé » et son PDF sera enregistré.</p>`:""}
+    <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" id="sd-go">Préparer le mail</button></div>`);
+  p.querySelectorAll("[name=sdv]").forEach(r=>r.onchange=()=>{const sp=r.value==="sp"&&r.checked;if(!r.checked)return;const [o,m]=sdTexte(d0,sp);p.querySelector("#sd-obj").value=o;p.querySelector("#sd-msg").value=m;p.querySelector("#sd-to").value=sp?"":cl.email||""});
+  p.querySelector("#sd-go").onclick=async()=>{const sp=(p.querySelector("[name=sdv]:checked")||{}).value==="sp",to=p.querySelector("#sd-to").value.trim(),cc=p.querySelector("#sd-cc").value.trim(),obj=p.querySelector("#sd-obj").value,msg=p.querySelector("#sd-msg").value,b=p.querySelector("#sd-go");
+    b.disabled=true;b.textContent="Préparation du PDF…";
+    try{let d=ED&&ED.id===id?ED.d:docById(id),blob=null,name;
+      if(ED&&ED.id===id)await edFlush();
+      if(sp){blob=(await rendreDoc({...d,sansPrix:true},true)).pdf;name="descriptif-"+pdfName(d)}
+      else{if(dv&&d.statut==="brouillon"){closeFloat();await dvEnvoyer(id);d=docById(id);if(!d||d.statut==="brouillon"||!d.numero){toast("Mail pas préparé : le devis n'a pas pu passer « Envoyé ».");return}}
+        if(d.pdf){const r=await C.storage.from("fichiers").download(d.pdf);if(!r.error&&r.data)blob=new Blob([r.data],{type:"application/pdf"})}
+        if(!blob)blob=(await rendreDoc(d,true)).pdf;name=pdfName(d)}
+      const env=[...(d.envois||[]),{at:new Date().toISOString(),to,cc,version:sp?"sans prix":"client"}];await gput("doc",id,{...gid("doc",id),envois:env});if(ED&&ED.id===id)ED.d.envois=env;
+      sdPret({blob,name,to,cc,obj,msg})}
+    catch(e){toast("Mail impossible à préparer : "+e.message);b.disabled=false;b.textContent="Préparer le mail"}}}
+function sdPret(m){closeFloat();const f=new File([m.blob],m.name,{type:"application/pdf"}),share=!!(navigator.canShare&&navigator.canShare({files:[f]}))&&matchMedia("(pointer:coarse)").matches;
+  const url=`mailto:${encodeURIComponent(m.to).replace(/%40/g,"@")}?cc=${encodeURIComponent(m.cc).replace(/%40/g,"@")}&subject=${encodeURIComponent(m.obj)}&body=${encodeURIComponent(m.msg)}`;
+  const p=openModal(`<h3>Le mail est prêt</h3><p class="note">C'est toi qui l'envoies depuis ta boîte : rien ne part tout seul.</p>
+    <div class="kv"><span>À</span><span>${esc(m.to||"(à compléter)")}</span></div><div class="kv"><span>Copie</span><span>${esc(m.cc)}</span></div><div class="kv"><span>Pièce jointe</span><span>${esc(m.name)}</span></div>
+    ${share?`<button class="btn pri" id="sd-share">Ouvrir dans Outlook avec le PDF</button><p class="note">Choisis Outlook, puis vérifie le destinataire et la copie.</p>`:""}
+    <button class="btn${share?"":" pri"}" id="sd-mail">Ouvrir le mail et télécharger le PDF</button><p class="note">Sur PC : le mail s'ouvre rempli, glisse le PDF téléchargé dedans.</p>
+    <div class="acts"><button class="btn sm" data-x>Fermer</button></div>`);
+  const sh=p.querySelector("#sd-share");if(sh)sh.onclick=async()=>{try{await navigator.share({files:[f],title:m.obj,text:m.msg})}catch(e){}};
+  p.querySelector("#sd-mail").onclick=()=>{dlBlob(m.blob,m.name);setTimeout(()=>{location.href=url},700)}}
 // 05/11 (Tolteck) : devis sans prix pour le technicien ou le sous-traitant (jamais enregistré comme pièce : simple téléchargement)
 async function dvPdfSansPrix(d){try{toast("Préparation du PDF sans prix…");const r=await rendreDoc({...d,sansPrix:true},true);dlBlob(r.pdf,"descriptif-"+pdfName(d))}catch(e){toast("PDF impossible : "+e.message)}}
 function pagesHtml(r){return `<div class="dvpages">${r.pages.join("")}</div>`}
@@ -1372,7 +1412,7 @@ function clientDoc(cli){const k=clientsMap()[cli]||{};let c={type:"pro",nom:k.no
 function chantierDoc(chId){const r=ROWS.find(x=>x.id===chId),g=gid("chantier",chId)||{};return{adresse:(r&&r.fiche&&r.fiche.adresse)||g.adresse||"",debut:"",duree:""}}
 function baseDoc(kind,extra={}){const cli=extra.cli||"",ctx=cli==="dmv"?"st":"pro";
   return{kind,genre:kind==="facture"?"libre":null,numero:null,statut:"brouillon",date:today(),cli,client:cli?clientDoc(cli):{type:"pro",nom:"",adresse1:"",adresse2:"",cp:"",ville:"",pays:"France",siren:"",siret:"",tva:"",tel:"",email:""},chId:"",chantier:{adresse:"",debut:"",duree:""},
-    objet:"",contexte:ctx,paiement:"Paiement en espèces, par chèque ou par virement bancaire.",note:"",options:{details:true,sousTotaux:false,revision:kind==="devis"},validite:"3 mois",echeance:"",delai:"",parent:null,refDoc:"",lines:[],paiements:[],cree:new Date().toISOString(),...extra}}
+    objet:"",contexte:ctx,paiement:"Paiement en espèces, par chèque ou par virement bancaire.",note:"",options:{details:true,sousTotaux:false,revision:kind==="devis"},validite:"3 mois",echeance:kind==="facture"?addK(today(),30):"",delai:kind==="facture"?"30":"",parent:null,refDoc:"",lines:[],paiements:[],cree:new Date().toISOString(),...extra}}
 async function dvCreate(d,open=true){if(d.kind==="devis"&&!d.numero){const nu=await numeroterDevis(d);if(!nu)return null;d={...d,numero:nu}}const id=uid("d-");if(!await gput("doc",id,d))return null;DSEL=id;if(open)edOpen(id);return id}
 async function dvDup(id){const s=docById(id);if(!s)return;const d=clone(s);["numero","pdf","emisLe","parent","refDoc","pct","sdb","att","id"].forEach(k=>delete d[k]);
   Object.assign(d,{statut:"brouillon",date:today(),echeance:"",delai:"",paiements:[],cree:new Date().toISOString(),lines:(s.lines||[]).filter(l=>s.sdb?l.st==="val"||l.kind==="titre":true).map(l=>({...l,id:uid("l-")}))});
@@ -1462,7 +1502,7 @@ async function dvEmettre(id){if(emitting)return;const all=docsAll(),d=ED&&ED.id=
 async function dvEmettre2(id,d0){if(emitting)return;emitting=true;try{
     const all=docsAll(),k=d0.kind;try{await rendreDoc(d0,false)}catch(e){toast("Aperçu impossible, rien n'est numéroté : "+e.message);return}
     const n=await lireCompteur(k,all),numero=fmtNum(k,n,d0.date),d={...d0,numero,statut:k==="devis"?"envoye":k==="facture"?"emise":"emis",emisLe:new Date().toISOString(),date:d0.date||today()};
-    if(k==="facture"&&!d.echeance)d.echeance=addK(d.date,0);
+    if(k==="facture"&&!d.echeance)d.echeance=addK(d.date,30);
     let pdfOk=false;try{const r=await rendreDoc(d,true),path=`gestion/doc/${d.date.slice(0,4)}/${slug(numero)}.pdf`;const {error}=await C.storage.from("fichiers").upload(path,r.pdf,{upsert:true,contentType:"application/pdf"});if(error)throw error;d.pdf=path;pdfOk=true}catch(e){console.warn("PDF non enregistré",e)}
     const frais=await lireCompteur(k,all);if(frais!==n){toast("Un autre document vient d'être numéroté : réessaie.");return}
     if(k==="devis"){if(!await gput("doc",id,d))return;await ecrireCompteur("devis",n+1)}else if(!await gputMany([{type:"compteur",id:serie(k),data:{n:n+1}},{type:"doc",id,data:d}]))return;
@@ -1563,7 +1603,7 @@ function edRender(keepScroll){const d=ED.d,ro=ED.ro,k=d.kind,all=docsAll(),lock=
   if(!o){o=document.createElement("div");o.id="dved";o.className="dvedit";o.setAttribute("role","dialog");document.body.appendChild(o)}
   const cl=d.client||{},fl=(lbl,path,v,extra="")=>`<label>${lbl}<input data-ef="${path}" value="${esc(v||"")}" ${ro?"disabled":""} ${extra}></label>`;
   o.innerHTML=`<header><button class="btn sm" data-edx>← Retour au registre</button><b class="ttl">${esc(titreDoc(d))} ${d.numero?esc(d.numero):'<span class="ph dim">numéro à l\'émission</span>'}</b><span class="pill ${I.cls}">${esc(I.lab)}</span><span class="sp"></span>
-    <span class="note" id="edsave">${ro?(k==="devis"?"Devis accepté et facturé : non modifiable":"Document numéroté : non modifiable"):"Enregistré automatiquement"}</span><button class="btn sm" data-dvpdf="${esc(ED.id)}">PDF</button>${k==="devis"?`<button class="btn sm" data-dvpdfsp="${esc(ED.id)}" title="Pour un technicien ou un sous-traitant : désignations et quantités, sans aucun prix">PDF sans prix</button>`:""}${ro?"":`<button class="btn sm pri" data-dvemit="${esc(ED.id)}">${k==="devis"?(d.statut==="brouillon"||!d.pdf?"Marquer envoyé":"Mettre à jour le PDF"):k==="facture"?"Émettre la facture":"Émettre l'avoir"}</button>`}</header>
+    <span class="note" id="edsave">${ro?(k==="devis"?"Devis accepté et facturé : non modifiable":"Document numéroté : non modifiable"):"Enregistré automatiquement"}</span><button class="btn sm" data-dvpdf="${esc(ED.id)}">PDF</button>${k==="devis"?`<button class="btn sm" data-dvpdfsp="${esc(ED.id)}" title="Pour un technicien ou un sous-traitant : désignations et quantités, sans aucun prix">PDF sans prix</button>`:""}${k==="devis"||d.numero?`<button class="btn sm pri" data-dvsend="${esc(ED.id)}">Envoyer…</button>`:""}${ro?"":`<button class="btn sm${k==="devis"?"":" pri"}" data-dvemit="${esc(ED.id)}">${k==="devis"?(d.statut==="brouillon"||!d.pdf?"Marquer envoyé":"Mettre à jour le PDF"):k==="facture"?"Émettre la facture":"Émettre l'avoir"}</button>`}</header>
   <div class="dvbody"><div class="dvleft">
     ${lock?`<div class="box warn"><b>Ce document est numéroté et figé.</b><span class="note">Pour corriger : ${k==="facture"?"émets un avoir puis refais une facture (bouton Dupliquer).":"duplique-le en brouillon."}</span></div>`:""}
     <div class="box"><div class="grid3">
@@ -1625,6 +1665,7 @@ document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);let el;
   if(q("[data-ouvsave]")){ouvSave();return}
   if(q("[data-edcli]")){const d=ED.d,k=gid("client",d.cli)||{},c=d.client||{};gput("client",d.cli,{...k,nom:c.nom||k.nom,adresse:[c.adresse1,[c.cp,c.ville].filter(Boolean).join(" ")].filter(Boolean).join(", "),tel:c.tel||"",email:c.email||"",siret:c.siret||""}).then(ok=>ok&&toast("Fiche client mise à jour."));return}
   if(el=q("[data-dvemit]")){const id=el.dataset.dvemit;edFlush().then(()=>dvEmettre(id));return}
+  if(el=q("[data-dvsend]")){const id=el.dataset.dvsend;(ED&&ED.id===id?edFlush():Promise.resolve()).then(()=>dvSendModal(id));return}
   if(el=q("[data-dvpdfsp]")){const d=ED&&ED.id===el.dataset.dvpdfsp?ED.d:docById(el.dataset.dvpdfsp);if(d)dvPdfSansPrix(d);return}
   if(el=q("[data-dvpdf]")){const d=ED&&ED.id===el.dataset.dvpdf?ED.d:docById(el.dataset.dvpdf);if(d)dvPdf(d);return}
   if(el=q("[data-dvnew]")){if(!needBase()){const k=el.dataset.dvnew;dvCreate(baseDoc(k,k==="avoir"?{genre:"avoir"}:{}))}return}
