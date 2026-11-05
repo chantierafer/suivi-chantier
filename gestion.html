@@ -410,6 +410,10 @@ tr.clk.sel td{background:var(--turq-soft)}
 .dvlines td{vertical-align:top;white-space:normal}.dvlines td input[data-lf=qty]{width:70px}.dvlines td input[data-lf=pu]{width:96px}.dvlines td select{width:auto}
 .dvlines input.det{margin-top:4px;font-size:12px}.dvlines tr.ltitre td{background:var(--turq-soft);font-weight:700}
 .dvtot{max-width:340px;margin-left:auto;width:100%}
+.remx{display:grid;gap:8px;padding-bottom:8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.remx label{display:grid;gap:3px;font-size:12.5px;color:var(--muted)}
+.remin{display:flex;gap:6px}.remin input{flex:1 1 60px;min-width:0;width:auto}.remin input.sm{flex:0 0 80px;width:80px}.remin select{flex:0 0 84px;width:84px;min-width:0}
+.kv.rem b{color:var(--turq-ink,#1B7F7F)}.kv.net{font-size:15px}
 .dvlib{display:grid;gap:3px;max-height:420px;overflow-y:auto}
 .dvlib button{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border:1px solid var(--line-soft);border-radius:6px;background:var(--surface);font-size:12.5px}
 .dvlib button:hover{background:var(--turq-soft)}.dvlib small{display:block;color:var(--muted);font-size:11px}
@@ -1246,8 +1250,13 @@ const pcx=r=>(Math.round(r*1000)/10).toLocaleString("fr-FR")+" %";
 const kr=r=>Math.round(r*1000);
 const slug=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const clone=o=>JSON.parse(JSON.stringify(o));
-function totDoc(lines){const by=new Map();let ht=0;for(const l of lines||[]){if(l.kind==="titre")continue;const t=l.rt?Math.round((Number(l.qty)||0)*(Number(l.pu)||0)*100):Math.round((Number(l.qty)||0)*cts(l.pu)); /* rt : ligne reprise de Tolteck, arrondie comme Tolteck (au centime sur le montant en euros) */by.set(kr(Number(l.tx)||0),(by.get(kr(Number(l.tx)||0))||0)+t);ht+=t}
-  const rates=[...by.keys()].sort((a,b)=>a-b).map(k=>({r:k/1000,base:by.get(k),tva:Math.round(by.get(k)*k/1000)})),tva=rates.reduce((s,x)=>s+x.tva,0);return{ht,tva,ttc:ht+tva,rates}}
+function totDoc(lines,d){const by=new Map();let ht=0;for(const l of lines||[]){if(l.kind==="titre")continue;const t=l.rt?Math.round((Number(l.qty)||0)*(Number(l.pu)||0)*100):Math.round((Number(l.qty)||0)*cts(l.pu)); /* rt : ligne reprise de Tolteck, arrondie comme Tolteck (au centime sur le montant en euros) */by.set(kr(Number(l.tx)||0),(by.get(kr(Number(l.tx)||0))||0)+t);ht+=t}
+  // 05/11 (Tolteck) : remise globale sur le HT (% ou €), répartie entre les taux de TVA au prorata ; prime déduite après le TTC (net à payer)
+  const rem=remiseCts(ht,d),keys=[...by.keys()].sort((a,b)=>a-b);let left=rem;
+  const rates=keys.map((k,i)=>{const b0=by.get(k),rr=i===keys.length-1?left:Math.round(rem*b0/ht);left-=rr;return{r:k/1000,base:b0-rr,tva:Math.round((b0-rr)*k/1000)}}),tva=rates.reduce((s,x)=>s+x.tva,0),prime=primeCts(d);
+  return{htBrut:ht,remise:rem,ht:ht-rem,tva,ttc:ht-rem+tva,prime,net:ht-rem+tva-prime,rates}}
+function remiseCts(ht,d){const R=d&&d.remise,v=R&&num(R.v);if(!(v>0)||!(ht>0))return 0;return Math.min(ht,R.mode==="eur"?Math.round(v*100):Math.round(ht*v/100))}
+function primeCts(d){const v=d&&d.prime&&num(d.prime.montant);return v>0?Math.round(v*100):0}
 // ---- les documents : lignes gestion « doc » + devis du suivi SDB ----
 function docsAll(){const out=[];Object.entries(gt("doc")).forEach(([id,d])=>out.push({...d,id}));
   ROWS.forEach(r=>{const ov=gid("sdbdv",r.id)||{};if(ov.masque)return;const e=EL[r.id]||{},ls=Object.values(e.devis||{}),inf=((e.devisinfo||{}).H||{}).v; // l'élément « devisinfo » enveloppe l'en-tête dans {v:…}
@@ -1260,12 +1269,12 @@ function docsAll(){const out=[];Object.entries(gt("doc")).forEach(([id,d])=>out.
   const fp=new Set(out.filter(d=>d.kind==="facture"&&d.parent).map(d=>d.parent));out.forEach(d=>{if(d.sdb&&!(gid("sdbdv",d.chId)||{}).statut&&d.statut==="brouillon"&&fp.has(d.id))d.statut="accepte"});
   return out}
 const docById=(id,all)=>(all||docsAll()).find(d=>d.id===id);
-function dInfo(d,all){const t=totDoc(d.lines);let lab="Brouillon",cls="neu",reste=null;
+function dInfo(d,all){const t=totDoc(d.lines,d);let lab="Brouillon",cls="neu",reste=null;
   if(d.kind==="devis"){[lab,cls]=({brouillon:["Brouillon","neu"],envoye:["Envoyé","warn"],accepte:["Accepté","ok"],refuse:["Refusé","bad"]})[d.statut]||["Brouillon","neu"]}
   else if(d.kind==="avoir"){if(d.numero){lab="Émis";cls="ok"}}
-  else if(d.numero){const paye=(d.paiements||[]).reduce((s,p)=>s+cts(p.montant),0),cred=-all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===d.id).reduce((s,a)=>s+totDoc(a.lines).ttc,0);
-    reste=Math.max(0,t.ttc-paye-cred);
-    if(reste<=0){lab=t.ttc>0&&cred>=t.ttc?"Annulée par avoir":"Payée";cls="ok"}
+  else if(d.numero){const paye=(d.paiements||[]).reduce((s,p)=>s+cts(p.montant),0),cred=-all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===d.id).reduce((s,a)=>s+totDoc(a.lines,a).ttc,0);
+    reste=Math.max(0,t.net-paye-cred);
+    if(reste<=0){lab=t.net>0&&cred>=t.net?"Annulée par avoir":"Payée";cls="ok"}
     else{const j=d.echeance&&d.echeance<today()?daysBetween(d.echeance,today()):0;if(j>0){lab="Échue "+j+" j";cls="bad"}else{lab=paye>0?"Partielle":"À encaisser";cls="warn"}}}
   return{t,lab,cls,reste}}
 const dNum=d=>d.numero||(d.sdb?"Devis SDB (sans n°)":"Brouillon");
@@ -1297,14 +1306,14 @@ function mentionsFor(d){if(d.kind==="devis")return null;const R=mentionsReg(),L=
   if(d.kind==="facture"){if(R.penalites)L.push(R.penalites);if(R.indemnite&&(d.client||{}).type!=="particulier")L.push(R.indemnite);if(R.escompte)L.push(R.escompte)}return L}
 function titreDoc(d){return d.kind==="avoir"?"Avoir":d.kind==="facture"?({acompte:"Facture d'acompte",situation:"Facture de situation"})[d.genre]||"Facture":"Devis"}
 function dvIn(d){return{numero:d.numero||null,date:d.date,validite:d.validite,objet:d.objet,client:d.client||{},chantier:d.chantier||{},contexte:d.contexte,paiement:d.paiement,note:d.note,
-  options:d.options||{details:true,sousTotaux:false,revision:true},docType:d.kind,titre:titreDoc(d),echeance:d.echeance,refDevis:d.refDoc,mentionsExtra:mentionsFor(d),lines:(d.lines||[]).map(l=>({...l}))}}
+  options:d.options||{details:true,sousTotaux:false,revision:true},remise:d.remise||null,prime:d.prime||null,docType:d.kind,titre:titreDoc(d),echeance:d.echeance,refDevis:d.refDoc,mentionsExtra:mentionsFor(d),lines:(d.lines||[]).map(l=>({...l}))}}
 async function rendreDoc(d,pdf){const key=JSON.stringify([dvIn(d),!!pdf]);if(!pdf&&RC[key])return RC[key];const r=await rendre(dvIn(d),{pdf});if(!pdf){RC[key]=r;const ks=Object.keys(RC);if(ks.length>30)delete RC[ks[0]]}return r}
 function dlBlob(b,name){const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)}
 const pdfName=d=>(slug(d.numero||"brouillon-"+DT[d.kind].nom)+"-"+slug((d.client||{}).nom||"")).replace(/-$/,"")+".pdf";
 async function dvPdf(d){try{if(d.pdf){const {data,error}=await C.storage.from("fichiers").download(d.pdf);if(!error&&data){dlBlob(data,pdfName(d));return}}
     toast("Préparation du PDF…");const r=await rendreDoc(d,true);dlBlob(r.pdf,pdfName(d))}catch(e){toast("PDF impossible : "+e.message)}}
 function pagesHtml(r){return `<div class="dvpages">${r.pages.join("")}</div>`}
-function miniPrev(d){const t=totDoc(d.lines);return `<div class="dvmini"><b>${esc(titreDoc(d))} ${esc(d.numero||"")}</b><div class="note">${esc((d.client||{}).nom||"")} · ${esc(d.objet||"")}</div>${(d.lines||[]).map(l=>l.kind==="titre"?`<div><b>${esc(l.designation)}</b></div>`:`<div>${esc(l.designation)}<span>${m2(Math.round((+l.qty||0)*cts(l.pu)))}</span></div>`).join("")}<div class="tot"><b>Total HT</b><b>${m2(t.ht)}</b></div></div>`}
+function miniPrev(d){const t=totDoc(d.lines,d);return `<div class="dvmini"><b>${esc(titreDoc(d))} ${esc(d.numero||"")}</b><div class="note">${esc((d.client||{}).nom||"")} · ${esc(d.objet||"")}</div>${(d.lines||[]).map(l=>l.kind==="titre"?`<div><b>${esc(l.designation)}</b></div>`:`<div>${esc(l.designation)}<span>${m2(Math.round((+l.qty||0)*cts(l.pu)))}</span></div>`).join("")}<div class="tot"><b>Total HT</b><b>${m2(t.ht)}</b></div></div>`}
 async function fillPrev(el,d,tok){if(!el)return;el.dataset.tok=tok;try{const r=await rendreDoc(d,false);if(el.dataset.tok===tok&&el.isConnected)el.innerHTML=pagesHtml(r)}catch(e){if(el.dataset.tok===tok&&el.isConnected)el.innerHTML=miniPrev(d)+`<p class="note">Aperçu A4 indisponible (${esc(e.message)}). Aperçu simplifié.</p>`}}
 // ---- registre ----
 function dvFilter(all){const F=DVF,q=norm(F.q);return all.filter(d=>(F.t==="all"||d.kind===F.t)&&(!F.st||dInfo(d,all).lab.replace(/ \d+ j$/,"")===F.st)&&(!F.cli||d.cli===F.cli)&&(!F.ch||d.chId===F.ch)&&(!F.an||String(d.date||"").slice(0,4)===F.an)
@@ -1373,13 +1382,14 @@ async function dvDel(id){const all=docsAll(),d=docById(id,all);if(!d)return;
 function marcheLines(P){const L=(P.lines||[]).filter(l=>!P.sdb||l.kind==="titre"||l.st==="val"),out=[];
   L.forEach((l,i)=>{if(l.kind!=="titre"){out.push(l);return}const n=L.slice(i+1).findIndex(x=>x.kind==="titre"),seg=n<0?L.slice(i+1):L.slice(i+1,i+1+n);if(seg.some(x=>x.kind!=="titre"))out.push(l)});return out}
 function dejaFact(pid,all){const by=new Map(),add=(r,v)=>by.set(kr(r),(by.get(kr(r))||0)+v);
-  all.filter(f=>f.kind==="facture"&&f.numero&&f.parent===pid&&f.genre!=="finale").forEach(f=>{totDoc(f.lines).rates.forEach(x=>add(x.r,x.base));all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id).forEach(a=>totDoc(a.lines).rates.forEach(x=>add(x.r,x.base)))});return by}
-function finaleFaite(pid,all){return all.some(f=>f.kind==="facture"&&f.numero&&f.parent===pid&&f.genre==="finale"&&totDoc(f.lines).ht-(-all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id).reduce((s,a)=>s+totDoc(a.lines).ht,0))>0)}
+  all.filter(f=>f.kind==="facture"&&f.numero&&f.parent===pid&&f.genre!=="finale").forEach(f=>{totDoc(f.lines,f).rates.forEach(x=>add(x.r,x.base));all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id).forEach(a=>totDoc(a.lines,a).rates.forEach(x=>add(x.r,x.base)))});return by}
+function finaleFaite(pid,all){return all.some(f=>f.kind==="facture"&&f.numero&&f.parent===pid&&f.genre==="finale"&&totDoc(f.lines,f).ht-(-all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id).reduce((s,a)=>s+totDoc(a.lines,a).ht,0))>0)}
+const remLib=d=>"Remise"+(d.remise&&d.remise.mode!=="eur"?" de "+num(d.remise.v).toLocaleString("fr-FR")+" %":"")+(d.numero?" (devis n° "+d.numero+")":"");
 const lg=(designation,pu,tx,extra={})=>({id:uid("l-"),kind:"article",designation,detail:"",qty:1,unit:"forfait",pu,tx,...extra});
-function calcFacture(P,all,genre,pct){const L=marcheLines(P),M=totDoc(L);if(!M.ht)return{err:"Le devis est à 0 € : rien à facturer."};
+function calcFacture(P,all,genre,pct){const L=marcheLines(P),M=totDoc(L,P);if(!M.ht)return{err:"Le devis est à 0 € : rien à facturer."};
   const done=dejaFact(P.id,all),sfx=x=>M.rates.length>1?" (TVA "+pcx(x.r)+")":"",out=[],ref=P.numero||"";
   if(genre==="finale"){if(finaleFaite(P.id,all))return{err:"Ce devis a déjà une facture finale. Pour la refaire, émets d'abord un avoir."};
-    L.forEach(l=>out.push({...l,id:uid("l-")}));M.rates.forEach(x=>{const d=done.get(kr(x.r))||0;if(d)out.push(lg("À déduire : acomptes et situations déjà facturés"+sfx(x),-d/100,x.r))})}
+    L.forEach(l=>out.push({...l,id:uid("l-")}));if(M.remise){const B=totDoc(L);let left=M.remise;B.rates.forEach((x,i)=>{const rr=i===B.rates.length-1?left:Math.round(M.remise*x.base/B.ht);left-=rr;if(rr)out.push(lg(remLib(P)+sfx(x),-rr/100,x.r))})}M.rates.forEach(x=>{const d=done.get(kr(x.r))||0;if(d)out.push(lg("À déduire : acomptes et situations déjà facturés"+sfx(x),-d/100,x.r))})}
   else{if(!(pct>0&&pct<=100))return{err:"Indique un pourcentage entre 0 et 100."};
     for(const x of M.rates){const want=Math.round(x.base*pct/100),d=done.get(kr(x.r))||0;
       if(genre==="acompte"){if(d+want>x.base)return{err:"Avec ce pourcentage, le total facturé dépasserait le devis."};out.push(lg(`Acompte de ${pct.toLocaleString("fr-FR")} % sur le devis n° ${ref}${sfx(x)}`,want/100,x.r))}
@@ -1387,7 +1397,7 @@ function calcFacture(P,all,genre,pct){const L=marcheLines(P),M=totDoc(L);if(!M.h
   const t=totDoc(out);if(t.ht<=0)return{err:genre==="situation"?"Rien à facturer : ce pourcentage est déjà facturé.":"Le montant à facturer est nul ou négatif."};return{lines:out,t,M}}
 function dvFacModal(pid){const all=docsAll(),P=docById(pid,all);if(!P)return;
   if(!P.numero){const p=openModal(`<h3>Le devis n'a pas encore de numéro</h3><p class="note">Une facture reprend le numéro du devis. ${P.sdb?"Dans le suivi SDB, génère le PDF du devis (il prend son numéro) ou clique « Envoyer ».":"Émets d'abord le devis."}</p><div class="acts">${P.sdb?`<button class="btn sm pri" data-dvsdb="${esc(P.chId)}">Ouvrir le devis dans le suivi SDB</button>`:""}<button class="btn sm" data-x>Fermer</button></div>`);return}
-  const M=totDoc(marcheLines(P)),done=dejaFact(pid,all),dn=[...done.values()].reduce((s,v)=>s+v,0),avSdb=P.chId&&CHI[P.chId]&&CHI[P.chId].sdb?Math.round(CHI[P.chId].av||0):null,bro=all.filter(f=>f.kind==="facture"&&!f.numero&&f.parent===pid).length;
+  const M=totDoc(marcheLines(P),P),done=dejaFact(pid,all),dn=[...done.values()].reduce((s,v)=>s+v,0),avSdb=P.chId&&CHI[P.chId]&&CHI[P.chId].sdb?Math.round(CHI[P.chId].av||0):null,bro=all.filter(f=>f.kind==="facture"&&!f.numero&&f.parent===pid).length;
   const p=openModal(`<h3>Créer une facture · ${esc(P.numero)}</h3>
     <div class="note">Marché ${m2(M.ht)} HT · déjà facturé ${m2(dn)} HT · reste ${m2(M.ht-dn)} HT${P.att?` · ${plural(P.att,"ligne attend","lignes attendent")} DOMetVIE (non facturée${P.att>1?"s":""})`:""}${bro?` · ${plural(bro,"brouillon de facture existe déjà","brouillons de facture existent déjà")}`:""}</div>
     <div class="fgrp"><label class="chk"><input type="radio" name="fg" value="acompte"> <span>Facture d'acompte <small class="note">pourcentage du marché</small></span></label>
@@ -1401,7 +1411,7 @@ function dvFacModal(pid){const all=docsAll(),P=docById(pid,all);if(!P)return;
   p.addEventListener("input",upd);p.addEventListener("change",upd);upd();
   p.querySelector("#fg-ok").onclick=async()=>{if(res.err)return;const g=p.querySelector("[name=fg]:checked").value,pc=num(p.querySelector("#fg-p").value);
     const nSit=all.filter(f=>f.kind==="facture"&&f.parent===pid&&f.genre==="situation").length+1;
-    const d=baseDoc("facture",{genre:g,cli:P.cli,client:clone(P.client||{}),chId:P.chId||"",chantier:clone(P.chantier||{}),objet:P.objet||"",contexte:P.contexte,paiement:P.paiement||"",parent:pid,pct:g==="finale"?null:pc,
+    const d=baseDoc("facture",{genre:g,cli:P.cli,client:clone(P.client||{}),chId:P.chId||"",chantier:clone(P.chantier||{}),objet:P.objet||"",contexte:P.contexte,paiement:P.paiement||"",parent:pid,pct:g==="finale"?null:pc,prime:g==="finale"&&primeCts(P)?clone(P.prime):undefined,
       refDoc:"Établie sur le devis n° "+P.numero+(P.date?" du "+fkl(P.date):""),options:{details:true,sousTotaux:false,revision:false},lines:res.lines,note:g==="situation"?"Situation n° "+nSit:""});
     closeFloat();const id=await dvCreate(d);if(id)toast("Brouillon de facture créé : vérifie-le puis émets-le.")}}
 async function dvAvoir(fid){const all=docsAll(),f=docById(fid,all);if(!f||!f.numero)return;
@@ -1426,7 +1436,7 @@ async function dvEnvoyer(id){if(emitting)return;const all=docsAll(),d0=ED&&ED.id
     if(!await gput("doc",id,d))return;if(ED&&ED.id===id){ED.d=d;edRender()}toast(d.numero+" marqué envoyé.");DSEL=id;RENDER()}
   finally{emitting=false}}
 // ---- émission : contrôle, numéro, PDF figé ----
-function dvIssues(d,all){const L=[],B=(t)=>L.push({t,block:true}),W=(t)=>L.push({t}),cl=d.client||{},arts=(d.lines||[]).filter(l=>l.kind!=="titre"),t=totDoc(d.lines);
+function dvIssues(d,all){const L=[],B=(t)=>L.push({t,block:true}),W=(t)=>L.push({t}),cl=d.client||{},arts=(d.lines||[]).filter(l=>l.kind!=="titre"),t=totDoc(d.lines,d);
   if(!cl.nom)B("Choisis le client.");if(!arts.length)B("Aucune ligne.");if(arts.some(l=>!String(l.designation||"").trim()))B("Une ligne n'a pas de désignation.");
   if(!d.objet)W("Pas d'objet.");if(!cl.adresse1||!cl.cp||!cl.ville)(d.kind==="devis"?W:B)("Adresse complète du client manquante (voie, code postal, ville).");
   if(d.kind==="facture"){if(t.ht<=0)B("Le total de la facture doit être positif.");if(!d.echeance)B("Choisis le délai de paiement : la date d'échéance est obligatoire sur une facture.");
@@ -1434,7 +1444,7 @@ function dvIssues(d,all){const L=[],B=(t)=>L.push({t,block:true}),W=(t)=>L.push(
     const dern=all.filter(x=>x.kind==="facture"&&x.numero).map(x=>x.date).sort().pop();if(dern&&d.date<dern)W("La date est antérieure à la dernière facture émise ("+fkl(dern)+") : les numéros doivent suivre l'ordre des dates.");
     if(d.client&&d.client.type==="pro"&&!cl.siret&&!cl.siren)W("SIREN ou SIRET du client absent.")}
   if(d.kind==="avoir"){if(t.ht>=0)B("Un avoir doit avoir un total négatif.");const f=d.parent&&docById(d.parent,all);
-    if(f){const ant=all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id&&a.id!==d.id).reduce((s,a)=>s+totDoc(a.lines).ht,0);if(-t.ht>totDoc(f.lines).ht+ant)B("Cet avoir dépasse le montant restant de la facture "+f.numero+".")}}
+    if(f){const ant=all.filter(a=>a.kind==="avoir"&&a.numero&&a.parent===f.id&&a.id!==d.id).reduce((s,a)=>s+totDoc(a.lines,a).ht,0);if(-t.ht>totDoc(f.lines,f).ht+ant)B("Cet avoir dépasse le montant restant de la facture "+f.numero+".")}}
   if(d.kind==="devis"&&!d.validite)W("Pas de durée de validité.");if(arts.some(l=>l.tx==null||l.tx===""))B("Une ligne n'a pas de taux de TVA.");return L}
 function issuesModal(L,titre,ok){const bl=L.some(i=>i.block);const p=openModal(`<h3>${esc(titre)}</h3><ul class="dvissues">${L.map(i=>`<li class="${i.block?"bad":""}">${esc(i.t)}</li>`).join("")}</ul>${bl?"":`<p class="note">Ces points ne bloquent pas.</p>`}<div class="acts"><button class="btn sm" data-x>${bl?"Fermer":"Revenir"}</button>${L.some(i=>i.act==="mentions")?`<button class="btn sm pri" id="is-men">Vérifier les mentions</button>`:""}${bl?"":`<button class="btn sm pri" id="is-ok">Émettre quand même</button>`}</div>`);
   const b=p.querySelector("#is-ok");if(b)b.onclick=()=>{closeFloat();ok()};const m=p.querySelector("#is-men");if(m)m.onclick=()=>{closeFloat();dvSettings()}}
@@ -1512,7 +1522,10 @@ const lineHtml=(l,i,ro)=>l.kind==="titre"?`<tr class="ltitre" data-li="${i}"><td
     <td><input data-lf="qty" type="number" step="any" value="${l.qty}" ${ro?"disabled":""}></td><td><select data-lf="unit" ${ro?"disabled":""}>${opts(DUNITS.includes(l.unit)||!l.unit?DUNITS:[...DUNITS,l.unit],l.unit||"u",false)}</select></td>
     <td><input data-lf="pu" type="number" step="0.01" value="${l.pu}" ${ro?"disabled":""}></td><td><select data-lf="tx" ${ro?"disabled":""}>${TXS.map(([v,t])=>`<option value="${v}"${Number(l.tx)===v?" selected":""}>${t}</option>`).join("")}</select></td><td class="num" data-lt>${m2(Math.round((+l.qty||0)*cts(l.pu)))}</td><td>${ro?"":edBtns(i)}</td></tr>`;
 const edBtns=i=>`<button class="btn xs" data-edmv="${i}|-1" aria-label="Monter">↑</button><button class="btn xs" data-edmv="${i}|1" aria-label="Descendre">↓</button><button class="btn xs" data-eddel="${i}" aria-label="Supprimer la ligne">✕</button>`;
-function totHtml(d){const t=totDoc(d.lines);return `<div class="kv"><span>Total HT</span><b>${m2(t.ht)}</b></div>${t.rates.map(x=>`<div class="kv"><span>TVA à ${pcx(x.r)}${x.r===0&&d.contexte==="st"?" (autoliquidation)":""}</span><span>${m2(x.tva)}</span></div>`).join("")}<div class="kv tot"><span>Total TTC</span><b>${m2(t.ttc)}</b></div>`}
+function totHtml(d){const t=totDoc(d.lines,d);return `${t.remise?`<div class="kv"><span>Total HT avant remise</span><span>${m2(t.htBrut)}</span></div><div class="kv rem"><span>Remise${d.remise.mode!=="eur"?" "+num(d.remise.v).toLocaleString("fr-FR")+" %":""}</span><b>− ${m2(t.remise)}</b></div>`:""}<div class="kv"><span>Total HT</span><b>${m2(t.ht)}</b></div>${t.rates.map(x=>`<div class="kv"><span>TVA à ${pcx(x.r)}${x.r===0&&d.contexte==="st"?" (autoliquidation)":""}</span><span>${m2(x.tva)}</span></div>`).join("")}<div class="kv tot"><span>Total TTC</span><b>${m2(t.ttc)}</b></div>${t.prime?`<div class="kv rem"><span>${esc((d.prime.lib||"Prime").trim())} déduite</span><b>− ${m2(t.prime)}</b></div><div class="kv tot net"><span>Net à payer</span><b>${m2(t.net)}</b></div>`:""}`}
+function remHtml(d,ro){const R=d.remise||{},P=d.prime||{},dis=ro?"disabled":"";if(ro&&!primeCts(d)&&!(num(R.v)>0))return "";
+  return `<div class="remx"><label>Remise<span class="remin"><input data-ef="remise.v" value="${esc(R.v??"")}" inputmode="decimal" placeholder="0" ${dis}><select data-ef="remise.mode" ${dis}><option value="pct"${R.mode!=="eur"?" selected":""}>%</option><option value="eur"${R.mode==="eur"?" selected":""}>€ HT</option></select></span></label>
+    <label>Prime déduite du TTC<span class="remin"><input data-ef="prime.lib" value="${esc(P.lib||"")}" placeholder="Libellé (ex. prime CEE)" ${dis}><input data-ef="prime.montant" value="${esc(P.montant??"")}" inputmode="decimal" placeholder="€" class="sm" ${dis}></span></label></div>`}
 function libHtml(){const rows=libRows(),c=PAR.catalogue||{},q=norm(ED.lq),lots=(c.lots||[]);
   if(!rows.length)return `<p class="note">La bibliothèque n'est pas encore dans la base. Ouvre une fois l'onglet Devis d'un chantier du suivi SDB (il la dépose), ou importe parametres-devis-afer.json. ${PH("bibliothèque à importer")}</p>`;
   const f=rows.filter(r=>(!ED.lot||r.lot===ED.lot)&&(!q||r._s.includes(q))).slice(0,40),ouv=Object.entries(gt("ouvrage"));
@@ -1548,7 +1561,7 @@ function edRender(keepScroll){const d=ED.d,ro=ED.ro,k=d.kind,all=docsAll(),lock=
         <label class="chk"><input type="checkbox" data-ef="options.details"${(d.options||{}).details!==false?" checked":""} ${ro?"disabled":""}> <span>Afficher le détail sous chaque ligne</span></label><label class="chk"><input type="checkbox" data-ef="options.sousTotaux"${(d.options||{}).sousTotaux?" checked":""} ${ro?"disabled":""}> <span>Sous-totaux par section</span></label></details></div>
     <div class="box" style="padding:0"><div class="scroll"><table class="dvlines"><thead><tr><th></th><th>Désignation</th><th>Qté</th><th>Unité</th><th>P.U. HT (€)</th><th>TVA</th><th class="num">Total HT</th><th></th></tr></thead><tbody>${(d.lines||[]).map((l,i)=>lineHtml(l,i,ro)).join("")||`<tr><td colspan="8" class="empty">Aucune ligne. Ajoute-en depuis la bibliothèque à droite ou une ligne libre.</td></tr>`}</tbody></table></div>
       ${ro?"":`<div class="acts" style="padding:8px"><button class="btn xs" data-edadd="art">+ Ligne libre</button><button class="btn xs" data-edadd="titre">+ Titre de section</button></div>`}</div>
-    <div class="box dvtot" id="edtot">${totHtml(d)}</div>
+    <div class="box dvtot">${remHtml(d,ro)}<div id="edtot">${totHtml(d)}</div></div>
     ${(d.paiements||[]).length||k==="facture"&&lock?`<div class="box"><b>Paiements</b>${(d.paiements||[]).map(p=>`<div class="kv"><span>${fkl(p.date)} · ${esc(p.mode||"")}</span><span>${m2(cts(p.montant))}</span></div>`).join("")||'<span class="note">Aucun.</span>'}${k==="facture"&&lock?`<button class="btn xs" data-dvpay="${esc(ED.id)}">+ Paiement</button>`:""}</div>`:""}
   </div><div class="dvright"><div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="${ED.tab==="prev"}" data-edtab="prev">Aperçu A4</button>${ro?"":`<button class="tab" role="tab" aria-selected="${ED.tab==="lib"}" data-edtab="lib">Bibliothèque</button>`}</div>
     ${ED.tab==="lib"&&!ro?`<div id="edlib">${libHtml()}</div>`:`<div id="edprev" class="dvprev big"><p class="note">Chargement de l'aperçu…</p></div>`}</div></div>`;
@@ -1562,6 +1575,7 @@ function edField(e){const t=e.target,f=t.dataset.ef;if(!ED||ED.ro)return;const v
   if(f==="contexte"){d.lines.forEach(l=>{if(l.kind!=="titre"&&!l.txManuel)l.tx=txFor(l.cat||"C",v)});edDirty();edRender(true);return}
   if(f==="delai"&&v!==""){d.echeance=addK(d.date||today(),+v);edDirty();edRender(true);return}
   if(f==="date"&&d.delai!==""&&d.delai!=null&&d.kind==="facture"){d.echeance=addK(v||today(),+d.delai);const e2=$("#dved [data-ef=echeance]");if(e2)e2.value=d.echeance}
+  if(/^(remise|prime)\./.test(f)){const el=$("#edtot");if(el)el.innerHTML=totHtml(d)}
   edDirty();edPrev()}
 function edLine(e){const t=e.target,tr=t.closest("[data-li]");if(!tr||!ED||ED.ro)return;const l=ED.d.lines[+tr.dataset.li],f=t.dataset.lf;if(!l)return;
   l[f]=["qty","pu","tx"].includes(f)?(f==="tx"?Number(t.value):t.value===""?"":Number(t.value)):t.value;if(f==="tx")l.txManuel=true;
@@ -2120,7 +2134,7 @@ function cpEtats(y,d,K){const E=K.E,d1=cpData(y-1),E1=d1.L?cpCalc(y-1,d1.L).E:nu
 function cpPieces(y,d){const all=docsAll(),F=all.filter(x=>(x.kind==="facture"||x.kind==="avoir")&&x.numero&&String(x.date||"").slice(0,4)===String(y)).sort((a,b)=>String(a.numero).localeCompare(String(b.numero)));
   const L=d.L,pr=L?new Set(L.map(l=>l.pr)):null,libs=L?L.map(l=>l.lib+" "+l.pr).join("\n"):"",dans=n=>pr&&(pr.has(n)||libs.includes(n));
   return `<div class="box"><h3>Factures et avoirs émis dans l'appli · ${y}</h3>${F.length?`<div class="scroll"><table><thead><tr><th>N°</th><th>Date</th><th>Client</th><th class="num">Total TTC</th><th>Comptabilité</th></tr></thead><tbody>
-    ${F.map(x=>{const t=totDoc(x.lines);return `<tr><td class="mono">${esc(x.numero)}</td><td>${fkl(x.date)}</td><td class="wrap">${esc((x.client||{}).nom||"")}</td><td class="num">${m2(x.kind==="avoir"?-Math.abs(t.ttc):t.ttc)}</td><td>${!L?'<span class="pill neu">Pas de FEC '+y+"</span>":dans(x.numero)?'<span class="pill ok">Dans le FEC</span>':'<span class="pill warn">Pas dans le FEC</span>'}</td></tr>`}).join("")}</tbody></table></div>`
+    ${F.map(x=>{const t=totDoc(x.lines,x);return `<tr><td class="mono">${esc(x.numero)}</td><td>${fkl(x.date)}</td><td class="wrap">${esc((x.client||{}).nom||"")}</td><td class="num">${m2(x.kind==="avoir"?-Math.abs(t.ttc):t.ttc)}</td><td>${!L?'<span class="pill neu">Pas de FEC '+y+"</span>":dans(x.numero)?'<span class="pill ok">Dans le FEC</span>':'<span class="pill warn">Pas dans le FEC</span>'}</td></tr>`}).join("")}</tbody></table></div>`
     :`<p class="note">Aucune facture numérotée en ${y} dans la fenêtre <button class="btn xs" data-view="devis">Devis et factures</button>.</p>`}
     <p class="src">fenêtre Devis et factures ; « Dans le FEC » = numéro retrouvé dans une pièce ou un libellé d'écriture</p></div>
   <div class="why"><b>Pièces SharePoint : prochaine étape</b>Claude lira chaque pièce du dossier SharePoint administration afer › 02_COMPTABILITE › ${y} (ventes, achats, banque, notes de frais) et proposera l'écriture ; tu valideras d'un clic. Les écritures validées rejoindront les journaux, le grand livre et les états de cette fenêtre.</div>`}

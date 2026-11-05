@@ -1198,9 +1198,15 @@ const Engine = (() => {
       byRate.set(r1000, (byRate.get(r1000) || 0) + tot);
       ht += tot; lines.push({ tot, r });
     }
-    const rates = [...byRate.keys()].sort((a, b) => a - b).map(k => ({ r: k / 1000, base: byRate.get(k), tva: Math.round(byRate.get(k) * k / 1000) }));
+    // 05/11 : remise globale (dv.remise {mode:'pct'|'eur', v}) répartie entre les taux au prorata ; prime (dv.prime {lib, montant}) déduite après le TTC
+    const nv = v => { const n = Number(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
+    const R = dv.remise, rv = R ? nv(R.v) : 0;
+    const rem = rv > 0 && ht > 0 ? Math.min(ht, R.mode === 'eur' ? Math.round(rv * 100) : Math.round(ht * rv / 100)) : 0;
+    const keys = [...byRate.keys()].sort((a, b) => a - b); let left = rem;
+    const rates = keys.map((k, i) => { const b0 = byRate.get(k), rr = i === keys.length - 1 ? left : Math.round(rem * b0 / ht); left -= rr; return { r: k / 1000, base: b0 - rr, tva: Math.round((b0 - rr) * k / 1000) }; });
     const tva = rates.reduce((s, x) => s + x.tva, 0);
-    return { ht, tva, ttc: ht + tva, rates, lines };
+    const pv = dv.prime ? nv(dv.prime.montant) : 0, prime = pv > 0 ? Math.round(pv * 100) : 0;
+    return { htBrut: ht, remise: rem, ht: ht - rem, tva, ttc: ht - rem + tva, prime, net: ht - rem + tva - prime, rates, lines };
   }
 
   // ---- mise en page ----
@@ -1365,14 +1371,21 @@ const Engine = (() => {
 
     // --- totaux + conditions de paiement ---
     const nR = Math.max(totals.rates.length, 1);
-    const totH = 20.5 + 15.5 * nR + 21.5;
+    const hasRem = totals.remise > 0, hasPrime = totals.prime > 0;
+    const totH = 20.5 + (hasRem ? 31 : 0) + 15.5 * nR + 21.5 + (hasPrime ? 15.5 + 21.5 + 4 : 0);
     let tt = tableBottom + 32.0;
     if (tt + totH > FOOT_LIMIT) { newPage(); tt = CONT_TOP; }
     const TX = 298.0, TW = 270.0, TL = 304.1, TV = 561.9;
     L(TX, tt, TX + TW, tt, C.rule, 0.75);
     T(TL, tt + 13.4, 'Total HT', 'B', 9.7);
-    T(TV, tt + 13.4, money(totals.ht), 'B', 9.7, C.txt, 'r');
+    T(TV, tt + 13.4, money(hasRem ? totals.htBrut : totals.ht), 'B', 9.7, C.txt, 'r');
     let ly = tt + 20.5;
+    const lab1 = s => wrap(s, 'R', 9.7, 175)[0];
+    if (hasRem) {
+      const rl = 'Remise' + (dv.remise.mode !== 'eur' ? ' ' + num(Number(String(dv.remise.v).replace(',', '.')), 2) + NB + '%' : '');
+      L(TX, ly, TX + TW, ly, C.rule, 0.75); T(TL, ly + 10.9, rl, 'R', 9.7); T(TV, ly + 10.9, money(-totals.remise), 'R', 9.7, C.txt, 'r'); ly += 15.5;
+      L(TX, ly, TX + TW, ly, C.rule, 0.75); T(TL, ly + 10.9, 'Total HT après remise', 'B', 9.7); T(TV, ly + 10.9, money(totals.ht), 'B', 9.7, C.txt, 'r'); ly += 15.5;
+    }
     const rateRows = totals.rates.length ? totals.rates : [{ r: 0, tva: 0 }];
     rateRows.forEach(rr => {
       L(TX, ly, TX + TW, ly, C.rule, 0.75);
@@ -1383,7 +1396,13 @@ const Engine = (() => {
     R(TX, ly, TW, 21.5, C.hdr);
     T(TL, ly + 13.9, 'Total TTC', 'B', 11.2, C.white);
     T(TV - 0.1, ly + 13.9, money(totals.ttc), 'B', 11.2, C.white, 'r');
-    const bandBottom = ly + 21.5;
+    let bandBottom = ly + 21.5;
+    if (hasPrime) {
+      ly = bandBottom;
+      T(TL, ly + 12.9, lab1(((dv.prime.lib || 'Prime') + '').trim() + ' déduite'), 'R', 9.7); T(TV, ly + 12.9, money(-totals.prime), 'R', 9.7, C.txt, 'r'); ly += 19.5;
+      R(TX, ly, TW, 21.5, C.sect); T(TL, ly + 13.9, 'Net à payer', 'B', 11.2, C.white); T(TV - 0.1, ly + 13.9, money(totals.net), 'B', 11.2, C.white, 'r');
+      bandBottom = ly + 21.5;
+    }
     let pb = tt + 10.9; let payLast = tt;
     wrap(dv.paiement || '', 'R', 9.7, 250).forEach((s, i) => { T(28.4, pb, s, 'R', 9.7); payLast = pb; pb += 14.1; });
     let cursor = Math.max(bandBottom, payLast + 6);
