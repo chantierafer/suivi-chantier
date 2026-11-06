@@ -1270,7 +1270,13 @@ const Engine = (() => {
     else {
       let ey = devisBase + 15.5;
       if (dv.echeance) { T(28.4, ey, 'Échéance : ' + dateFR(dv.echeance), 'R', 9.7); ey += 12.5; }
-      if (dv.refDevis) T(28.4, ey, dv.refDevis, 'R', 9.7);
+      if (dv.refDevis) T(28.4, ey, /^(Établie|Avoir|Référence)/.test(dv.refDevis) ? dv.refDevis : 'Référence : ' + dv.refDevis, 'R', 9.7);
+      // 06/11 : modèle FAC-2026-0025 — période des travaux et catégorie d'opération sous la date (factures)
+      let ry = devisBase + 15.5; const pe = dv.periode || {};
+      const pd = pe.du && pe.au ? 'Travaux réalisés du ' + dateFR(pe.du) + ' au ' + dateFR(pe.au) : (pe.du || pe.au) ? 'Travaux réalisés le ' + dateFR(pe.du || pe.au) : '';
+      if (pd) { T(335.9, ry, pd, 'R', 9.7); ry += 12.5; }
+      const CAT_OP = { services: 'prestation de services', biens: 'livraison de biens', mixte: 'livraison de biens et prestation de services' };
+      if (dv.categorie && CAT_OP[dv.categorie]) T(335.9, ry, "Catégorie d'opération : " + CAT_OP[dv.categorie], 'R', 9.7);
     }
     T(335.9, devisBase - 5.4, 'En date du', 'R', 9.7);
     T(335.9 + tw('En date du', 'R', 9.7) + 10, devisBase - 5.4, dateFR(dv.date), 'R', 9.7);
@@ -2930,7 +2936,7 @@ const DEFAULT_SETTINGS = {
   company: /*DV-SOCIETE*/{ adresse: ['[À COMPLÉTER : importer les paramètres du devis]'], contact: [], legal: [], footer: [], signataire: '' }/*/DV-SOCIETE*/,
   showSignature: true, showBadges: true,
   validite: '3 mois',
-  paiement: 'Paiement en espèces, par chèque ou par virement bancaire.',
+  paiement: 'Paiement par chèque ou par virement bancaire.',
   mentions: {
     attestation: 'Je certifie que les travaux réalisés sont éligibles au taux de TVA réduit de 5,5 % ou 10 % et respectent les conditions prévues par les articles 279-0 bis et 278-0 bis A du Code Général des Impôts.',
     autoliquidation: 'Autoliquidation — TVA due par le preneur, article 283-2 nonies du Code Général des Impôts.',
