@@ -1433,10 +1433,12 @@ const Engine = (() => {
 
     // --- mentions ---
     const paras = [];
+    // 06/11 : la gestion envoie les mentions du document (réglages ou modifiées dans le document) ; une chaîne vide retire la mention
+    const MN = { ...(cfg.mentions || {}) }; if (dv.mentions) Object.keys(dv.mentions).forEach(k => { if (typeof dv.mentions[k] === 'string') MN[k] = dv.mentions[k]; });
     const reduced = totals.rates.some(x => x.r > 0 && x.r < 0.2 && x.base !== 0);
-    if (reduced && cfg.mentions.attestation) paras.push(cfg.mentions.attestation);
-    if (dv.contexte === 'st' && cfg.mentions.autoliquidation) paras.push(cfg.mentions.autoliquidation);
-    if (isDevis && dv.options?.revision !== false && cfg.mentions.revision) paras.push(cfg.mentions.revision);
+    if (reduced && MN.attestation) paras.push(MN.attestation);
+    if (dv.contexte === 'st' && MN.autoliquidation) paras.push(MN.autoliquidation);
+    if (isDevis && dv.options?.revision !== false && MN.revision) paras.push(MN.revision);
     if (!isDevis && Array.isArray(dv.mentionsExtra)) dv.mentionsExtra.forEach(m => { if (m && String(m).trim()) paras.push(String(m).trim()); });
     if (dv.note && dv.note.trim()) paras.push(dv.note.trim());
     let mb = cursor + 26.8; let lastBase = null;
