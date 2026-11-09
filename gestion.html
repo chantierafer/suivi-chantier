@@ -90,6 +90,7 @@ a{color:var(--turq-ink)}
 .topline p{margin:2px 0 0;color:var(--muted);font-size:13px;max-width:80ch}
 .tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .note{font-size:12.5px;color:var(--muted)}
+.note.att{font-size:11px;color:#c77700;white-space:nowrap}
 .ph{color:var(--warn);font-style:italic}
 .ph.dim{color:var(--muted)}
 .btn{font:600 14px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:9px 14px;cursor:pointer;min-height:42px}
@@ -303,8 +304,8 @@ kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--l
 .as .av{width:18px;height:18px;font-size:8.5px;margin:0;border:0}
 .as.clash{border-color:var(--bad);background:var(--bad-bg)}
 .as.grp{box-shadow:0 0 0 2px var(--turq);background:var(--turq-soft)}
-.as .m{width:6px;height:6px;border-radius:50%;background:var(--turq-ink);margin-left:auto;flex:none}
-.as .mis{flex-basis:100%;color:var(--muted);font-size:11.5px;padding-left:23px;white-space:normal}
+.as .m{min-width:15px;height:15px;padding:0 3px;box-sizing:border-box;border-radius:8px;background:var(--turq-ink);color:#fff;font:800 9.5px/15px var(--body);text-align:center;margin-left:auto;flex:none}
+.as .mis{flex-basis:100%;color:var(--muted);font-size:11.5px;padding-left:23px;white-space:pre-line}
 .as.mini{padding:1px;border-left-width:2px}
 /* Gantt */
 .gt{display:grid;grid-template-columns:minmax(220px,300px) 110px 52px minmax(560px,1fr);font-size:12.5px}
@@ -551,7 +552,7 @@ const MIN=2;
 // Clients : code et couleur (turquoise réservé à AFER). DOMetVIE existe toujours : les chantiers SDB sont en sous-traitance DOMetVIE.
 const PALETTE=["#3F7CC0","#D9822B","#8A6BB0","#C2577A","#6E9A2E","#9A6B43","#2F8F83","#B5A021","#5A6FD6","#C0463A"];
 const DEF_CLIENTS={dmv:{nom:"DOMetVIE",code:"DMV",c:"#3F7CC0",type:"Donneur d'ordre (sous-traitance)",info:"Salles de bain PMR en sous-traitance",ordre:0}};
-const FORFAIT_SDB=900; // forfait de base d'une salle de bain simple (HT), comme dans l'appli SDB
+const FORFAIT_SDB=1200; // forfait de base d'une salle de bain simple (HT), comme dans l'appli SDB
 const AV_COL=["#3F6E8C","#7A5C3E","#5E7D3A","#8A4F7D","#6B6F76","#4F6D9A","#80603A","#9A5B4F","#5B7F6E","#6A5A9C"];
 const VAN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 16V7h11v9M13 10h4l3 3v3h-7"/><circle cx="6.5" cy="17" r="1.8"/><circle cx="16.5" cy="17" r="1.8"/></svg>';
 const TOOL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20l7-7M14 4a4 4 0 0 0 5 5l-3 3-5-5z"/></svg>';
@@ -731,6 +732,7 @@ const affId=(r,ch,d,c)=>r+"|"+ch+"|"+d+(c?"|"+c:"");
 // demi-journées : c = "m" (matin) ou "a" (après-midi) ; sans c = journée entière (compte 1 jour, une demi-journée 0,5)
 const CRN={m:"Matin",a:"Après-midi"};
 const poids=a=>a.c?.5:1;
+const nTaches=m=>String(m||"").split("\n").map(t=>t.trim()).filter(Boolean).length; // tâches écrites : une par ligne
 const affData=(x,extra={})=>{const o={r:x.r,ch:x.ch,d:x.d};if(x.c)o.c=x.c;if(x.m)o.m=x.m;return {...o,...extra}};
 const estCoupe=(ch,k)=>!!gid("coupe",ch+"|"+k)||(AFFI[ch+"|"+k]||[]).some(a=>a.c);
 const clash=(r,k)=>{const L=AFFR[r+"|"+k]||[];if(L.length<2)return false;if(L.some(a=>!a.c))return true;return new Set(L.map(a=>a.c)).size<L.length};
@@ -876,8 +878,10 @@ function renta(c){const R=gid("renta",c.id)||{},E=EL[c.id]||{};
   if(num(R.recette)!=null){recette=num(R.recette);recNote="saisie dans la rentabilité"}
   else if(c.sdb){const L=Object.values(E.devis||{}).filter(l=>l&&l.kind!=="titre"&&l.kind!=="soustotal");
     if(!L.length){recette=FORFAIT_SDB;recNote="forfait de base (devis pas encore ouvert)"}
-    else{const q=l=>num(l.qty??l.q)||0;recette=L.filter(l=>l.st==="val").reduce((a,l)=>a+Math.round(q(l)*(num(l.pu)||0)*100)/100,0);attente=L.filter(l=>l.st==="att").reduce((a,l)=>a+q(l)*(num(l.pu)||0),0);
-      recNote="devis : forfait + lignes validées par DOMetVIE"+(attente?" ("+eur(attente)+" en attente de validation)":"")}}
+    else{const q=l=>num(l.qty??l.q)||0,mt=l=>Math.round(q(l)*(num(l.pu)||0)*100)/100,Lr=L.filter(l=>l.st!=="ref");
+      // 09/11 : la recette suit le devis courant (lignes en attente comprises, refusées exclues) ; la part non validée est indiquée à côté
+      recette=Lr.reduce((a,l)=>a+mt(l),0);attente=Lr.filter(l=>l.st!=="val").reduce((a,l)=>a+mt(l),0);
+      recNote="devis en cours (lignes refusées exclues)"+(attente?", dont "+eur(attente)+" en attente de validation DOMetVIE":", tout validé par DOMetVIE")}}
   else if(c.recette!=null){recette=c.recette;recNote="montant du chantier"}
   // main-d'œuvre : jours du planning × coût chargé
   const jours={};AFF.filter(a=>a.ch===c.id).forEach(a=>{jours[a.r]=(jours[a.r]||0)+poids(a)});
@@ -1029,7 +1033,7 @@ function vPlan(){
   const inRange=r=>ABS.some(a=>a.r===r.id&&a.fin>=k0&&a.deb<=k1);
   const tray=["chantier","externe","bureau","materiel"].map(g=>{const L=resList(r=>r.actif&&r.grp===g);return L.length?`<div class="tg"><span>${GRPN[g]}</span><div class="row">${L.map(r=>`<button class="res ${active===r.id?"on":""}" draggable="true" data-res="${esc(r.id)}" aria-pressed="${active===r.id}" title="${esc(r.nom+(r.metier?" · "+r.metier:""))}">${avatar(r)}<span class="n">${esc(r.nom)}</span>${inRange(r)?'<span class="cg">absent</span>':""}</button>`).join("")}</div></div>`:""}).join("");
   const a=active?rs(active):null;
-  return `<div class="topline"><div><h2>Planning global</h2><p>Glisse sur les jours d'un chantier (ou touche un jour), puis coche les personnes et véhicules à ajouter, sur n'importe quel jour. Clic droit sur une case : couper la journée en matin / après-midi, poser la ligne orange (idéal) ou rouge (limite). Les pastilles des lignes se glissent.</p></div>
+  return `<div class="topline"><div><h2>Planning global</h2><p>Glisse sur les jours d'un chantier (ou touche un jour), puis coche les personnes et véhicules à ajouter, sur n'importe quel jour. Clic sur une personne dans une case : lui écrire ses tâches (elles s'affichent dans son espace ouvrier). Clic droit sur une case : couper la journée en matin / après-midi, poser la ligne orange (idéal) ou rouge (limite). Les pastilles des lignes se glissent.</p></div>
     <div class="tools"><div class="seg"><button data-pm="sem" aria-pressed="${planMode==="sem"}">Planning chantiers</button><button data-pm="gantt" aria-pressed="${planMode==="gantt"}">Gantt</button></div>
      ${planMode==="sem"?`<div class="seg" title="Chantiers affichés"><button data-pt="0" aria-pressed="${!planTous}">En cours</button><button data-pt="1" aria-pressed="${planTous}">Avec les terminés</button></div>`:""}
      <div class="seg" title="Zoom">${["jour","semaine","mois"].map(z=>`<button data-zoom="${z}" aria-pressed="${(planMode==="sem"?zoom:gZoom)===z}">${{jour:"Jour",semaine:"Semaine",mois:"Mois"}[z]}</button>`).join("")}</div>
@@ -1038,7 +1042,7 @@ function vPlan(){
   ${planMode==="sem"?`${tray?`<div class="tray">${tray}</div>`:`<div class="box warn"><b>Aucune personne ni aucun véhicule</b><span class="note">${sansExcel()?"La liste vient des 2 fichiers Excel du dossier SharePoint « Gestion AFER » : elle arrive dès que la synchronisation tourne (voir Synchronisation).":"Toutes les fiches sont marquées sorties ou vendues."}</span></div>`}
   ${a?`<div class="hintbar">${avatar(a)}<b>${esc(a.nom)}</b> sélectionné · clic sur un chantier = tous ses jours ouvrés · double clic sur une case = ce jour seul · cases hachurées = absence · <kbd>Échap</kbd> pour annuler <button class="btn xs" data-unsel>Annuler</button></div>`:`<p class="hint">Personne sélectionnée en haut : clic sur un chantier = tous ses jours ouvrés, double clic sur une case = ce jour seul. <kbd>Maj</kbd> + clic étend une sélection de jours. Glisser une étiquette du haut vers une case marche aussi.</p>`}
   <div class="scroll${zoom==="jour"?"":" defile"}" data-defile><div class="wk" style="${zoom==="jour"?"grid-template-columns:200px minmax(420px,1fr);min-width:620px":`grid-template-columns:${LW()}px repeat(${cs.length},${CW()}px);width:${LW()+cs.length*CW()}px`}">${week(cs)}</div></div>
-  <p class="hint">Ligne orange pointillée = date idéale, ligne rouge = à ne pas dépasser (fond orange pâle entre les deux, rouge pâle au-delà) : elles rappellent, elles ne bloquent rien. Point turquoise = mission écrite (en entier avec le zoom Jour). Cadre rouge = même personne sur deux chantiers dans le même créneau. Hachures = absence (onglet Absences de l'Excel du personnel) : la case refuse l'affectation ; demi-hachure = demi-journée.</p>`
+  <p class="hint">Ligne orange pointillée = date idéale, ligne rouge = à ne pas dépasser (fond orange pâle entre les deux, rouge pâle au-delà) : elles rappellent, elles ne bloquent rien. Pastille turquoise = nombre de tâches écrites (en entier avec le zoom Jour). Cadre rouge = même personne sur deux chantiers dans le même créneau. Hachures = absence (onglet Absences de l'Excel du personnel) : la case refuse l'affectation ; demi-hachure = demi-journée.</p>`
   :`<div class="scroll"><div class="gt">${gantt()}</div></div>
   <div class="leg"><span><span class="sw" style="--cc:var(--anth)"></span>Chantier</span><span><span class="sw" style="border:1px solid var(--mo);background:transparent"></span>Phase (remplie selon l'avancement)</span><span><span class="sw" style="background:repeating-linear-gradient(45deg,var(--muted) 0 3px,transparent 3px 7px)"></span>Opportunité</span><span><span class="sw" style="background:repeating-linear-gradient(45deg,var(--warn) 0 3px,transparent 3px 7px)"></span>Absence</span><span><span class="sw" style="--cc:var(--bad);width:2px"></span>Aujourd'hui</span></div>`}`}
 function week(cs){
@@ -1056,7 +1060,7 @@ function week(cs){
         const bl=active&&bloque(active,kk);
         const items=(AFFI[c.id+"|"+kk]||[]).filter(a=>rowOf(rs(a.r))===row);
         const chip=a=>{const r=rs(a.r);
-          return `<button class="as ${clash(a.r,kk)?"clash":""} ${mois?"mini":""}" style="--cc:${chCol(c.id)}" data-aff="${esc(a.id)}" title="${esc(r.nom)}${a.c?" · "+CRN[a.c]:""}${a.m?" · "+esc(a.m):""}">${avatar(r)}${mois?"":`<span class="n">${esc(r.nom)}</span>`}${a.m&&!mois?'<span class="m"></span>':""}${jour&&a.m?`<span class="mis">${esc(a.m)}</span>`:""}</button>`};
+          return `<button class="as ${clash(a.r,kk)?"clash":""} ${mois?"mini":""}" style="--cc:${chCol(c.id)}" data-aff="${esc(a.id)}" title="${esc(r.nom)}${a.c?" · "+CRN[a.c]:""}${a.m?" · "+esc(a.m):""}">${avatar(r)}${mois?"":`<span class="n">${esc(r.nom)}</span>`}${a.m&&!mois?`<span class="m" aria-label="${plural(nTaches(a.m),"tâche","tâches")}">${nTaches(a.m)}</span>`:""}${jour&&a.m?`<span class="mis">${esc(a.m)}</span>`:""}</button>`};
         const zone=termine(c)?"":c.limite&&kk>c.limite?"zr":c.ideal&&kk>c.ideal?"zo":""; // chantier terminé : plus de fond, les lignes restent
         const mk=(c.ideal===kk?" mko":"")+(c.limite===kk?" mkr":"");
         const hdl=row==="eq"?(c.ideal===kk?`<button class="hdl o" data-mk="ideal|${esc(c.id)}" title="Ligne orange (idéal) : glisser pour la déplacer" aria-label="Déplacer la ligne orange, date idéale ${fk(kk)}">J</button>`:"")+(c.limite===kk?`<button class="hdl r" data-mk="limite|${esc(c.id)}" title="Ligne rouge (limite) : glisser pour la déplacer" aria-label="Déplacer la ligne rouge, date limite ${fk(kk)}">R</button>`:""):"";
@@ -1170,14 +1174,14 @@ function groupPop(aid,anchor){
   const same=resList(x=>x.actif&&x.id!==r.id&&rowOf(x)===rowOf(r));
   const p=openPop(anchor,`<div style="display:flex;gap:8px;align-items:center">${avatar(r)}<div><b>${esc(r.nom)}</b><div class="note">${esc(c.code)} · ${multi?`${g.length} jours de suite, ${fk(g[0])} → ${fk(g[g.length-1])}`:fk(a.d)}${a.c?" · "+CRN[a.c].toLowerCase():""}</div></div></div>
     ${multi?`<div class="scope"><span class="note">Agir sur :</span><label class="chk"><input type="radio" name="sc" value="g" checked> les ${g.length} jours</label><label class="chk"><input type="radio" name="sc" value="d"> ce jour seul (${fk(a.d)})</label></div>`:""}
-    <label>Mission<textarea id="m-txt" rows="2" placeholder="Ex. tirage des câbles, reprise des joints…">${esc(a.m||"")}</textarea></label>
+    <label>Tâches à faire <span class="note">une par ligne · elles s'affichent dans son espace ouvrier</span><textarea id="m-txt" rows="4" placeholder="Ex.&#10;Dépose de la baignoire&#10;Tirage des câbles&#10;Reprise des joints">${esc(a.m||"")}</textarea></label>
     <div class="inline"><label>Remplacer par<select id="m-rep">${ropts(same,"")}</select></label><button class="btn sm" data-rep>Remplacer</button></div>
     <div class="acts"><button class="btn sm dang left" data-del>Retirer</button><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Enregistrer</button></div>`);
   document.querySelectorAll("[data-aff]").forEach(el=>{const x=AFF.find(y=>y.id===el.dataset.aff);el.classList.toggle("grp",!!x&&x.r===a.r&&x.ch===a.ch&&g.includes(x.d))});
   const scope=()=>multi&&p.querySelector('input[name="sc"]:checked').value==="d"?[a.d]:g;
   const lab=()=>scope().length>1?`les ${scope().length} jours`:"ce jour";
   const cible=()=>AFF.filter(x=>x.r===a.r&&x.ch===a.ch&&scope().includes(x.d)&&(scope().length>1||!a.c||x.c===a.c));
-  p.querySelector("[data-ok]").onclick=()=>{const m=p.querySelector("#m-txt").value.trim(),L=cible(),l=lab();closeFloat();gputMany(L.map(x=>{const d=affData(x);if(m)d.m=m;else delete d.m;return {type:"aff",id:x.id,data:d}}));toast(`Mission enregistrée sur ${l}.`)};
+  p.querySelector("[data-ok]").onclick=()=>{const m=p.querySelector("#m-txt").value.trim(),L=cible(),l=lab();closeFloat();gputMany(L.map(x=>{const d=affData(x);if(m)d.m=m;else delete d.m;return {type:"aff",id:x.id,data:d}}));toast(m?`${plural(nTaches(m),"tâche enregistrée","tâches enregistrées")} sur ${l} : visibles dans l'espace ouvrier de ${r.nom}.`:`Tâches retirées sur ${l}.`)};
   p.querySelector("[data-del]").onclick=()=>{const L=cible(),l=lab();closeFloat();gdelMany("aff",L.map(x=>x.id));toast(`${r.nom} retiré de ${c.nom} sur ${l}.`)};
   p.querySelector("[data-rep]").onclick=async()=>{const nr=p.querySelector("#m-rep").value;if(!nr){toast("Choisis par qui remplacer.");return}const L=cible();let skip=0;const add=[],del=[];
     L.forEach(x=>{if(bloque(nr,x.d)){skip++;return}del.push(x.id);const id=affId(nr,x.ch,x.d,x.c);if(!gid("aff",id))add.push({type:"aff",id,data:affData(x,{r:nr})})});
@@ -1192,7 +1196,7 @@ function selPop(anchor){
   const groups=["chantier","externe","materiel","bureau"].map(g=>{const L=resList(r=>r.actif&&r.grp===g);return L.length?`<span class="gh3">${GRPN[g]}</span>`+L.map(item).join(""):""}).join("");
   const p=openPop(anchor,`<div><b>${esc(c.code)} · ${days.length>1?`${fk(a)} → ${fk(b)} · ${days.length} jours`:DN[PK(a).getDay()]+" "+fk(a)+(cr?" · "+CRN[cr].toLowerCase():"")}</b><div class="note">Coche qui ajouter sur ces jours ; les jours d'absence sont sautés.</div></div>
     ${groups?`<div class="list cols">${groups}</div>`:`<div class="note">Aucune personne ni aucun véhicule : la liste vient des fichiers Excel (voir Synchronisation).</div>`}
-    <label>Mission (facultative)<textarea id="s-txt" rows="2"></textarea></label>
+    <label>Tâches à faire (facultatif) <span class="note">une par ligne · visibles dans l'espace ouvrier de chacun</span><textarea id="s-txt" rows="3"></textarea></label>
     <div class="acts">${existing.length?`<button class="btn sm dang left" data-clear>Retirer les ${existing.length} affectations</button>`:""}<button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Ajouter (0)</button></div>`);
   p.style.width="400px";placePop(anchor);
   const cnt=()=>p.querySelectorAll(".list input:checked").length;
@@ -1394,13 +1398,13 @@ function vRenta(){
     <div style="width:${x.recette?Math.max(8,x.recette/max*100):8}%"><div class="rb ${x.marge==null?"outline":""}">${x.marge==null?"":segs(x)}</div></div>
     <span class="v">${x.marge==null?'<span class="note">à compléter</span>':pctM(x)}</span></div>`).join("");
   const cell=(v,m)=>v==null?`<span class="ph">${m||"à compléter"}</span>`:eur(v);
-  const table=R.map(({c,x})=>`<tr class="clk ${selRenta===c.id?"sel":""}" data-renta="${esc(c.id)}"><td><span class="dot" style="--cc:${c.cli.c}"></span> <b>${esc(c.code)}</b> ${esc(c.nom)}</td><td class="num">${cell(x.recette)}</td><td class="num">${cell(x.mo)}</td><td class="num">${cell(x.mat)}</td><td class="num">${eur(x.veh)}</td><td class="num">${cell(x.st)}</td><td class="num"><b>${x.marge==null?'<span class="ph dim">—</span>':eur(x.marge)}</b></td><td class="num">${pctM(x)}</td></tr>`).join("");
+  const table=R.map(({c,x})=>`<tr class="clk ${selRenta===c.id?"sel":""}" data-renta="${esc(c.id)}"><td><span class="dot" style="--cc:${c.cli.c}"></span> <b>${esc(c.code)}</b> ${esc(c.nom)}</td><td class="num">${cell(x.recette)}${x.attente?`<div class="note att">dont ${eur(x.attente)} en attente</div>`:""}</td><td class="num">${cell(x.mo)}</td><td class="num">${cell(x.mat)}</td><td class="num">${eur(x.veh)}</td><td class="num">${cell(x.st)}</td><td class="num"><b>${x.marge==null?'<span class="ph dim">—</span>':eur(x.marge)}</b></td><td class="num">${pctM(x)}</td></tr>`).join("");
   const sc=selRenta&&CHI[selRenta];
   return `<div class="topline"><div><h2>Rentabilité par chantier</h2><p>Ce que rapporte chaque chantier, moins ce qu'il a réellement coûté. Un poste manquant = marge non calculée, jamais estimée. Clic sur une ligne pour le détail et les saisies.</p></div></div>
   ${R.length?`<div class="rchart"><div class="note">Largeur de la barre = recette · couleurs = coûts · vert = marge · pointillé = coûts pas encore connus</div>${chart}${LEG}</div>
   <div class="scroll"><table><thead><tr><th>Chantier</th><th class="num">Recette HT</th><th class="num">Main-d'œuvre</th><th class="num">Matériaux</th><th class="num">Véhicules</th><th class="num">Sous-traitance</th><th class="num">Marge</th><th class="num">%</th></tr></thead><tbody>${table}</tbody></table></div>`:'<div class="empty">Aucun chantier démarré pour l\'instant.</div>'}
   ${sc?rentaDetail(sc):""}
-  <div class="why"><b>D'où viennent les chiffres</b>Recette : devis de l'appli SDB (forfait + lignes validées par DOMetVIE) ou montant saisi. Main-d'œuvre : jours du planning × coût chargé par jour de l'Excel du personnel. Véhicules : coût fixe mensuel au prorata des jours, pleins et entretiens imputés au chantier dans l'Excel (colonne « Chantier imputé » = code du chantier), dépenses carburant et péage de l'appli SDB. Matériaux et sous-traitance : montants saisis ici (pour une SDB, le matériel est fourni par DOMetVIE).</div>`}
+  <div class="why"><b>D'où viennent les chiffres</b>Recette : devis en cours de l'appli SDB (forfait + lignes, validées ou en attente de DOMetVIE ; les refusées ne comptent pas) ou montant saisi. Main-d'œuvre : jours du planning × coût chargé par jour de l'Excel du personnel. Véhicules : coût fixe mensuel au prorata des jours, pleins et entretiens imputés au chantier dans l'Excel (colonne « Chantier imputé » = code du chantier), dépenses carburant et péage de l'appli SDB. Matériaux et sous-traitance : montants saisis ici (pour une SDB, le matériel est fourni par DOMetVIE).</div>`}
 function rentaDetail(c){const x=renta(c),R=x.R,inp=(k,v)=>`<span class="minput"><input type="number" step="0.01" min="0" data-rk="${k}" data-rch="${esc(c.id)}" value="${esc(v??"")}" placeholder="—" aria-label="${k}"> €</span>`;
   const kv=(a,b)=>`<div class="kv"><span>${a}</span><span>${b}</span></div>`;
   return `<div class="detail" style="--cc:${c.cli.c}"><div class="topline"><h3>${esc(c.code)} · ${esc(c.nom)}</h3><button class="btn xs" data-ch="${esc(c.id)}">Voir le chantier</button></div>
@@ -1437,7 +1441,7 @@ function vSync(){const e=gid("excel_etat","dernier")||null,Q=Object.entries(gt("
     <tr><td>Personnel, absences et congés</td><td>AFER - Personnel et absences.xlsx</td><td>Excel ⇄ appli</td></tr>
     <tr><td>Véhicules, matériel</td><td>AFER - Véhicules et matériel.xlsx</td><td>Excel ⇄ appli</td></tr>
     <tr><td>Entretiens, carburant</td><td>AFER - Véhicules et matériel.xlsx</td><td>Excel → appli (saisie dans l'Excel)</td></tr>
-    <tr><td>Planning, missions, pilotes</td><td>Base de l'appli (Supabase)</td><td>Appli seulement pour l'instant</td></tr>
+    <tr><td>Planning, tâches, pilotes</td><td>Base de l'appli (Supabase)</td><td>Appli seulement pour l'instant</td></tr>
     <tr><td>Clients, chantiers hors SDB, opportunités, saisies de rentabilité</td><td>Base de l'appli (Supabase)</td><td>Appli seulement pour l'instant</td></tr>
     <tr><td>Chantiers SDB : photos, PV, documents</td><td>Base de l'appli + SharePoint « Suivi Chantier SDB »</td><td>Appli → SharePoint</td></tr>
   </tbody></table></div>
@@ -1618,7 +1622,7 @@ function dvPanel(d,all,i){const kids=all.filter(x=>x.parent===d.id),par=d.parent
     ${d.att?`<div class="note" style="color:var(--warn)">${plural(d.att,"ligne attend","lignes attendent")} la validation de DOMetVIE (hors total).</div>`:""}
     <div class="dvprev" id="dvprev"><p class="note">Chargement de l'aperçu…</p></div>
     <div class="dvact">${d.sdb?`<button class="btn sm" data-dvsdb="${esc(d.chId)}">Ouvrir dans le suivi SDB</button>`:`<button class="btn sm pri" data-dvopen="${esc(d.id)}">${lock?"Ouvrir":"Modifier"}</button>`}
-      <button class="btn sm" data-dvbig="${esc(d.id)}">Aperçu A4</button><button class="btn sm" data-dvpdf="${esc(d.id)}">PDF</button>
+      <button class="btn sm" data-dvbig="${esc(d.id)}">Aperçu A4</button><button class="btn sm" data-dvpdf="${esc(d.id)}">Télécharger PDF</button>
       ${d.kind==="devis"&&(d.numero||d.sdb)?`<button class="btn sm pri" data-dvfac="${esc(d.id)}">Créer la facture ▾</button>`:""}
       ${fr?`<button class="btn sm" data-dvpay="${esc(d.id)}">+ Paiement</button><button class="btn sm" data-dvavoir="${esc(d.id)}">Créer un avoir</button>`:""}
       ${!d.sdb?`<button class="btn sm" data-dvdup="${esc(d.id)}">Dupliquer</button>`:""}
@@ -1628,7 +1632,7 @@ function dvPanel(d,all,i){const kids=all.filter(x=>x.parent===d.id),par=d.parent
     ${fr||(d.paiements||[]).length?`<div class="dvpays"><b>Paiements</b>${(d.paiements||[]).map((p,k)=>`<div class="kv"><span>${fkl(p.date)} · ${esc(p.mode||"")}</span><span>${m2(cts(p.montant))} <button class="btn xs" data-dvpaydel="${esc(d.id)}|${k}" aria-label="Retirer ce paiement">✕</button></span></div>`).join("")||'<span class="note">Aucun paiement enregistré.</span>'}
       ${i.reste!=null?`<div class="kv tot"><span>Reste dû (TTC)</span><span>${m2(i.reste)}</span></div>`:""}</div>`:""}
     ${par||kids.length?`<div class="dvlinks"><b>Documents liés</b>${par?`<button class="btn xs" data-dvsel="${esc(par.id)}">↑ ${esc(dNum(par))}</button>`:""}${kids.map(k=>`<button class="btn xs" data-dvsel="${esc(k.id)}">${esc(k.numero||"Brouillon "+DT[k.kind].nom.toLowerCase())}</button>`).join("")}</div>`:""}
-    ${d.pdf?`<div class="note">PDF figé dans la base${d.emisLe?", émis le "+fkl(d.emisLe):""} ; copié ensuite dans SharePoint (Gestion AFER › Devis et factures).</div>`:d.numero&&!d.sdb?`<div class="note" style="color:var(--warn)">PDF pas encore enregistré : bouton PDF pour le régénérer.</div><button class="btn xs" data-dvregen="${esc(d.id)}">Enregistrer le PDF</button>`:""}</div>`}
+    ${d.pdf?`<div class="note">PDF figé dans la base${d.emisLe?", émis le "+fkl(d.emisLe):""} ; copié ensuite dans SharePoint (Gestion AFER › Devis et factures).</div>`:d.numero&&!d.sdb?`<div class="note" style="color:var(--warn)">PDF pas encore enregistré : bouton « Télécharger PDF » pour le régénérer.</div><button class="btn xs" data-dvregen="${esc(d.id)}">Enregistrer le PDF</button>`:""}</div>`}
 function dvAfter(){const d=DSEL&&docById(DSEL);const el=$("#dvprev");if(d&&el)fillPrev(el,d,"p"+Date.now())}
 // ---- création, copie, suppression ----
 function clientDoc(cli){const k=clientsMap()[cli]||{};let c={type:"pro",nom:k.nom||"",adresse1:k.adresse||"",adresse2:"",cp:"",ville:"",pays:"France",siren:"",siret:k.siret||"",tva:"",tel:k.tel||"",email:k.email||""};
@@ -1754,7 +1758,7 @@ function dvSettings(){const all=docsAll(),R=mentionsReg(),cf=(gid("reglage","doc
     closeFloat();await gput("reglage","docs",{...(gid("reglage","docs")||{}),penalites:v("penalites"),indemnite:v("indemnite"),escompte:v("escompte"),confirme:p.querySelector("#mn-ok").checked});toast("Réglages enregistrés.")}
   p.querySelector("#mn-def").onclick=()=>MENT_KEYS.forEach(([k])=>{p.querySelector(`[data-mn="${k}"]`).value=MENT_DEF[k]})}
 // ---- grand aperçu ----
-async function bigPrev(id){const d=docById(id);if(!d)return;const w=document.createElement("div");w.className="dvbig";w.innerHTML=`<div class="dvbighd"><b>${esc(dNum(d))}</b><span><button class="btn sm" data-dvpdf="${esc(id)}">PDF</button> <button class="btn sm" data-dvbigx>Fermer</button></span></div><div class="dvbigbody"><p class="note">Chargement…</p></div>`;
+async function bigPrev(id){const d=docById(id);if(!d)return;const w=document.createElement("div");w.className="dvbig";w.innerHTML=`<div class="dvbighd"><b>${esc(dNum(d))}</b><span><button class="btn sm" data-dvpdf="${esc(id)}">Télécharger PDF</button> <button class="btn sm" data-dvbigx>Fermer</button></span></div><div class="dvbigbody"><p class="note">Chargement…</p></div>`;
   document.body.appendChild(w);const fermer=()=>{w.remove();document.removeEventListener("keydown",surEchap,true)},surEchap=e=>{if(e.key==="Escape"&&w.isConnected){e.stopImmediatePropagation();e.preventDefault();fermer()}};
   w.tabIndex=-1;w.focus({preventScroll:true});w.querySelector("[data-dvbigx]").onclick=fermer;document.addEventListener("keydown",surEchap,true); // Échap ferme l'aperçu même sans le focus dedans
   try{w.querySelector(".dvbigbody").innerHTML=pagesHtml(await rendreDoc(d,false))}catch(e){w.querySelector(".dvbigbody").innerHTML=miniPrev(d)}}
@@ -1835,7 +1839,7 @@ function edRender(keepScroll){const d=ED.d,ro=ED.ro,k=d.kind,all=docsAll(),lock=
   if(!o){o=document.createElement("div");o.id="dved";o.className="dvedit";o.setAttribute("role","dialog");document.body.appendChild(o)}
   const cl=d.client||{},fl=(lbl,path,v,extra="")=>`<label>${lbl}<input data-ef="${path}" value="${esc(v||"")}" ${ro?"disabled":""} ${extra}></label>`,ta=(path,v,extra="")=>`<textarea class="ml" rows="1" data-ef="${path}" ${ro?"disabled":""} ${extra}>${esc(v||"")}</textarea>`,flm=(lbl,path,v,extra="")=>`<label>${lbl}${ta(path,v,extra)}</label>`;
   o.innerHTML=`<header><button class="btn sm" data-edx>← Retour au registre</button><b class="ttl">${esc(titreDoc(d))} ${d.numero?esc(d.numero):'<span class="ph dim">numéro à l\'émission</span>'}</b><span class="pill ${I.cls}">${esc(I.lab)}</span><span class="sp"></span>
-    <span class="note" id="edsave">${ro?(k==="devis"?"Devis accepté et facturé : non modifiable":"Document numéroté : non modifiable"):"Enregistré automatiquement"}</span><button class="btn sm" data-dvpdf="${esc(ED.id)}">PDF</button>${k==="devis"?`<button class="btn sm" data-dvpdfsp="${esc(ED.id)}" title="Pour un technicien ou un sous-traitant : désignations et quantités, sans aucun prix">PDF sans prix</button>`:""}${k==="devis"||d.numero?`<button class="btn sm pri" data-dvsend="${esc(ED.id)}">Envoyer…</button>`:""}${ro?"":`<button class="btn sm${k==="devis"?"":" pri"}" data-dvemit="${esc(ED.id)}">${k==="devis"?(d.statut==="brouillon"||!d.pdf?"Marquer envoyé":"Mettre à jour le PDF"):k==="facture"?"Émettre la facture":"Émettre l'avoir"}</button>`}</header>
+    <span class="note" id="edsave">${ro?(k==="devis"?"Devis accepté et facturé : non modifiable":"Document numéroté : non modifiable"):"Enregistré automatiquement"}</span><button class="btn sm" data-dvpdf="${esc(ED.id)}">Télécharger PDF</button>${k==="devis"?`<button class="btn sm" data-dvpdfsp="${esc(ED.id)}" title="Pour un technicien ou un sous-traitant : désignations et quantités, sans aucun prix">Télécharger PDF sans prix</button>`:""}${k==="devis"||d.numero?`<button class="btn sm pri" data-dvsend="${esc(ED.id)}">Envoyer…</button>`:""}${ro?"":`<button class="btn sm${k==="devis"?"":" pri"}" data-dvemit="${esc(ED.id)}">${k==="devis"?(d.statut==="brouillon"||!d.pdf?"Marquer envoyé":"Mettre à jour le PDF"):k==="facture"?"Émettre la facture":"Émettre l'avoir"}</button>`}</header>
   <div class="dvbody"><div class="dvleft">
     ${lock?`<div class="box warn"><b>Ce document est numéroté et figé.</b><span class="note">Pour corriger : ${k==="facture"?"émets un avoir puis refais une facture (bouton Dupliquer).":"duplique-le en brouillon."}</span></div>`:""}
     <div class="box"><div class="grid3">

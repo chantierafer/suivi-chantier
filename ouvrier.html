@@ -61,6 +61,12 @@ main{max-width:620px;margin:0 auto;padding:10px max(12px,env(safe-area-inset-rig
 .det b{font-size:16px}
 .addr{color:var(--muted);font-size:14px}
 .txt{white-space:pre-wrap}
+.blk{position:relative}
+.blk .nt{position:absolute;top:2px;right:2px;min-width:14px;height:14px;border-radius:7px;background:#fff;color:var(--cc);font:800 9.5px/14px var(--body);text-align:center;padding:0 2px;box-sizing:border-box}
+.taches{margin-top:6px;display:grid;gap:4px}
+.taches ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.taches li{position:relative;padding:8px 10px 8px 30px;background:var(--bg);border-radius:8px;font-size:15px;line-height:1.35;white-space:pre-wrap}
+.taches li::before{content:"";position:absolute;left:10px;top:11px;width:11px;height:11px;border:2px solid var(--cc);border-radius:3px}
 .note{color:var(--muted);font-size:14px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;margin-top:6px;border-radius:8px;background:var(--turq);color:#fff;font:700 15px var(--body);text-decoration:none;justify-self:start;border:0;cursor:pointer}
@@ -114,6 +120,8 @@ const CH_COL=["#4F6D9A","#C0782E","#8A6BB0","#3E8E5E","#B5487A","#2E6F8E","#A361
 const chCol=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;return CH_COL[h%CH_COL.length]};
 // « Chantier chantier Paris 75005 » -> « Chantier Paris 75005 » ; nom court pour les cases
 const propre=n=>String(n||"Chantier").replace(/^(chantier\s+)+/i,"Chantier ");
+// tâches écrites par AFER dans le planning : une par ligne
+const taches=m=>String(m||"").split("\n").map(t=>t.replace(/^\s*[-•*]\s*/,"").trim()).filter(Boolean);
 const court=n=>propre(n).replace(/^Chantier\s+/i,"").replace(/\s+\d{5}$/,"")||"Chantier";
 const jeton=new URLSearchParams(location.search).get("o")||"";
 let D=null,choix=null,vers=null,V=null;
@@ -131,7 +139,7 @@ function afficher(){
   const {L,CH}=D,t=today(),J=jours();
   const sc0=$m.querySelector(".defile"),gardeX=sc0?sc0.scrollLeft:null;
   if(!choix||!L.includes(choix))choix=L.find(x=>x.d>=t)||L[L.length-1]||null;
-  const blk=x=>{const c=CH[x.ch];return `<button class="blk${x===choix?" sel":""}" style="--cc:${c.cc}" data-i="${L.indexOf(x)}" aria-label="${esc(flong(x.d)+", "+(x.c?CRN[x.c]:"journée")+" : "+c.nom)}">${esc(court(c.nom))}</button>`};
+  const blk=x=>{const c=CH[x.ch];return `<button class="blk${x===choix?" sel":""}" style="--cc:${c.cc}" data-i="${L.indexOf(x)}" aria-label="${esc(flong(x.d)+", "+(x.c?CRN[x.c]:"journée")+" : "+c.nom+(taches(x.m).length?", "+taches(x.m).length+" tâche(s)":""))}">${esc(court(c.nom))}${taches(x.m).length?`<span class="nt">${taches(x.m).length}</span>`:""}</button>`};
   let g=`<div class="grid" style="grid-template-columns:repeat(${J.length},var(--cw,60px))">`;
   g+=J.map(k=>{const d=PK(k),lun=d.getDay()===1;return `<div class="hd${k===t?" t":""}${lun?" lun":""}" data-k="${k}">${lun?`<small>S${isoWeek(d)}</small>`:"<small>&nbsp;</small>"}${DN[d.getDay()]}<b>${d.getDate()}</b></div>`}).join("");
   g+=J.map((k,i)=>{const d=PK(k),X=L.filter(x=>x.d===k);
@@ -149,7 +157,7 @@ function afficher(){
     const btn=c.sdb?(c.k?`<a class="btn" href="index.html?k=${encodeURIComponent(c.k)}">Ouvrir le chantier (photos)</a>`:`<span class="note">Accès photo en préparation : réessaie dans une minute.</span>`):"";
     det=`<div class="det" style="--cc:${c.cc}"><span class="k">${esc(flong(choix.d))} · ${choix.c?CRN[choix.c]:"journée"}</span><b>${esc(c.nom)}</b>${adr?`<span class="addr">${esc(adr)}</span>`:""}
       ${c.ideal||c.limite?`<div class="chips">${c.ideal?`<span class="pill o">Idéal ${esc(fcourt(c.ideal))}</span>`:""}${c.limite?`<span class="pill r">Limite ${esc(fcourt(c.limite))}</span>`:""}</div>`:""}
-      ${choix.m?`<span class="txt">${esc(choix.m)}</span>`:`<span class="note">Pas de mission écrite.</span>`}${btn}</div>`}
+      ${taches(choix.m).length?`<div class="taches"><span class="k">Tes tâches</span><ul>${taches(choix.m).map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`:`<span class="note">Pas de tâche écrite pour ce créneau.</span>`}${btn}</div>`}
   else det=`<div class="box"><b>Rien de prévu pour toi</b><span class="note">AFER n'a encore rien placé dans les prochaines semaines. La page se met à jour toute seule.</span></div>`;
   $m.innerHTML=`${V?`<button class="btn" type="button" data-dep>+ Dépense véhicule (plein, péage, parking)</button>`:""}<div class="wknav"><span class="lab" id="per"></span><button class="mini" data-auj type="button">Aujourd'hui</button></div>
     <div class="defile">${g}</div>${key}${leg}${det}${mesDeps()}<button class="btn ghost" id="rf" type="button">Actualiser</button>`;
