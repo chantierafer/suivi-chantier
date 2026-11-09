@@ -1266,11 +1266,13 @@ const Engine = (() => {
     const isDevis = !dv.docType || dv.docType === 'devis';
     const SP = !!dv.sansPrix; // 05/11 : version sans prix (technicien, sous-traitant) : ni prix, ni totaux, ni signatures
     T(28.4, devisBase, SP ? 'Descriptif des travaux · devis n° ' + numero : (dv.titre || 'Devis') + ' n° ' + numero, 'B', 14.2, C.title);
-    if (isDevis && !SP) T(28.4, devisBase + 15.5, 'Valable ' + (dv.validite || '3 mois'), 'R', 9.7);
+    let hb = devisBase; // 09/11 : bas des lignes sous le titre (validité ou référence sur plusieurs lignes)
+    const TL = (txt, y0) => { wrap(String(txt).trim(), 'R', 9.7, 290).forEach((s, i) => { T(28.4, y0 + i * 12.5, s, 'R', 9.7); hb = y0 + i * 12.5; }); };
+    if (isDevis && !SP) TL('Valable ' + (String(dv.validite || '').trim() || '3 mois'), devisBase + 15.5);
     else {
       let ey = devisBase + 15.5;
-      if (dv.echeance) { T(28.4, ey, 'Échéance : ' + dateFR(dv.echeance), 'R', 9.7); ey += 12.5; }
-      if (dv.refDevis) T(28.4, ey, /^(Établie|Avoir|Référence)/.test(dv.refDevis) ? dv.refDevis : 'Référence : ' + dv.refDevis, 'R', 9.7);
+      if (dv.echeance) { T(28.4, ey, 'Échéance : ' + dateFR(dv.echeance), 'R', 9.7); hb = ey; ey += 12.5; }
+      if (dv.refDevis && String(dv.refDevis).trim()) TL(/^(Établie|Avoir|Référence)/.test(dv.refDevis) ? dv.refDevis : 'Référence : ' + dv.refDevis, ey);
       // 06/11 : modèle FAC-2026-0025 — période des travaux et catégorie d'opération sous la date (factures)
       let ry = devisBase + 15.5; const pe = dv.periode || {};
       const pd = pe.du && pe.au ? 'Travaux réalisés du ' + dateFR(pe.du) + ' au ' + dateFR(pe.au) : (pe.du || pe.au) ? 'Travaux réalisés le ' + dateFR(pe.du || pe.au) : '';
@@ -1282,16 +1284,19 @@ const Engine = (() => {
     T(335.9 + tw('En date du', 'R', 9.7) + 10, devisBase - 5.4, dateFR(dv.date), 'R', 9.7);
 
     // --- objet + infos chantier ---
-    let oy = devisBase + 65.1;
+    let oy = Math.max(devisBase + 65.1, hb + 37);
     const objLines = wrap(dv.objet || '', 'I', 16.4, 505);
     objLines.forEach((s, i) => { T(58.3, oy, s, 'I', 16.4); if (i < objLines.length - 1) oy += 18.9; });
     const info = [];
     const ch = dv.chantier || {};
-    if (ch.adresse && ch.adresse.trim()) info.push('Adresse du chantier : ' + ch.adresse.trim().replace(/\n+/g, ', '));
+    // 09/11 : retours à la ligne conservés ; date de pré-visite (devis seulement, masquée si vide)
+    const dts = v => String(v || '').trim().split('\n').map(x => /^\d{4}-\d{2}-\d{2}$/.test(x.trim()) ? dateFR(x.trim()) : x).join('\n');
+    if (ch.adresse && String(ch.adresse).trim()) info.push('Adresse du chantier : ' + String(ch.adresse).trim());
+    if (isDevis && ch.previsite && String(ch.previsite).trim()) info.push('Date de pré-visite : ' + dts(ch.previsite));
     const dd = [];
-    if (ch.debut) dd.push('Début des travaux : ' + (/^\d{4}-\d{2}-\d{2}$/.test(ch.debut) ? dateFR(ch.debut) : ch.debut));
-    if (ch.duree && ch.duree.trim()) dd.push('Durée estimée : ' + ch.duree.trim());
-    if (dd.length) info.push(dd.join('  —  '));
+    if (ch.debut && String(ch.debut).trim()) dd.push('Début des travaux : ' + dts(ch.debut));
+    if (ch.duree && String(ch.duree).trim()) dd.push('Durée estimée : ' + String(ch.duree).trim());
+    if (dd.length) { if (dd.some(x => x.includes('\n'))) info.push(...dd); else info.push(dd.join('  —  ')); }
     let lastTop = oy;
     if (info.length) {
       let iy = oy + 19;
