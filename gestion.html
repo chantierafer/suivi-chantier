@@ -348,6 +348,8 @@ kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--l
 .cout .trio div{background:var(--surface);border-radius:8px;padding:6px 8px;min-width:0}
 .cout .trio small{display:block;color:var(--muted);font-size:11px}
 .cout .trio b{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.cout select{font:600 12px var(--body);border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);padding:2px 4px}
+.ticket img{max-width:100%;max-height:70vh;border-radius:8px;display:block;margin:0 auto}
 .gauge .bar i{background:var(--warn)}
 .gauge.ok .bar i{background:var(--ok)}
 .gauge.bad .bar i{background:var(--bad)}
@@ -660,7 +662,7 @@ async function pull(){
   catch(e){console.warn("Lecture impossible",e);online=false}
   // gestion : table créée par supabase/complement-v12-gestion.sql ; sans elle, les nouvelles fenêtres l'expliquent et le tableau de bord marche comme avant
   // les écritures comptables (cpt_fec) sont lues à l'ouverture de la fenêtre Comptabilité, pas à chaque passage
-  if(online)try{const rows=await fetchAll(()=>C.from("gestion").select("type,id,data,maj_le").neq("type","cpt_fec").order("type").order("id"));
+  if(online)try{const rows=await fetchAll(()=>C.from("gestion").select("type,id,data,maj_le").neq("type","cpt_fec").neq("type","depveh_photo").order("type").order("id"));
       const g={};rows.forEach(r=>{(g[r.type]=g[r.type]||{})[r.id]=r.type==="excel_ecrire"?{...r.data,_maj:r.maj_le}:r.data});G=g;GOK=true;GERR=""}
     catch(e){if(/fetch|network/i.test(e.message||""))online=false;else{GOK=false;GERR=e.message||String(e);G={}}}
   // bibliothèque d'ouvrages (BPU SDB + catalogue) et compteur de devis, pour la fenêtre Devis et factures
@@ -748,6 +750,66 @@ function coutPop(rid){const r=RES[rid];if(!r)return;const d=r.d,C2=colsOf("perso
   p.querySelector("[data-ok]").onclick=async()=>{const v={};p.querySelectorAll("[data-col]").forEach(el=>{const x=el.value.trim(),nv=x===""?null:num(x);if(String(nv??"")!==String(d[el.dataset.col]??""))v[el.dataset.col]=nv});
     if(!Object.keys(v).length){closeFloat();toast("Rien n'a changé.");return}
     closeFloat();await excelEcrire("personne",r.xid,v,{});RENDER();toast("Coût enregistré : il part dans l'Excel.")}}
+/* V17 : coût du véhicule (dépenses saisies par les ouvriers + onglets Carburant et Entretiens de l'Excel + coût fixe) */
+const DTYP={plein:"Plein",peage:"Péage",parking:"Parking",lavage:"Lavage",autre:"Autre"};
+let vehMois=null;
+const depsVeh=r=>Object.entries(gt("depveh")).map(([id,x])=>({id,...x})).filter(x=>x.veh===r.xid);
+function vehStats(r,mo){const d=r.d||{},im=norm(d.Immatriculation),D=depsVeh(r),inM=x=>String(x||"").startsWith(mo);
+  const exC=Object.values(gt("carburant")).filter(x=>im&&norm(x["Véhicule (immatriculation)"])===im&&inM(x.Date));
+  const exE=Object.values(gt("entretien")).filter(x=>im&&norm(x["Véhicule (immatriculation)"])===im&&inM(x.Date));
+  const dm=D.filter(x=>inM(x.d)),sum=(L,f)=>L.reduce((a,x)=>a+(num(f(x))||0),0);
+  const pleins=dm.filter(x=>x.type==="plein");
+  const carb=sum(pleins,x=>x.montant)+sum(exC,x=>x["Montant (€)"]),litres=sum(pleins,x=>x.litres)+sum(exC,x=>x.Litres);
+  const peage=sum(dm.filter(x=>x.type==="peage"||x.type==="parking"),x=>x.montant),autres=sum(dm.filter(x=>x.type==="lavage"||x.type==="autre"),x=>x.montant);
+  const entretien=sum(exE,x=>x["Montant (€)"]),fixe=num(d["Coût fixe mensuel (€)"]);
+  // kilomètres du mois : dernier relevé du mois moins dernier relevé d'avant (sinon premier relevé du mois)
+  const P=D.filter(x=>num(x.km)!=null).map(x=>({d:x.d,km:num(x.km)}));if(num(d["Kilométrage (dernier relevé)"])!=null&&isK(d["Date du relevé km"]))P.push({d:d["Date du relevé km"],km:num(d["Kilométrage (dernier relevé)"])});
+  const avant=P.filter(x=>x.d<mo),dans=P.filter(x=>inM(x.d)),mx=L=>Math.max(...L.map(x=>x.km)),mn=L=>Math.min(...L.map(x=>x.km));
+  let km=null;if(dans.length){const fin=mx(dans),deb=avant.length?mx(avant):dans.length>1?mn(dans):null;if(deb!=null&&fin>deb)km=fin-deb}
+  const tot=carb+peage+autres+entretien+(fixe||0);
+  return {carb,litres,nbPleins:pleins.length+exC.length,peage,autres,entretien,fixe,km,l100:litres&&km?litres/km*100:null,tot,dm,vide:!dm.length&&!exC.length&&!exE.length}}
+const moisDe=(k,n)=>{const [y,m]=k.split("-").map(Number),d=new Date(y,m-1+n,1);return d.getFullYear()+"-"+pad(d.getMonth()+1)};
+const moisNom=k=>{const [y,m]=k.split("-").map(Number);return new Date(y,m-1,1).toLocaleDateString("fr-FR",{month:"long",year:"numeric"})};
+function vehCarte(r){const cur=today().slice(0,7),mo=vehMois||cur,S=vehStats(r,mo);
+  const prev=[1,2,3].map(n=>vehStats(r,moisDe(mo,-n)).l100).filter(x=>x!=null),moy=prev.length?prev.reduce((a,x)=>a+x,0)/prev.length:null;
+  const f1=n=>n.toLocaleString("fr-FR",{maximumFractionDigits:1});
+  const alerte=S.l100!=null&&moy!=null&&S.l100>moy*1.15?`<div class="box warn"><b>Conso en hausse : ${f1(S.l100)} L/100 contre ${f1(moy)} en moyenne sur les mois d'avant.</b><span class="note">À vérifier : fuite, pneus, conduite ou ticket mal attribué.</span></div>`:"";
+  const L=S.dm.slice().sort((a,b)=>String(b.d).localeCompare(String(a.d))||String(b.at).localeCompare(String(a.at)));
+  const qui=x=>{const p=RES[x.par];return p?p.nom:"—"},chn=x=>x.ch?(CHI[x.ch]||{nom:"chantier retiré"}).nom:"sans chantier";
+  return `<div class="cout"><div class="top"><span class="note">Coût du véhicule · <select data-vehmois aria-label="Mois">${range(6).map(i=>moisDe(cur,-i)).map(k=>`<option value="${k}"${k===mo?" selected":""}>${moisNom(k)}</option>`).join("")}</select> · <span class="lock">AFER seul</span></span><button class="btn xs" data-vehfixe="${esc(r.id)}">Modifier le coût fixe</button></div>
+    <div class="v">${eur(S.tot)} <small>${mo===cur?"ce mois-ci":moisNom(mo)}</small></div>
+    <div class="trio"><div><small>Par jour ouvré</small><b>${eur(S.tot/21.67)}</b></div><div><small>Par km</small><b>${S.km?eur(S.tot/S.km):"—"}</b></div><div><small>Conso</small><b>${S.l100!=null?f1(S.l100)+" L/100":"—"}</b></div></div>
+    ${S.fixe==null?`<div class="note">${PH("coût fixe mensuel : crédit ou location, assurance, Geotab")}</div>`:""}</div>
+  ${alerte}
+  <div class="sec"><b>Détail du mois</b>
+    <div class="kv"><span>Carburant · ${plural(S.nbPleins,"plein","pleins")}${S.litres?" · "+f1(S.litres)+" L":""}</span><span>${eur(S.carb)}</span></div>
+    <div class="kv"><span>Péages et parkings</span><span>${eur(S.peage)}</span></div>
+    <div class="kv"><span>Lavage et autres</span><span>${eur(S.autres)}</span></div>
+    <div class="kv"><span>Entretien et réparations (onglet Entretiens)</span><span>${eur(S.entretien)}</span></div>
+    <div class="kv"><span>Coût fixe mensuel</span><span>${S.fixe!=null?eur(S.fixe):'<span class="ph">à compléter</span>'}</span></div>
+    <div class="kv"><span>Kilométrage du mois</span><span>${S.km!=null?S.km.toLocaleString("fr-FR")+" km":'<span class="note">2 relevés de compteur nécessaires</span>'}</span></div></div>
+  <div class="sec"><b>Tickets des ouvriers (${L.length})</b>${L.slice(0,6).map(x=>`<div class="kv"><span>${fk(x.d)} · ${esc(DTYP[x.type]||x.type)} · ${esc(qui(x))} · ${esc(chn(x))}</span><span>${eur(num(x.montant))}${num(x.litres)?" · "+f1(num(x.litres))+" L":""} <button class="btn xs" data-depvoir="${esc(x.id)}">voir</button></span></div>`).join("")||'<div class="note">Aucun ticket ce mois-ci. Les ouvriers les envoient depuis leur espace (bouton « Dépense véhicule »).</div>'}${L.length>6?`<div class="note">et ${L.length-6} de plus</div>`:""}</div>`}
+function vehFixePop(rid){const r=RES[rid];if(!r)return;const n="Coût fixe mensuel (€)",c=colsOf("vehicule").find(x=>x.nom===n);
+  if(!c||c.type==="formule"){toast("Colonne « Coût fixe mensuel (€) » absente de l'Excel Véhicules.");return}
+  const p=openModal(`<h3>Coût fixe · ${esc(r.nom)}</h3><div class="note">Par mois : crédit ou location, assurance, abonnement Geotab, carte grise étalée… Enregistré dans l'Excel Véhicules, visible par AFER seul.</div>
+    <div class="grid2"><label>${esc(n)}<input type="number" step="any" min="0" data-col="${esc(n)}" value="${esc(r.d[n]??"")}"></label></div>
+    <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Enregistrer</button></div>`);
+  p.querySelector("[data-ok]").onclick=async()=>{const x=p.querySelector("[data-col]").value.trim(),nv=x===""?null:num(x);
+    if(String(nv??"")===String(r.d[n]??"")){closeFloat();toast("Rien n'a changé.");return}
+    closeFloat();await excelEcrire("vehicule",r.xid,{[n]:nv},{});RENDER();toast("Coût fixe enregistré : il part dans l'Excel.")}}
+async function depVoir(id){const x=gid("depveh",id);if(!x)return;const v=RES["v:"+x.veh],p=RES[x.par];
+  const pop=openModal(`<h3>${esc(DTYP[x.type]||x.type)} du ${fkl(x.d)}</h3>
+    <div class="kv"><span>Montant TTC</span><span>${eur(num(x.montant))}</span></div>${num(x.litres)?`<div class="kv"><span>Litres</span><span>${num(x.litres).toLocaleString("fr-FR")} L</span></div>`:""}
+    ${num(x.km)!=null?`<div class="kv"><span>Compteur</span><span>${num(x.km).toLocaleString("fr-FR")} km</span></div>`:""}
+    <div class="kv"><span>Véhicule</span><span>${esc(v?v.nom:x.veh)}</span></div><div class="kv"><span>Saisi par</span><span>${esc(p?p.nom:x.par||"—")}</span></div>
+    <div class="kv"><span>Chantier</span><span>${esc(x.ch?(CHI[x.ch]||{nom:"chantier retiré"}).nom:"sans chantier")}</span></div>${x.station?`<div class="kv"><span>Lieu</span><span>${esc(x.station)}</span></div>`:""}
+    <div class="note">${x.lu?"Montant lu sur le ticket par Claude, vérifié par l'ouvrier.":"Saisi à la main par l'ouvrier."}</div>
+    <div class="ticket" id="tk">${x.photo?'<span class="note">Chargement de la photo…</span>':'<span class="note">Pas de photo.</span>'}</div>
+    <div class="acts"><button class="btn sm" data-depdel>Supprimer ce ticket</button><button class="btn sm pri" data-x>Fermer</button></div>`);
+  pop.querySelector("[data-depdel]").onclick=async e=>{const b=e.target;if(!b.dataset.sur){b.dataset.sur="1";b.textContent="Confirmer la suppression";return}
+    closeFloat();await gdelMany("depveh",[id]);await C.from("gestion").delete().eq("type","depveh_photo").eq("id",id);toast("Ticket supprimé.")};
+  if(x.photo){const {data,error}=await C.from("gestion").select("data").eq("type","depveh_photo").eq("id",id).maybeSingle();const el=pop.querySelector("#tk");
+    if(el)el.innerHTML=!error&&data&&/^data:image\//.test(data.data.img||"")?`<img src="${data.data.img}" alt="Photo du ticket">`:'<span class="note">Photo introuvable.</span>'}}
 function coutJour(r){const d=r.d||{},m=num(d["Coût global mensuel employeur (€)"]),j=num(d["Jours travaillés par mois"]);if(m!=null&&j)return m/j;return num(d["Coût chargé par jour (€)"])} // le coût mensuel saisi prime sur la colonne calculée de l'Excel (pas encore recalculée juste après une modification)
 
 /* ---------- modèle : chantiers (SDB + autres) ---------- */
@@ -819,6 +881,7 @@ function renta(c){const R=gid("renta",c.id)||{},E=EL[c.id]||{};
   vehs.filter(r=>r.veh).forEach(r=>{const f=num(r.d["Coût fixe mensuel (€)"]);if(f!=null)vehL.push({l:`${r.nom} · ${plural(jours[r.id],"jour","jours")} × coût fixe ÷ 21,67`,v:f/21.67*jours[r.id]})});
   Object.values(gt("carburant")).filter(x=>imputeA(x["Chantier imputé"],c)).forEach(x=>{const v=num(x["Montant (€)"]);if(v!=null)vehL.push({l:"Plein du "+fkl(x.Date)+" · "+(x["Véhicule (immatriculation)"]||""),v})});
   Object.values(gt("entretien")).filter(x=>imputeA(x["Chantier imputé"],c)).forEach(x=>{const v=num(x["Montant (€)"]);if(v!=null)vehL.push({l:(x.Type||"Entretien")+" du "+fkl(x.Date),v})});
+  Object.values(gt("depveh")).filter(x=>x.ch===c.id&&num(x.montant)!=null).forEach(x=>{const v=RES["v:"+x.veh];vehL.push({l:(DTYP[x.type]||"Dépense")+" du "+fkl(x.d)+" · "+(v?(v.d.Immatriculation||v.nom):x.veh)+" (ticket ouvrier, TTC)",v:num(x.montant)})});
   const frais=Object.values(E.frais||{}).filter(x=>x&&num(x.amt)!=null);
   frais.filter(x=>/carburant|péage|peage|stationnement/i.test(x.cat||"")).forEach(x=>vehL.push({l:(x.cat||"Dépense")+" du "+fdl(x.at)+" (TTC)",v:num(x.amt)}));
   const vehSansCout=vehs.filter(r=>r.veh&&num(r.d["Coût fixe mensuel (€)"])==null).map(r=>r.nom);
@@ -1251,7 +1314,7 @@ function fiche(r){const t=r.t,d=r.d,C2=colsOf(t),byN={};C2.forEach(c=>byN[c.nom]
   const used=new Set(["ID"]);const sec=(titre,noms,prive)=>{const L=noms.filter(n=>byN[n]);L.forEach(n=>used.add(n));if(!L.length)return"";return `<div class="sec"><b>${esc(titre)}${prive?' <span class="lock">· AFER seul</span>':""}</b>${L.map(n=>`<div class="kv"><span>${esc(n)}</span><span>${val(byN[n],d[n],d,t)}</span></div>`).join("")}</div>`};
   let h=`<div class="head">${avatar(r,"big")}<div><h3>${esc(r.nom)}</h3><div class="note">${esc(r.metier)} · ${esc(r.xid)}${d.Statut?" · "+esc(d.Statut):""}</div></div></div>
     ${d._attente?`<div class="note">⟳ Modification en route vers l'Excel${(gid("excel_ecrire",t+":"+r.xid)||{}).erreur?` : <span class="ph">${esc(gid("excel_ecrire",t+":"+r.xid).erreur)}</span>`:"."}</div>`:""}
-    <div class="row2"><button class="btn sm pri" data-editfiche="${esc(r.id)}">Modifier</button>${r.actif?`<button class="btn sm" data-goplanres="${esc(r.id)}">Affecter dans le planning</button>`:""}${t==="personne"?`<button class="btn sm" data-conge="${esc(r.id)}">+ Absence</button>`:""}${t==="personne"&&r.actif?`<button class="btn sm" data-lienouv="${esc(r.id)}">${(gid("lien_ouvrier",r.id)||{}).actif?"Lien espace ouvrier":"Créer son lien ouvrier"}</button>`:""}</div>${t==="personne"?coutCarte(r):""}`;
+    <div class="row2"><button class="btn sm pri" data-editfiche="${esc(r.id)}">Modifier</button>${r.actif?`<button class="btn sm" data-goplanres="${esc(r.id)}">Affecter dans le planning</button>`:""}${t==="personne"?`<button class="btn sm" data-conge="${esc(r.id)}">+ Absence</button>`:""}${t==="personne"&&r.actif?`<button class="btn sm" data-lienouv="${esc(r.id)}">${(gid("lien_ouvrier",r.id)||{}).actif?"Lien espace ouvrier":"Créer son lien ouvrier"}</button>`:""}</div>${t==="personne"?coutCarte(r):""}${r.veh?vehCarte(r):""}`;
   if(r.veh){const km=num(d["Kilométrage (dernier relevé)"]),l=num(d["Dernière vidange : km"]),nx=num(d["Prochaine vidange : km"]);
     if(km!=null&&nx!=null){const pc=l!=null&&nx>l?Math.max(0,Math.min(100,(km-l)/(nx-l)*100)):km>=nx?100:null;const f=km>=nx?"bad":km>=nx-1000?"":"ok";
       h+=`<div class="sec gauge ${f}"><b>Vidange</b><div class="kv"><span>Compteur ${km.toLocaleString("fr-FR")} km</span><span>prochaine à ${nx.toLocaleString("fr-FR")} km</span></div>${pc!=null?`<div class="bar"><i style="width:${pc}%"></i></div>`:""}</div>`}}
@@ -1850,6 +1913,7 @@ document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);let el;
   if(el=q("[data-dvst]")){const [id,s]=el.dataset.dvst.split("|");if(s==="envoye"&&!id.startsWith("sdb:"))dvEnvoyer(id);else dvSetStatut(id,s);return}
   if(el=q("[data-dvregen]")){dvRegen(el.dataset.dvregen);return}
 });
+document.addEventListener("change",e=>{if(e.target.matches&&e.target.matches("[data-vehmois]")){vehMois=e.target.value;RENDER()}});
 document.addEventListener("change",e=>{const f=e.target.dataset&&e.target.dataset.dvf;if(f){DVF[f]=e.target.value;RENDER()}});
 document.addEventListener("input",e=>{if(e.target.dataset&&e.target.dataset.dvq!==undefined){DVF.q=e.target.value;clearTimeout(DVF.T);DVF.T=setTimeout(()=>{RENDER();const n=$("[data-dvq]");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}},250)}});
 document.addEventListener("dblclick",e=>{const r=e.target.closest("[data-dvsel]");if(r&&r.tagName==="TR"){const d=docById(r.dataset.dvsel);if(d&&d.sdb)openSdb(d.chId);else if(d)edOpen(d.id)}});
@@ -2488,6 +2552,8 @@ document.addEventListener("click",e=>{const t=e.target;
   if(el=q("[data-sortis]")){voirSortis=el.checked;RENDER();return}
   if(el=q("[data-rs]")){selRes=el.dataset.rs;RENDER();if(innerWidth<1100){const f=$("#fiche");f&&f.scrollIntoView({behavior:"smooth",block:"start"})}return}
   if(el=q("[data-coutpop]")){coutPop(el.dataset.coutpop);return}
+  if(el=q("[data-vehfixe]")){vehFixePop(el.dataset.vehfixe);return}
+  if(el=q("[data-depvoir]")){depVoir(el.dataset.depvoir);return}
   if(el=q("[data-editfiche]")){const r=RES[el.dataset.editfiche];if(r)fichePop(r.t,r.id);return}
   if(el=q("[data-addfiche]")){fichePop(el.dataset.addfiche,null);return}
   if(el=q("[data-renta]")){selRenta=selRenta===el.dataset.renta?null:el.dataset.renta;RENDER();return}

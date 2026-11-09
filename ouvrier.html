@@ -67,6 +67,27 @@ main{max-width:620px;margin:0 auto;padding:10px max(12px,env(safe-area-inset-rig
 .ghost{background:transparent;color:var(--turq-ink);border:1px solid var(--turq)}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:8px}
 .box.bad{background:var(--bad-bg);border-color:var(--bad)}
+/* V17 : dépenses véhicule (plein, péage, parking…) */
+.ov{position:fixed;inset:0;z-index:20;background:var(--bg);overflow:auto;padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.ov form{max-width:520px;margin:0 auto;display:grid;gap:12px}
+.ov h2{font:700 26px var(--display);margin:0}
+.typ{display:flex;gap:6px;flex-wrap:wrap}
+.typ label{position:relative}
+.typ input{position:absolute;opacity:0;inset:0}
+.typ span{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:9px 14px;font-weight:700;font-size:14px;background:var(--surface)}
+.typ input:checked+span{background:var(--turq);border-color:var(--turq);color:#fff}
+.typ input:focus-visible+span{outline:2px solid var(--turq);outline-offset:2px}
+.shot{display:grid;gap:6px;justify-items:center;border:2px dashed var(--line);border-radius:12px;padding:16px;text-align:center;background:var(--surface);cursor:pointer;font-weight:700}
+.shot img{max-height:180px;border-radius:8px}
+.shot input{position:absolute;opacity:0;width:1px;height:1px}
+.fl{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:600}
+.fl input,.fl select{font:600 16px var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%;min-width:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lu{color:var(--turq-ink);font-size:13px;font-weight:700}
+.err{color:var(--bad);font-weight:700;font-size:14px}
+.deps{display:grid;gap:6px}
+.dep{display:flex;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px}
+.dep small{display:block;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
@@ -95,7 +116,7 @@ const chCol=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;
 const propre=n=>String(n||"Chantier").replace(/^(chantier\s+)+/i,"Chantier ");
 const court=n=>propre(n).replace(/^Chantier\s+/i,"").replace(/\s+\d{5}$/,"")||"Chantier";
 const jeton=new URLSearchParams(location.search).get("o")||"";
-let D=null,choix=null,vers=null;
+let D=null,choix=null,vers=null,V=null;
 function modele(d){
   const L=(d.missions||[]).map(x=>({...x,ch:x.ch||x.nom}));
   const CH={};(d.chantiers||[]).forEach(c=>CH[c.ch]={...c});
@@ -130,8 +151,8 @@ function afficher(){
       ${c.ideal||c.limite?`<div class="chips">${c.ideal?`<span class="pill o">Idéal ${esc(fcourt(c.ideal))}</span>`:""}${c.limite?`<span class="pill r">Limite ${esc(fcourt(c.limite))}</span>`:""}</div>`:""}
       ${choix.m?`<span class="txt">${esc(choix.m)}</span>`:`<span class="note">Pas de mission écrite.</span>`}${btn}</div>`}
   else det=`<div class="box"><b>Rien de prévu pour toi</b><span class="note">AFER n'a encore rien placé dans les prochaines semaines. La page se met à jour toute seule.</span></div>`;
-  $m.innerHTML=`<div class="wknav"><span class="lab" id="per"></span><button class="mini" data-auj type="button">Aujourd'hui</button></div>
-    <div class="defile">${g}</div>${key}${leg}${det}<button class="btn ghost" id="rf" type="button">Actualiser</button>`;
+  $m.innerHTML=`${V?`<button class="btn" type="button" data-dep>+ Dépense véhicule (plein, péage, parking)</button>`:""}<div class="wknav"><span class="lab" id="per"></span><button class="mini" data-auj type="button">Aujourd'hui</button></div>
+    <div class="defile">${g}</div>${key}${leg}${det}${mesDeps()}<button class="btn ghost" id="rf" type="button">Actualiser</button>`;
   const sc=$m.querySelector(".defile");largeur(sc);
   if(gardeX!=null&&!vers)sc.scrollLeft=gardeX;else aller(sc,vers||K(monday(new Date())));vers=null;periode(sc)}
 function largeur(sc){const n=innerWidth<520?6:innerWidth<900?9:12;sc.style.setProperty("--cw",Math.max(54,Math.floor(sc.clientWidth/n))+"px")}
@@ -141,6 +162,7 @@ function periode(sc){const hs=[...sc.querySelectorAll(".hd[data-k]")],h=hs.find(
 $m.addEventListener("scroll",e=>{if(e.target.classList&&e.target.classList.contains("defile"))periode(e.target)},true);
 $m.addEventListener("click",e=>{if(e.target.closest("[data-auj]")){const sc=$m.querySelector(".defile");sc.scrollTo({left:(sc.querySelector(`.hd[data-k="${K(monday(new Date()))}"]`)||{offsetLeft:0}).offsetLeft,behavior:"smooth"});return}
   const b=e.target.closest("[data-i]");if(b){const sc=$m.querySelector(".defile"),x=sc.scrollLeft;choix=D.L[+b.dataset.i];afficher();$m.querySelector(".defile").scrollLeft=x;const d=$m.querySelector(".det");d&&d.scrollIntoView({behavior:"smooth",block:"nearest"});return}
+  if(e.target.closest("[data-dep]"))return depOuvrir();
   if(e.target.closest("#rf"))charger()});
 addEventListener("resize",()=>{const sc=$m.querySelector(".defile");if(!sc)return;const h=[...sc.querySelectorAll(".hd[data-k]")].find(x=>x.offsetLeft>=sc.scrollLeft);largeur(sc);if(h)aller(sc,h.dataset.k)});
 function erreur(titre,txt,retry){$n.textContent="Mon planning";$m.innerHTML=`<div class="box${retry?"":" bad"}"><b>${esc(titre)}</b><span class="note">${esc(txt)}</span>${retry?`<button class="btn" type="button" onclick="charger()">Réessayer</button>`:""}</div>`}
@@ -153,12 +175,68 @@ async function charger(){
   if(error){if(/invalide ou désactivé/i.test(error.message||""))return erreur("Lien désactivé","Ce lien n'est plus valide. Demande un nouveau lien à AFER.",false);
     return erreur("Connexion impossible",navigator.onLine?"Le service ne répond pas. Réessaie dans un instant.":"Pas de connexion internet. Réessaie quand le réseau revient.",true)}
   const old=choix&&D?{d:choix.d,c:choix.c,ch:choix.ch}:null;
+  try{const r=await C.rpc("ouvrier_vehicules",{p_jeton:jeton});V=r.error?null:r.data}catch(e){V=null} // V17 : sans le SQL, pas de bouton
   D=modele(data||{});$n.textContent=D.nom||"Mon planning";document.title=(D.nom?D.nom+" · ":"")+"Mon planning AFER";
   choix=old?D.L.find(x=>x.d===old.d&&x.c===old.c&&x.ch===old.ch)||null:null;
   afficher()}
+/* ---------- V17 : dépenses véhicule (complement-v17-depenses-vehicules.sql, fonction lire-ticket) ---------- */
+const TYPES=[["plein","Plein"],["peage","Péage"],["parking","Parking"],["lavage","Lavage"],["autre","Autre"]];
+const TNOM=Object.fromEntries(TYPES);
+const eur=n=>Number(n).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+"\u00a0€";
+const nb=v=>{const x=parseFloat(String(v??"").replace(/\s/g,"").replace(",","."));return isFinite(x)?x:null};
+function mesDeps(){if(!V||!(V.depenses||[]).length)return"";const vn=id=>((V.vehicules||[]).find(v=>v.id===id)||{}).immat||id;
+  return `<div class="deps"><b>Mes dernières dépenses</b>${V.depenses.slice(0,5).map(x=>`<div class="dep"><span>${esc(TNOM[x.type]||x.type)} · ${esc(vn(x.veh))}<small>${esc(fcourt(x.d))}${x.ch&&D.CH[x.ch]?" · "+esc(court(D.CH[x.ch].nom)):""}</small></span><b>${eur(x.montant)}</b></div>`).join("")}</div>`}
+function depDefauts(){const t=V.auj||today(),miens=D.L.filter(x=>x.d===t).map(x=>x.ch);
+  const j=(V.jour||[]).find(x=>miens.includes(x.ch)),h=(V.vehicules||[]).find(v=>v.habituel);
+  return {veh:j?j.v:h?h.id:((V.vehicules||[])[0]||{}).id||"",ch:miens[0]||""}}
+let PH=null,LU=false;
+function depOuvrir(){const df=depDefauts(),t=V.auj||today();PH=null;LU=false;
+  const chs=Object.values(D.CH).sort((a,b)=>a.nom.localeCompare(b.nom));
+  const ov=document.createElement("div");ov.className="ov";ov.id="depf";
+  ov.innerHTML=`<form novalidate><h2>Dépense véhicule</h2>
+    <div class="typ" role="radiogroup" aria-label="Type de dépense">${TYPES.map(([k,l],i)=>`<label><input type="radio" name="t" value="${k}"${i===0?" checked":""}><span>${l}</span></label>`).join("")}</div>
+    <label class="shot" for="dep-ph"><span id="dep-pv">Prendre le ticket en photo</span><small class="note">Le montant et les litres sont lus sur le ticket</small><input type="file" id="dep-ph" accept="image/*" capture="environment"></label>
+    <div id="dep-lu" class="lu" aria-live="polite"></div>
+    <div class="two"><label class="fl">Montant TTC (€)<input id="dep-m" inputmode="decimal" autocomplete="off"></label><label class="fl" id="dep-lw">Litres<input id="dep-l" inputmode="decimal" autocomplete="off"></label></div>
+    <label class="fl">Kilométrage au compteur<input id="dep-k" inputmode="numeric" autocomplete="off" placeholder="ex. 98214"></label>
+    <label class="fl">Véhicule<select id="dep-v">${(V.vehicules||[]).map(v=>`<option value="${esc(v.id)}"${v.id===df.veh?" selected":""}>${esc(v.nom)}${v.immat?" · "+esc(v.immat):""}</option>`).join("")}</select></label>
+    <label class="fl">Chantier<select id="dep-c"><option value="">Aucun (trajet dépôt, bureau…)</option>${chs.map(c=>`<option value="${esc(c.ch)}"${c.ch===df.ch?" selected":""}>${esc(c.nom)}</option>`).join("")}</select></label>
+    <label class="fl">Date<input type="date" id="dep-d" value="${esc(t)}" max="${esc(t)}"></label>
+    <input type="hidden" id="dep-s">
+    <div id="dep-e" class="err" aria-live="assertive"></div>
+    <button class="btn" type="submit" id="dep-ok">Envoyer</button><button class="btn ghost" type="button" id="dep-x">Annuler</button></form>`;
+  document.body.appendChild(ov);document.body.style.overflow="hidden";
+  const f=ov.querySelector("form"),q=s=>ov.querySelector(s),litres=()=>{q("#dep-lw").hidden=f.t.value!=="plein"};litres();
+  f.addEventListener("change",e=>{if(e.target.name==="t")litres()});
+  q("#dep-x").onclick=depFermer;
+  q("#dep-ph").onchange=async e=>{const fi=e.target.files&&e.target.files[0];if(!fi)return;q("#dep-e").textContent="";
+    try{PH=await reduire(fi)}catch(x){PH=null;q("#dep-e").textContent="Photo illisible : reprends-la, ou saisis le montant à la main.";return}
+    q("#dep-pv").innerHTML=`<img src="${PH}" alt="Ticket">`;q("#dep-lu").textContent="Lecture du ticket…";
+    try{const r=await fetch(SB_URL+"/functions/v1/lire-ticket",{method:"POST",headers:{apikey:SB_KEY,authorization:"Bearer "+SB_KEY,"content-type":"application/json"},body:JSON.stringify({jeton,image:PH})});
+      const j=await r.json().catch(()=>({}));const lu=j.lu;if(!r.ok||!lu||lu.type==="illisible")throw new Error(j.erreur||"non lu");
+      if(lu.type&&TNOM[lu.type])f.t.value=lu.type;litres();
+      if(lu.montant!=null)q("#dep-m").value=String(lu.montant).replace(".",",");if(lu.litres!=null)q("#dep-l").value=String(lu.litres).replace(".",",");
+      if(lu.date&&/^\d{4}-\d{2}-\d{2}$/.test(lu.date)&&lu.date<=t)q("#dep-d").value=lu.date;q("#dep-s").value=lu.station||"";LU=true;
+      q("#dep-lu").textContent="Lu sur le ticket : vérifie le montant"+(lu.litres!=null?" et les litres":"")+", puis ajoute le kilométrage."}
+    catch(x){q("#dep-lu").textContent="Ticket non lu automatiquement : saisis le montant."}};
+  f.onsubmit=async e=>{e.preventDefault();const m=nb(q("#dep-m").value),l=f.t.value==="plein"?nb(q("#dep-l").value):null,k=nb(q("#dep-k").value),er=q("#dep-e");
+    if(m==null||m<=0)return er.textContent="Indique le montant du ticket.";
+    if(!q("#dep-v").value)return er.textContent="Choisis le véhicule.";
+    q("#dep-ok").disabled=true;er.textContent="";
+    const {error}=await C.rpc("ouvrier_depense",{p_jeton:jeton,p_dep:{type:f.t.value,montant:m,litres:l,km:k,veh:q("#dep-v").value,ch:q("#dep-c").value,d:q("#dep-d").value,station:q("#dep-s").value,lu:LU,photo:PH}});
+    q("#dep-ok").disabled=false;
+    if(error)return er.textContent=navigator.onLine?"Pas envoyé : "+(error.message||"erreur")+".":"Pas de connexion : réessaie quand le réseau revient (la saisie reste ici).";
+    depFermer();await charger();const b=$m.querySelector("[data-dep]");if(b){b.textContent="✓ Dépense envoyée · en ajouter une autre";setTimeout(()=>{if(b.isConnected)b.textContent="+ Dépense véhicule (plein, péage, parking)"},5000)}};
+  q("#dep-m").focus({preventScroll:true})}
+function depFermer(){const o=document.getElementById("depf");if(o)o.remove();document.body.style.overflow=""}
+// photo réduite (1280 px, JPEG) : légère pour la base et pour la lecture
+function reduire(fi){return new Promise((ok,ko)=>{const u=URL.createObjectURL(fi),im=new Image();
+  im.onload=()=>{const r=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*r);c.height=Math.round(im.height*r);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);let d=c.toDataURL("image/jpeg",.72);if(d.length>850000)d=c.toDataURL("image/jpeg",.5);ok(d)};
+  im.onerror=()=>{URL.revokeObjectURL(u);ko(new Error("illisible"))};im.src=u})}
 charger();
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")charger()});
-setInterval(()=>{if(document.visibilityState==="visible")charger()},120000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&!document.getElementById("depf"))charger()});
+setInterval(()=>{if(document.visibilityState==="visible"&&!document.getElementById("depf"))charger()},120000);
 </script>
 </body>
 </html>
