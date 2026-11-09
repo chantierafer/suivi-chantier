@@ -339,6 +339,15 @@ kbd{font:600 11px var(--body);background:var(--surface);border:1px solid var(--l
 .fiche{border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:12px;align-content:start;background:var(--surface);position:sticky;top:0}
 .fiche h3{font-size:24px}
 .fiche .head{display:flex;gap:10px;align-items:center}
+/* coût global employeur (fiche personne, AFER seul) */
+.cout{background:var(--turq-soft);border-radius:10px;padding:12px 14px;display:grid;gap:8px}
+.cout .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cout .v{font-family:var(--display);font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.cout .v small{font:600 12px var(--body);color:var(--muted)}
+.cout .trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cout .trio div{background:var(--surface);border-radius:8px;padding:6px 8px;min-width:0}
+.cout .trio small{display:block;color:var(--muted);font-size:11px}
+.cout .trio b{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .gauge .bar i{background:var(--warn)}
 .gauge.ok .bar i{background:var(--ok)}
 .gauge.bad .bar i{background:var(--bad)}
@@ -723,7 +732,23 @@ function reperes(x,g){x.ideal=isK(g.ideal)?g.ideal:isK(g.fin)?g.fin:null;x.limit
   x.fin=x.limite||x.ideal||(last&&last>x.deb?last:x.deb);return x}
 const team=ch=>[...new Set(AFF.filter(a=>a.ch===ch).map(a=>a.r))].map(rs);
 // Coût chargé d'une personne par jour : colonne calculée de l'Excel, sinon coût mensuel ÷ jours travaillés (même formule que l'Excel)
-function coutJour(r){const d=r.d||{},c=num(d["Coût chargé par jour (€)"]);if(c!=null)return c;const m=num(d["Coût global mensuel employeur (€)"]),j=num(d["Jours travaillés par mois"]);return m!=null&&j?m/j:null}
+const heuresMois=r=>{const m=String((r.d||{})["Temps de travail"]||"").match(/(\d+(?:[.,]\d+)?)\s*h/i);if(!m)return null;const h=+m[1].replace(",",".");return h>0&&h<=60?h*52/12:null};
+function coutCarte(r){const d=r.d||{},m=num(d["Coût global mensuel employeur (€)"]),cj=coutJour(r),hm=heuresMois(r),jm=num(d["Jours travaillés par mois"]);
+  const ph=t=>`<span class="ph">${t}</span>`;
+  return `<div class="cout"><div class="top"><span class="note">Coût global employeur · <span class="lock">AFER seul</span></span><button class="btn xs" data-coutpop="${esc(r.id)}">Modifier le coût</button></div>
+    <div class="v">${m!=null?eur(m)+" <small>/ mois</small>":ph("[À COMPLÉTER : coût global mensuel]")}</div>
+    <div class="trio"><div><small>Par jour</small><b>${cj!=null?eur(cj):"—"}</b></div><div><small>Par demi-journée</small><b>${cj!=null?eur(cj/2):"—"}</b></div><div><small>Par heure</small><b>${m!=null&&hm?eur(m/hm):"—"}</b></div></div>
+    <div class="note">${jm?plural(jm,"jour travaillé","jours travaillés")+" par mois":"Jours travaillés par mois : à compléter"}${hm?" · "+(Math.round(hm*100)/100).toLocaleString("fr-FR")+" h par mois ("+esc(d["Temps de travail"])+")":""}${r.grp==="bureau"?" · bureau : compte dans les frais de structure":" · compté dans la rentabilité selon les demi-journées du planning"}</div></div>`}
+function coutPop(rid){const r=RES[rid];if(!r)return;const d=r.d,C2=colsOf("personne");
+  const noms=["Coût global mensuel employeur (€)","Jours travaillés par mois"].filter(n=>{const c=C2.find(x=>x.nom===n);return c&&c.type!=="formule"});
+  if(!noms.length){toast("Colonnes de coût absentes de l'Excel Personnel.");return}
+  const p=openModal(`<h3>Coût global · ${esc(r.nom)}</h3><div class="note">Salaire brut + charges patronales du bulletin de paie. Enregistré dans l'Excel Personnel, visible par AFER seul.</div>
+    <div class="grid2">${noms.map(n=>`<label>${esc(n)}<input type="number" step="any" min="0" data-col="${esc(n)}" value="${esc(d[n]??"")}"></label>`).join("")}</div>
+    <div class="acts"><button class="btn sm" data-x>Annuler</button><button class="btn sm pri" data-ok>Enregistrer</button></div>`);
+  p.querySelector("[data-ok]").onclick=async()=>{const v={};p.querySelectorAll("[data-col]").forEach(el=>{const x=el.value.trim(),nv=x===""?null:num(x);if(String(nv??"")!==String(d[el.dataset.col]??""))v[el.dataset.col]=nv});
+    if(!Object.keys(v).length){closeFloat();toast("Rien n'a changé.");return}
+    closeFloat();await excelEcrire("personne",r.xid,v,{});RENDER();toast("Coût enregistré : il part dans l'Excel.")}}
+function coutJour(r){const d=r.d||{},m=num(d["Coût global mensuel employeur (€)"]),j=num(d["Jours travaillés par mois"]);if(m!=null&&j)return m/j;return num(d["Coût chargé par jour (€)"])} // le coût mensuel saisi prime sur la colonne calculée de l'Excel (pas encore recalculée juste après une modification)
 
 /* ---------- modèle : chantiers (SDB + autres) ---------- */
 function etatSdb(r,code,cli){
@@ -1226,7 +1251,7 @@ function fiche(r){const t=r.t,d=r.d,C2=colsOf(t),byN={};C2.forEach(c=>byN[c.nom]
   const used=new Set(["ID"]);const sec=(titre,noms,prive)=>{const L=noms.filter(n=>byN[n]);L.forEach(n=>used.add(n));if(!L.length)return"";return `<div class="sec"><b>${esc(titre)}${prive?' <span class="lock">· AFER seul</span>':""}</b>${L.map(n=>`<div class="kv"><span>${esc(n)}</span><span>${val(byN[n],d[n],d,t)}</span></div>`).join("")}</div>`};
   let h=`<div class="head">${avatar(r,"big")}<div><h3>${esc(r.nom)}</h3><div class="note">${esc(r.metier)} · ${esc(r.xid)}${d.Statut?" · "+esc(d.Statut):""}</div></div></div>
     ${d._attente?`<div class="note">⟳ Modification en route vers l'Excel${(gid("excel_ecrire",t+":"+r.xid)||{}).erreur?` : <span class="ph">${esc(gid("excel_ecrire",t+":"+r.xid).erreur)}</span>`:"."}</div>`:""}
-    <div class="row2"><button class="btn sm pri" data-editfiche="${esc(r.id)}">Modifier</button>${r.actif?`<button class="btn sm" data-goplanres="${esc(r.id)}">Affecter dans le planning</button>`:""}${t==="personne"?`<button class="btn sm" data-conge="${esc(r.id)}">+ Absence</button>`:""}${t==="personne"&&r.actif?`<button class="btn sm" data-lienouv="${esc(r.id)}">${(gid("lien_ouvrier",r.id)||{}).actif?"Lien espace ouvrier":"Créer son lien ouvrier"}</button>`:""}</div>`;
+    <div class="row2"><button class="btn sm pri" data-editfiche="${esc(r.id)}">Modifier</button>${r.actif?`<button class="btn sm" data-goplanres="${esc(r.id)}">Affecter dans le planning</button>`:""}${t==="personne"?`<button class="btn sm" data-conge="${esc(r.id)}">+ Absence</button>`:""}${t==="personne"&&r.actif?`<button class="btn sm" data-lienouv="${esc(r.id)}">${(gid("lien_ouvrier",r.id)||{}).actif?"Lien espace ouvrier":"Créer son lien ouvrier"}</button>`:""}</div>${t==="personne"?coutCarte(r):""}`;
   if(r.veh){const km=num(d["Kilométrage (dernier relevé)"]),l=num(d["Dernière vidange : km"]),nx=num(d["Prochaine vidange : km"]);
     if(km!=null&&nx!=null){const pc=l!=null&&nx>l?Math.max(0,Math.min(100,(km-l)/(nx-l)*100)):km>=nx?100:null;const f=km>=nx?"bad":km>=nx-1000?"":"ok";
       h+=`<div class="sec gauge ${f}"><b>Vidange</b><div class="kv"><span>Compteur ${km.toLocaleString("fr-FR")} km</span><span>prochaine à ${nx.toLocaleString("fr-FR")} km</span></div>${pc!=null?`<div class="bar"><i style="width:${pc}%"></i></div>`:""}</div>`}}
@@ -2462,6 +2487,7 @@ document.addEventListener("click",e=>{const t=e.target;
   if(el=q("[data-rt]")){resTab=el.dataset.rt;selRes=null;RENDER();return}
   if(el=q("[data-sortis]")){voirSortis=el.checked;RENDER();return}
   if(el=q("[data-rs]")){selRes=el.dataset.rs;RENDER();if(innerWidth<1100){const f=$("#fiche");f&&f.scrollIntoView({behavior:"smooth",block:"start"})}return}
+  if(el=q("[data-coutpop]")){coutPop(el.dataset.coutpop);return}
   if(el=q("[data-editfiche]")){const r=RES[el.dataset.editfiche];if(r)fichePop(r.t,r.id);return}
   if(el=q("[data-addfiche]")){fichePop(el.dataset.addfiche,null);return}
   if(el=q("[data-renta]")){selRenta=selRenta===el.dataset.renta?null:el.dataset.renta;RENDER();return}
