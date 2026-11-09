@@ -535,6 +535,13 @@ tr.ne td{border-top:1px solid var(--line)}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script>
+// Sélection de texte à la souris (pour copier) : le clic qui termine la sélection n'ouvre rien (ligne, tableau de bord, fenêtre) et ne ferme pas la fenêtre ouverte.
+// Écouteurs en capture sur window : passent avant tous ceux de document. Un clic simple garde son action.
+(()=>{let d0=null;const champ=t=>t&&t.closest&&t.closest("input,textarea,select,[contenteditable]");
+  addEventListener("mousedown",e=>{d0=e.button===0?{x:e.clientX,y:e.clientY,champ:!!champ(e.target)}:null},true);
+  addEventListener("click",e=>{const d=d0;d0=null;if(!d||e.button!==0||champ(e.target))return; // clic dans un champ : comportement normal
+    const bouge=Math.hypot(e.clientX-d.x,e.clientY-d.y)>4,s=getSelection(),texte=!!s&&!s.isCollapsed&&String(s).trim()!=="";
+    if((bouge&&(texte||d.champ))||(e.detail>1&&texte))e.stopImmediatePropagation()},true)})();
 const SB_URL="https://xgliespwrxlxiaqaxtzj.supabase.co",SB_KEY="sb_publishable_8UoZO8bXKkBgD47-wcLqCw_RlPkTslt";
 // Étapes de l'appli SDB : même liste que ALL_STEPS dans app/suivi-chantier-sdb.html (une étape est validée à 2 photos)
 const STEPS=[{id:"constat",t:"Constat avant travaux"},{id:"protection",t:"Protection et installation"},{id:"depose",t:"Dépose et démolition",opt:true},
