@@ -44,6 +44,7 @@ export function destination(el: El, devis: Record<string, Any>) {
   if (el.type === 'photo') {
     const slot = String(d.slot || ''), q = quand(d.at)
     if (slot === 'materiel') return `1 Réception du matériel/${q}`
+    if (slot === 'reserves') return `6 Réserves levées/${q}`
     const i = ETAPES.findIndex(([k]) => k === slot)
     if (i >= 0) return `2 Étapes/${String(i + 1).padStart(2, '0')} ${ETAPES[i][1]}/${q}`
     const m = slot.match(/^x:(.+):(av|ap)$/)

@@ -805,6 +805,9 @@ function versGestion(){try{if(window.top!==window.self)return false;const q=new 
 
         <div class="part"><h2><em>3</em>Travaux supplémentaires</h2><p class="sub">Photo avant, photo après</p></div>
         <div class="steps" id="extras"></div>
+
+        <div class="part"><h2><em>4</em>Réserves levées</h2><p class="sub">Photos des réserves traitées après la réception</p></div>
+        <div id="reserves"></div>
       </div>
     </div>
   </section>
@@ -1716,7 +1719,8 @@ function putImg(k,v){mem[k]=v;if(!db)return;try{db.transaction("img","readwrite"
 function delImg(k){delete mem[k];if(!db)return;try{db.transaction("img","readwrite").objectStore("img").delete(CH.key+":"+k)}catch(e){}}
 function getImg(k){return new Promise(res=>{if(!k)return res(null);if(mem[k])return res(mem[k]);const ch=CH.key,miss=()=>SB.ready?SB.img(ch,k).then(res):res(null);if(!db)return miss();try{const r=db.transaction("img").objectStore("img").get(ch+":"+k);r.onsuccess=()=>{if(r.result){mem[k]=r.result;res(r.result)}else miss()};r.onerror=miss}catch(e){miss()}})}
 const list=k=>photos[k]||[];
-const lim=k=>k==="materiel"||k.startsWith("x:")?{min:1,max:Infinity}:{min:MIN,max:MAX};
+// 17/11 (Djalil) : case « Réserves levées » (clé photo "reserves"), photos facultatives, sans limite, hors avancement
+const lim=k=>k==="reserves"?{min:0,max:Infinity}:k==="materiel"||k.startsWith("x:")?{min:1,max:Infinity}:{min:MIN,max:MAX};
 
 /* ===== Avancement : une étape = 2 photos ; la réception du matériel ouvre le chantier ===== */
 const prog=s=>Math.min(list(s.id).length,MIN)/MIN;
@@ -1732,7 +1736,7 @@ const extraDone=l=>list("x:"+l.id+":av").length>0&&list("x:"+l.id+":ap").length>
 const TABS={afer:["mission","suivi","devis","pv","docs","frais","bpu","sav","journal"],tech:["mission","suivi","pv","docs","frais"],domevie:["suivi","devis","pv","docs"]};
 const ROLE_NAME={afer:"AFER",tech:"Technicien",domevie:"DOMetVIE"};
 let role=GS.get("role",null)||peek("saint-denis-v3","role","tech");if(!TABS[role])role="tech";
-const canPhoto=()=>role==="afer"||(role==="tech"&&!closed);
+const canPhoto=k=>role==="afer"||(role==="tech"&&(!closed||k==="reserves")); // réserves : le technicien peut encore ajouter après la clôture
 /* Nom de l'espace, visible en haut de chaque page */
 const ESPACE={afer:["Espace principal",'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>'],tech:["Espace suivi de chantier",'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'],domevie:["Espace DOMetVIE",'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M10 21v-4h4v4"/>']};
 function paintEspace(){const e=document.getElementById("espace"),x=ESPACE[role];if(!e||!x)return;e.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${x[1]}</svg>${x[0]}`;e.hidden=false}
@@ -1836,6 +1840,7 @@ function addPhoto(key,d){
   const before=globalPct();photos[key]=[...list(key),{id:k,at:iso()}];save("photos",photos);
   const n=list(key).length,s=ALL_STEPS.find(x=>x.id===key);
   if(key==="materiel"){if(n===1){notify(["afer","domevie"],"Matériel réceptionné : début du chantier","suivi");toast("Chantier démarré")}else toast("Photo ajoutée")}
+  else if(key==="reserves"){const prev=list(key)[n-2];toast("Photo de réserve ajoutée");if(!prev||Date.now()-Date.parse(prev.at)>2*3600e3)notify(["afer","domevie"],"Réserves levées : photos ajoutées","suivi")}
   else if(key.startsWith("x:")){const l=devis.find(x=>"x:"+x.id===key.slice(0,key.lastIndexOf(":")));toast("Photo ajoutée");if(l&&extraDone(l))notify(["afer","domevie"],"Photos avant/après prises : "+l.designation,"suivi")}
   else{open=key;save("open",open);const gain=globalPct()-before;if(s&&n===MIN){toast("Étape validée");const S=STEPS();notify(["afer","domevie"],"Étape "+(S.indexOf(s)+1)+"/"+S.length+" validée : "+s.t+" · "+Math.round(globalPct())+" %","suivi")}else if(gain>0)toast("+"+fmtPct(gain)+" %");else toast("Photo ajoutée")}
   renderAll()}
@@ -1855,7 +1860,7 @@ document.getElementById("lb").onclick=e=>{if(e.target.id==="lb")e.currentTarget.
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){document.getElementById("lb").hidden=true;closeSheet()}});
 function imgInto(el,k,cap){getImg(k).then(src=>{if(!src)return;const im=document.createElement("img");im.src=src;im.alt=cap;im.onclick=()=>showLB(src,cap,im);el.prepend(im)})}
 function grid(key,title,labels){
-  const {min,max}=lim(key),L=list(key),ed=canPhoto(),g=document.createElement("div");g.className="thumbs";
+  const {min,max}=lim(key),L=list(key),ed=canPhoto(key),g=document.createElement("div");g.className="thumbs";
   L.forEach((ph,j)=>{const t=document.createElement("div");t.className="th";t.innerHTML=`<span class="when">${j+1} · ${fd(ph.at)}</span>`;imgInto(t,ph.id,title+" · photo "+(j+1)+" · "+ft(ph.at));
     if(ed){const d=document.createElement("button");d.className="del";d.textContent="✕";d.setAttribute("aria-label","Supprimer la photo");d.onclick=ev=>{ev.stopPropagation();if(!d.classList.contains("arm")){d.classList.add("arm");d.textContent="Supprimer ?";setTimeout(()=>{d.classList.remove("arm");d.textContent="✕"},3000);return}removePhoto(key,j)};t.appendChild(d)}
     g.appendChild(t)});
@@ -1907,6 +1912,10 @@ function renderSuivi(){
     d.innerHTML=`<div class="row" style="justify-content:space-between"><h3>${esc(l.designation)} <span class="sub">· ${String(l.qty).replace(".",",")} ${esc(l.unit)}</span></h3><span class="pill ${l.st==="val"?"val":"att"}">${l.st==="val"?"Validé par DOMetVIE":"En attente de validation DOMetVIE"}</span></div><div class="duo"><div><h4>Avant</h4></div><div><h4>Après</h4></div></div>`;
     const c=d.querySelectorAll(".duo>div");c[0].appendChild(grid("x:"+l.id+":av",l.designation+" · avant",["Photo avant : la contrainte"]));c[1].appendChild(grid("x:"+l.id+":ap",l.designation+" · après",["Photo après : réglé"]));xe.appendChild(d)});
   if(!xe.children.length)xe.innerHTML='<p class="empty">Aucun travail supplémentaire pour l\'instant.</p>';
+  // 4. réserves levées (17/11)
+  const rv=document.getElementById("reserves"),nr=list("reserves").length;rv.innerHTML="";const rvb=document.createElement("div");rvb.className="box"+(nr?" val":"");
+  rvb.innerHTML=`<div class="row" style="justify-content:space-between"><h3>Photos des réserves levées</h3><span class="pill${nr?" val":""}">${nr?nr+" photo"+(nr>1?"s":""):"Aucune"}</span></div>`;
+  rvb.appendChild(grid("reserves","Réserves levées",["Réserve levée"]));rv.appendChild(rvb);
   updateHUD();
 }
 function updateHUD(){
@@ -2217,7 +2226,7 @@ function renderTree(){
 
 /* ===== Journal du chantier (AFER seul) : chaque événement daté, par demi-journée ; demi-journées perdues et leur cause ===== */
 const J_CAUSES=["Problème DOMetVIE (commande, livraison)","Client absent ou accès impossible","Matériel manquant ou abîmé","Imprévu technique","Technicien absent","Intempéries ou autre cause extérieure","Autre"];
-const slotNom=k=>k==="materiel"?"Réception du matériel":/^x:/.test(k)?"Travaux en plus, photo "+(/:ap$/.test(k)?"après":"avant"):((ALL_STEPS.find(x=>x.id===k)||{}).t||k);
+const slotNom=k=>k==="materiel"?"Réception du matériel":k==="reserves"?"Réserves levées":/^x:/.test(k)?"Travaux en plus, photo "+(/:ap$/.test(k)?"après":"avant"):((ALL_STEPS.find(x=>x.id===k)||{}).t||k);
 const jKey=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
 const jHalf=d=>new Date(d).getHours()<13?"am":"pm";
 function jEvents(){const E=[],add=(at,txt)=>{if(at&&!isNaN(Date.parse(at)))E.push({at,txt})};
@@ -2810,7 +2819,7 @@ function odNom(c,keep){if(!c||!c.id)return"";if(OD.noms[c.id])return OD.noms[c.i
 function odPlan(c){
   const ch=c.id,P=peek(ch,"photos",{})||{},v=peek(ch,"variant",c.variante||"avec"),S=ALL_STEPS.filter(s=>!s.opt||v==="avec"),T=[];
   const ph=(slot,path,lab)=>(P[slot]||[]).forEach(p=>T.push({k:"ph:"+p.id,path,name:odSafe(odStamp(p.at)+(lab?" "+lab:"")+" "+String(p.id).slice(-4)),img:p.id}));
-  ph("materiel",["02_Photos","00_Réception matériel"]);
+  ph("materiel",["02_Photos","00_Réception matériel"]);ph("reserves",["04_Réserves levées"]);
   S.forEach((s,i)=>ph(s.id,["02_Photos",String(i+1).padStart(2,"0")+"_"+odSafe(s.t)]));
   (peek(ch,"devis",[])||[]).filter(l=>l.kind!=="titre"&&!l.base).forEach(l=>{const p=["03_Travaux supplémentaires",odSafe(l.designation||"Travaux")+" "+String(l.id).slice(-4)];ph("x:"+l.id+":av",p,"avant");ph("x:"+l.id+":ap",p,"après")});
   const used=new Set();
